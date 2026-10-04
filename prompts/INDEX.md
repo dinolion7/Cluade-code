@@ -28,3 +28,8 @@
 | 16 | A | IT 통신·구독·약관 | Claude Sonnet | A_IT-IT통신_ClaudeSonnet.txt |
 | 17 | A | (코드 미확인) 교육·입시·장학금 | Claude Sonnet | A_X1-교육_ClaudeSonnet.txt |
 | 18 | A | (코드 미확인) 자동차·보험·정비 | Claude Sonnet | A_X2-자동차_ClaudeSonnet.txt |
+| 19 | A | H 건강 — 각색 | Claude Sonnet | A_H-건강_ClaudeSonnet.txt |
+| 20 | A | H 건강 — 1단계 팩트체크 검수(웹 검색) | Claude Sonnet | A_H-건강-1검수_ClaudeSonnet.txt |
+| 21 | A | H 건강 — 2단계 검수 반영 편집(분기 A/B/C) | Claude Sonnet | A_H-건강-2편집_ClaudeSonnet.txt |
+
+건강 주제만 3단계 파이프라인: 각색 → 검수 보고서 → 보고서 반영 편집(필요 시 재검수)
