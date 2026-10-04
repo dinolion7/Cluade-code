@@ -10,3 +10,7 @@
 | 3 | B | D 고용·노동 | Claude Sonnet | B_D-고용노동_ClaudeSonnet.txt |
 | 4 | B | E 연금·복지 | Claude Sonnet | B_E-연금복지_ClaudeSonnet.txt |
 | 5 | B | F 행정절차(기한·과태료·처분) | Claude Sonnet | B_F-행정절차_ClaudeSonnet.txt |
+| 6 | B | G 전월세·임대차 | Claude Sonnet | B_G-임대차_ClaudeSonnet.txt |
+| 7 | B | IT 통신·구독·기기·계정 | Claude Sonnet | B_IT-IT통신_ClaudeSonnet.txt |
+| 8 | B | (코드 미확인) 교육·입시·장학금 | Claude Sonnet | B_X1-교육_ClaudeSonnet.txt |
+| 9 | B | (코드 미확인) 자동차·보험·정비 — 화자명 "차박사" | Claude Sonnet | B_X2-자동차_ClaudeSonnet.txt |
