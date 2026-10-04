@@ -24,3 +24,7 @@
 | 12 | A | D 고용·노동 | Claude Sonnet | A_D-고용노동_ClaudeSonnet.txt |
 | 13 | A | E 연금·복지 | Claude Sonnet | A_E-연금복지_ClaudeSonnet.txt |
 | 14 | A | F 행정절차·법률 | Claude Sonnet | A_F-행정절차_ClaudeSonnet.txt |
+| 15 | A | G 부동산·임대차 | Claude Sonnet | A_G-임대차_ClaudeSonnet.txt |
+| 16 | A | IT 통신·구독·약관 | Claude Sonnet | A_IT-IT통신_ClaudeSonnet.txt |
+| 17 | A | (코드 미확인) 교육·입시·장학금 | Claude Sonnet | A_X1-교육_ClaudeSonnet.txt |
+| 18 | A | (코드 미확인) 자동차·보험·정비 | Claude Sonnet | A_X2-자동차_ClaudeSonnet.txt |
