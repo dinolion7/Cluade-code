@@ -50,24 +50,29 @@ def check(style, text):
     return r, len(re.sub(r'\s', '', t))
 
 
-run = sys.argv[1]
-agg = collections.defaultdict(lambda: collections.defaultdict(list))
-for f in sorted(glob.glob(os.path.join(ROOT, 'eval', 'runs', run, '*_*', '*', '*.md'))):
-    style = os.path.basename(os.path.dirname(os.path.dirname(f)))
-    cfg = os.path.basename(f)[:-3]
-    r, n = check(style, open(f, encoding='utf-8').read())
-    for k, v in r.items():
-        agg[(style, cfg)][k].append(v)
-    agg[(style, cfg)]['_len'].append(n)
-for style in LIMITS:
-    rows = sorted(k for k in agg if k[0] == style)
-    if not rows:
-        continue
-    keys = [k for k in agg[rows[0]] if k != '_len']
-    print(f'\n## {style} (규칙 통과 건수 / 전체)')
-    print('| 설정 | ' + ' | '.join(keys) + ' | 통과율 | 평균 글자수 |')
-    print('|---' * (len(keys) + 3) + '|')
-    for k in rows:
-        a = agg[k]
-        tot = sum(sum(a[x]) for x in keys) / sum(len(a[x]) for x in keys)
-        print(f'| {k[1]} | ' + ' | '.join(f'{sum(a[x])}/{len(a[x])}' for x in keys) + f' | {tot:.0%} | {statistics.mean(a["_len"]):.0f} |')
+def main():
+    run = sys.argv[1]
+    agg = collections.defaultdict(lambda: collections.defaultdict(list))
+    for f in sorted(glob.glob(os.path.join(ROOT, 'eval', 'runs', run, '*_*', '*', '*.md'))):
+        style = os.path.basename(os.path.dirname(os.path.dirname(f)))
+        cfg = os.path.basename(f)[:-3]
+        r, n = check(style, open(f, encoding='utf-8').read())
+        for k, v in r.items():
+            agg[(style, cfg)][k].append(v)
+        agg[(style, cfg)]['_len'].append(n)
+    for style in LIMITS:
+        rows = sorted(k for k in agg if k[0] == style)
+        if not rows:
+            continue
+        keys = [k for k in agg[rows[0]] if k != '_len']
+        print(f'\n## {style} (규칙 통과 건수 / 전체)')
+        print('| 설정 | ' + ' | '.join(keys) + ' | 통과율 | 평균 글자수 |')
+        print('|---' * (len(keys) + 3) + '|')
+        for k in rows:
+            a = agg[k]
+            tot = sum(sum(a[x]) for x in keys) / sum(len(a[x]) for x in keys)
+            print(f'| {k[1]} | ' + ' | '.join(f'{sum(a[x])}/{len(a[x])}' for x in keys) + f' | {tot:.0%} | {statistics.mean(a["_len"]):.0f} |')
+
+
+if __name__ == '__main__':
+    main()

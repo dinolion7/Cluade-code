@@ -1,5 +1,8 @@
 # 각색 프롬프트 모듈 관리
 
+- 웹에서 쓰는 방법: [USAGE.md](USAGE.md)
+- 코드(API)로 쓰는 방법: [../api/README.md](../api/README.md)
+
 ## 폴더
 - `original/` — 받은 원본 그대로 (수정 금지, 회귀 비교 기준). 목록은 `INDEX.md`
 - `src/` — 편집하는 곳
