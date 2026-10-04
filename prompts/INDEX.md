@@ -51,3 +51,6 @@
 | 37 | A | IT 통신·구독 | GPT | A_IT-IT통신_GPT.txt |
 | 38 | A | 교육·입시 | GPT | A_X1-교육_GPT.txt |
 | 39 | A | 자동차·보험·정비 | GPT | A_X2-자동차_GPT.txt |
+| 40 | A | 건강 (①각색) | GPT | A_H-건강_GPT.txt |
+| 41 | A | 건강 (②검수) | GPT | A_H-건강-1검수_GPT.txt |
+| 42 | A | 건강 (③편집) | GPT | A_H-건강-2편집_GPT.txt |
