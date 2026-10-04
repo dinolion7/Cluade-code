@@ -33,3 +33,8 @@
 | 21 | A | H 건강 — 2단계 검수 반영 편집(분기 A/B/C) | Claude Sonnet | A_H-건강-2편집_ClaudeSonnet.txt |
 
 건강 주제만 3단계 파이프라인: 각색 → 검수 보고서 → 보고서 반영 편집(필요 시 재검수)
+| 22 | B | B 대출·서민금융 | GPT | B_B-대출신용_GPT.txt |
+| 23 | B | C 세금 | GPT | B_C-세금_GPT.txt |
+| 24 | B | D 고용·노동 | GPT | B_D-고용노동_GPT.txt |
+| 25 | B | E 연금·복지 | GPT | B_E-연금복지_GPT.txt |
+| 26 | B | F 행정절차 | GPT | B_F-행정절차_GPT.txt |
