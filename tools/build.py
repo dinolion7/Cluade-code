@@ -4,7 +4,7 @@
 - base.md + topics/{주제}.md : base의 {{필드}} / {{?필드}}(없어도 됨) 자리에 주제 파일의 "@@ 필드" 블록을 넣는다.
   자리표시가 한 줄을 통째로 차지하면 여러 줄 값으로 바꾸고, 선택 필드가 비어 있으면 그 줄을 지운다.
 - base.txt + topics/{주제}.txt : 1단계 무손실 분리 형식(<<<slot NNN>>>). 아직 정리 전인 스타일용.
-- src/standalone/*.txt 는 그대로 복사한다.
+- 건강 주제가 있는 스타일은 src/health/1검수.md(공통)와 2편집.md(+스타일의 health.md)로 ②검수·③편집도 만든다.
 """
 import glob, os, re, shutil
 
@@ -101,7 +101,7 @@ def main():
     for style_dir in sorted(glob.glob(os.path.join(SRC, '*_*'))):
         style = os.path.basename(style_dir)
         persona, model = style.split('_', 1)
-        if os.path.exists(os.path.join(style_dir, 'base.md')):
+        if glob.glob(os.path.join(style_dir, 'topics', '*.md')):
             base = read(os.path.join(style_dir, 'base.md'))
             dpath = os.path.join(style_dir, 'defaults.md')
             defaults = parse_fields(read(dpath), f'{style}/defaults') if os.path.exists(dpath) else {}
@@ -120,9 +120,16 @@ def main():
                 with open(os.path.join(DIST, f'{persona}_{topic}_{model}.txt'), 'w', encoding='utf-8') as f:
                     f.write(text)
                 n += 1
-    for f in glob.glob(os.path.join(SRC, 'standalone', '*.txt')):
-        shutil.copy(f, DIST)
-        n += 1
+        # 건강 파이프라인: ②검수는 공통, ③편집은 스타일별 톤 문장(health.md)만 다르다
+        hpath = os.path.join(style_dir, 'health.md')
+        if os.path.exists(os.path.join(style_dir, 'topics', '건강.md')) and os.path.exists(hpath):
+            review = '\n'.join(read(os.path.join(SRC, 'health', '1검수.md'))).strip('\n') + '\n'
+            edit = fill(read(os.path.join(SRC, 'health', '2편집.md')),
+                        parse_fields(read(hpath), f'{style}/health'), f'{style}/health')
+            for stage, text in (('1검수', review), ('2편집', edit)):
+                with open(os.path.join(DIST, f'{persona}_건강-{stage}_{model}.txt'), 'w', encoding='utf-8') as f:
+                    f.write(text)
+                n += 1
     print(f'dist/ 에 {n}개 생성')
 
 
