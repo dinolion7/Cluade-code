@@ -47,3 +47,7 @@
 | 33 | A | D 채용·고용·노동 | GPT | A_D-고용노동_GPT.txt |
 | 34 | A | E 사회보장·복지·연금 | GPT | A_E-연금복지_GPT.txt |
 | 35 | A | F 법률·행정·민원 | GPT | A_F-행정절차_GPT.txt |
+| 36 | A | G 부동산·임대차 | GPT | A_G-임대차_GPT.txt |
+| 37 | A | IT 통신·구독 | GPT | A_IT-IT통신_GPT.txt |
+| 38 | A | 교육·입시 | GPT | A_X1-교육_GPT.txt |
+| 39 | A | 자동차·보험·정비 | GPT | A_X2-자동차_GPT.txt |
