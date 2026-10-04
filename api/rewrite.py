@@ -1,4 +1,4 @@
-"""각색 프롬프트를 API로 쓰기 위한 도구 (웹 사용이 기본이고, 이 파일은 코드로 돌릴 때만 필요).
+"""[참고용] 각색 프롬프트를 API로 쓰기 위한 도구. 웹 사용이 기본이며, 나중에 프로그램에 붙일 때 참고하는 예시 코드다.
 
 웹과 다른 점은 아래 네 가지뿐이다. 프롬프트 본문은 웹과 같은 prompts/dist/*.txt 를 그대로 쓴다.
   1. 프롬프트는 system, 원문은 user 메시지로 보낸다.
@@ -109,6 +109,12 @@ def clean(text):
     return re.sub(r'[ \t]+\n', '\n', CITATION.sub('', body)).strip() + '\n'
 
 
+def manuscript(edit_output):
+    """편집 결과(코드블럭 하나: 상태 줄 / === 원고 === / 원고 / === 끝 === / 수정 내역)에서 원고만 꺼낸다."""
+    m = re.search(r'=== 원고 ===\n(.*?)\n=== 끝 ===', edit_output, re.S)
+    return (m.group(1).strip() + '\n') if m else edit_output
+
+
 def style_of(persona, family):
     return f'{persona}_{"Claude" if family == "claude" else "GPT"}'
 
@@ -161,7 +167,7 @@ def health(call, persona, source, max_rounds=2):
             return draft, v, log
         user = (f'[검수 보고서]\n{review}\n\n[원고]\n{draft}\n\n[2차 각색 프롬프트 원문]\n{rewrite_prompt}')
         edited = call(edit_prompt, user)
-        draft = clean(edited)
+        draft = manuscript(clean(edited))
         log.append((f'③편집 {rnd}회차', edited))
     # 마지막 편집본은 재검수를 한 번 더 거친 것이 아니므로 사람이 확인해야 한다
     return draft, '재검수 필요', log
