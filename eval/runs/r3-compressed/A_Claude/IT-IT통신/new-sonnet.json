@@ -1,0 +1,1 @@
+{"model": "claude-sonnet-5-5", "stop": "max_tokens", "in": 16831, "out": 16000, "sec": 107.4}
