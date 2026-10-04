@@ -42,3 +42,8 @@
 | 28 | B | IT 통신·구독·계정 | GPT | B_IT-IT통신_GPT.txt |
 | 29 | B | 교육·입시·장학금 | GPT | B_X1-교육_GPT.txt |
 | 30 | B | 자동차·보험·정비 | GPT | B_X2-자동차_GPT.txt |
+| 31 | A | B 금융·대출·투자 | GPT | A_B-대출신용_GPT.txt |
+| 32 | A | C 세금 | GPT | A_C-세금_GPT.txt |
+| 33 | A | D 채용·고용·노동 | GPT | A_D-고용노동_GPT.txt |
+| 34 | A | E 사회보장·복지·연금 | GPT | A_E-연금복지_GPT.txt |
+| 35 | A | F 법률·행정·민원 | GPT | A_F-행정절차_GPT.txt |
