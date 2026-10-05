@@ -215,10 +215,13 @@
   작업 메모를 삭제. 주석·독스트링 외 코드는 그대로임(AST 대조로 확인).
 
 - Ver10.05 (2026-10-05): (1) "8)2차 각색"에 저장 전 모바일 문단 정리 신설 - "📱 문단
-  정리(GPT)" 체크(기본 꺼짐, ui_settings의 web2nd_para_reflow)를 켜 두면 "✅ 최종 확정"
-  때 게시판 판정과 함께 백그라운드로 돈다. GPT(gpt-4.1-mini)는 문장 번호 묶음만 JSON으로
-  답하고 코드가 원래 문장 사이에 빈 줄만 넣어 조립한다(para_* 함수). 제목·소제목·표·
-  리스트·해시태그 줄은 잠그고, 공백 뺀 전후 본문이 다르거나 응답이 잘못되면 원본 유지.
+  정리(GPT)" 체크(기본 꺼짐)와 기준 글자 수 칸(기본 150자, 80~400, ui_settings의
+  web2nd_para_reflow/web2nd_para_limit)을 두고, 켜 두면 "✅ 최종 확정" 때 게시판 판정과
+  함께 백그라운드로 돈다. 기존 문단 구분은 그대로 두고 기준을 넘는 문단만 나눈다(합치지
+  않음). 넘는 문단이 없으면 GPT를 부르지 않는다. GPT(gpt-4.1-mini)는 나눌 자리(문장 번호
+  묶음)만 JSON으로 답하고 코드가 원래 문장 그대로 이어 붙이며 나눈 자리에만 빈 줄을 넣는다
+  (para_* 함수). 제목·소제목·표·리스트·해시태그 줄은 잠그고, 공백 뺀 전후 본문이 다르거나
+  응답이 잘못되면 원본 유지.
   진행 중이면 저장을 막고, 끝나면 본문칸에 바로 반영(제목 확정 상태 유지). (2) 포스팅DB
   중복비교용 도입부·마무리를 "앞 5줄" 대신 글자 수(200자)로만 자르게 변경 - 문단을 잘게
   나눠 저장해도 같은 범위를 비교한다. (3) 버그 수정: 탭 전환 새로고침 표의 "2)질문 상세
@@ -534,15 +537,18 @@ def parse_collected_kin_questions(raw_text):
 # ══════════════════════════════════════════════════════════
 # [2026-10-05 신규] 저장 전 모바일 문단 정리 (8)2차 각색, 기본 꺼짐)
 # ──────────────────────────────────────────────────────────
-# 각색 결과의 일반 문단만 모바일에서 읽기 좋게 다시 묶는다. GPT는 본문을
-# 다시 쓰지 않고 "문장 번호를 어떻게 묶을지"만 JSON으로 답하고, 실제 조립은
-# 코드가 원래 문장 그대로 한다 - 문단 사이에 빈 줄(포스팅 프로그램의 문단
-# 구분)만 넣으므로 글자가 바뀔 수 없다. 그래도 마지막에 공백·줄바꿈을 모두
-# 뺀 전후 본문을 대조해 한 글자라도 다르면 원본을 그대로 쓴다.
+# 각색 결과는 이미 빈 줄로 문단이 나뉘어 있으므로(대부분 1~3문장, 중간값 약
+# 100자) 기존 문단 구분은 그대로 두고, 기준 글자 수(기본 150자, 8)탭에서 조정)를
+# 넘는 문단만 나눈다. 문단을 합치지는 않는다. 넘는 문단이 없으면 GPT를 부르지
+# 않는다. GPT는 본문을 다시 쓰지 않고 그 문단의 "문장 번호를 어떻게 나눌지"만
+# JSON으로 답하고, 코드가 원래 문장 그대로 다시 이어 붙이며 나눈 자리에만 빈 줄
+# (포스팅 프로그램의 문단 구분)을 넣는다. 마지막에 공백·줄바꿈을 모두 뺀 전후
+# 본문을 대조해 한 글자라도 다르면 원본을 그대로 쓴다.
 # 제목·소제목·해시태그(#), 표(|), 리스트(- * + 1.), 인용(>), 이미지,
 # 코드펜스, 구분선, 굵은 글씨만 있는 줄, [[강조]] 줄은 건드리지 않는다.
 # ══════════════════════════════════════════════════════════
 PARA_REFLOW_MODEL = "gpt-4.1-mini-2025-04-14"
+PARA_REFLOW_DEFAULT_LIMIT = 150
 
 _PARA_LOCK_PAT = re.compile(
     r'^\s*(?:#|\||>|!\[|[-*+]\s|\d+[.)]\s|`{3,}|-{3,}\s*$|\*\*[^*].*\*\*\s*$|\[\[)')
@@ -551,22 +557,22 @@ _PARA_LOCK_PAT = re.compile(
 _PARA_SENT_END_PAT = re.compile(r'[.!?…][)"\'”’」』\]]*(?=\s)')
 
 PARA_REFLOW_RULES = (
-    "당신은 네이버 블로그 글을 모바일 화면에서 읽기 좋게 문단만 다시 나누는 편집자입니다.\n"
-    "아래 [묶음]마다 번호가 붙은 문장 목록이 있습니다. 문장은 고치지 않고, 이어지는 문장들을\n"
-    "몇 개씩 한 문단으로 묶을지만 정합니다.\n\n"
+    "당신은 네이버 블로그 글을 모바일 화면에서 읽기 좋게 긴 문단만 나누는 편집자입니다.\n"
+    "아래 [문단]마다 번호가 붙은 문장 목록이 있습니다. 문장은 고치지 않고, 그 문단을\n"
+    "어디서 나눌지만 정합니다.\n\n"
     "[기준]\n"
-    "- 한 문단은 약 120자 안팎(괄호 안은 그 문장의 글자 수)\n"
-    "- 60자 이상인 긴 문장은 혼자 한 문단\n"
-    "- 짧은 문장은 2~3개를 한 문단으로 묶음\n"
-    "- 떼면 뜻이 끊기는 문장(조건·예외, 숫자·기준, 원인·결과)은 150자까지 한 문단으로 묶음\n"
+    "- 나눈 뒤 각 문단이 되도록 {limit}자 이하(괄호 안은 그 문장의 글자 수)\n"
+    "- 떼면 뜻이 끊기는 문장(조건·예외, 숫자·기준, 원인·결과)은 같은 문단에 둠\n"
+    "- 나누는 곳은 최소한으로. 한 문장짜리 짧은 조각이 생기지 않게 함\n"
+    "- 뜻이 끊겨서 나누기 어려우면 나누지 않음([[1, 2, 3]]처럼 하나로)\n"
     "- 순서는 바꾸지 않고, 모든 문장 번호를 한 번씩만, 앞에서부터 차례대로 씀\n\n"
     "[출력]\n"
-    '아래 JSON만 출력합니다: {"runs": {"묶음번호": [[1, 2], [3], [4, 5]], ...}}'
+    '아래 JSON만 출력합니다: {{"paragraphs": {{"문단번호": [[1, 2], [3]], ...}}}}'
 )
 
 
 def para_split_sentences(line):
-    """한 줄을 문장 단위로 나눈다(공백은 그대로 둔 채 잘라서 다시 이어 붙이면 원문과 같다)."""
+    """한 줄을 문장 단위로 나눈다(앞뒤 공백만 떼므로 이어 붙이면 원문과 글자가 같다)."""
     out, start = [], 0
     for m in _PARA_SENT_END_PAT.finditer(line):
         out.append(line[start:m.end()].strip())
@@ -574,40 +580,43 @@ def para_split_sentences(line):
     rest = line[start:].strip()
     if rest:
         out.append(rest)
-    return [s for s in out if s]
-
-
-def para_find_runs(md_text):
-    """본문을 줄 단위로 보고, 잠금 줄 사이에 있는 일반 문단 덩어리(run)를 찾는다.
-    반환: (lines, runs) - runs는 [(시작줄, 끝줄, [문장, ...]), ...]이며 끝줄 포함.
-    run은 일반 문단 줄로 시작하고 끝나며, 사이의 빈 줄(기존 문단 구분)을 포함한다."""
-    lines = md_text.split('\n')
-    kinds = []
-    for ln in lines:
-        if not ln.strip():
-            kinds.append('B')
-        elif _PARA_LOCK_PAT.match(ln):
-            kinds.append('L')
+    out = [s for s in out if s]
+    # 문단 중간의 [[강조]]가 나뉜 뒤 줄 맨 앞으로 오지 않도록 앞 문장에 붙여 둔다.
+    merged = []
+    for s in out:
+        if merged and s.startswith('[['):
+            merged[-1] = merged[-1] + " " + s
         else:
-            kinds.append('P')
-    runs, i, n = [], 0, len(lines)
+            merged.append(s)
+    return merged
+
+
+def para_find_paragraphs(md_text):
+    """빈 줄·잠금 줄로 구분되는 일반 문단을 찾는다.
+    반환 (lines, paras) - paras는 [(시작줄, 끝줄, [문장, ...], 글자수), ...](끝줄 포함).
+    글자수는 문장을 공백 하나로 이어 붙인 길이(공백 포함)."""
+    lines = md_text.split('\n')
+    paras, i, n = [], 0, len(lines)
     while i < n:
-        if kinds[i] != 'P':
+        ln = lines[i]
+        if not ln.strip() or _PARA_LOCK_PAT.match(ln):
             i += 1
             continue
         j = i
-        k = i + 1
-        while k < n and kinds[k] in ('P', 'B'):
-            if kinds[k] == 'P':
-                j = k
-            k += 1
+        while j + 1 < n and lines[j + 1].strip() and not _PARA_LOCK_PAT.match(lines[j + 1]):
+            j += 1
         sents = []
-        for ln in lines[i:j + 1]:
-            if ln.strip():
-                sents.extend(para_split_sentences(ln))
-        runs.append((i, j, sents))
+        for x in lines[i:j + 1]:
+            sents.extend(para_split_sentences(x))
+        paras.append((i, j, sents, len(" ".join(sents))))
         i = j + 1
-    return lines, runs
+    return lines, paras
+
+
+def para_long_targets(md_text, limit):
+    """기준 글자 수를 넘고 문장이 2개 이상인(나눌 수 있는) 문단만 [(문단순번, 문장들, 글자수)]."""
+    _, paras = para_find_paragraphs(md_text)
+    return [(k + 1, p[2], p[3]) for k, p in enumerate(paras) if p[3] > limit and len(p[2]) >= 2]
 
 
 def para_valid_groups(groups, n):
@@ -622,28 +631,28 @@ def para_valid_groups(groups, n):
     return flat == list(range(1, n + 1))
 
 
-def para_apply_groups(md_text, runs_groups):
-    """runs_groups({run 순번(1부터): [[1,2],[3]]})대로 문단을 다시 조립한다.
-    묶음이 잘못된 run은 원래 모양 그대로 둔다. 반환 (새 본문, 바뀐 run 수, 잘못된 run 수)."""
-    lines, runs = para_find_runs(md_text)
+def para_apply_splits(md_text, splits):
+    """splits({문단순번: [[1,2],[3]]})대로 해당 문단만 나눈다. 나머지 문단·줄은 그대로.
+    묶음이 잘못됐거나 하나로 둔 문단은 손대지 않는다. 반환 (새 본문, 나눈 문단 수, 잘못된 응답 수)."""
+    lines, paras = para_find_paragraphs(md_text)
     changed = invalid = 0
-    for idx in range(len(runs), 0, -1):
-        s, e, sents = runs[idx - 1]
-        groups = runs_groups.get(idx)
-        if groups is None:
+    for idx in range(len(paras), 0, -1):
+        if idx not in splits:
             continue
+        s, e, sents, _ = paras[idx - 1]
+        groups = splits[idx]
         if not para_valid_groups(groups, len(sents)):
             invalid += 1
             continue
-        new_paras = [" ".join(sents[k - 1] for k in g) for g in groups]
+        if len(groups) < 2:
+            continue
         new_lines = []
-        for p_i, p in enumerate(new_paras):
-            if p_i:
+        for g_i, g in enumerate(groups):
+            if g_i:
                 new_lines.append("")
-            new_lines.append(p)
-        if new_lines != lines[s:e + 1]:
-            changed += 1
+            new_lines.append(" ".join(sents[k - 1] for k in g))
         lines[s:e + 1] = new_lines
+        changed += 1
     return "\n".join(lines), changed, invalid
 
 
@@ -652,23 +661,23 @@ def para_same_text(a, b):
     return re.sub(r'\s', '', a) == re.sub(r'\s', '', b)
 
 
-def para_reflow_with_gpt(openai_client, md_text, model=PARA_REFLOW_MODEL):
-    """GPT에게 문장 묶음만 받아 문단을 다시 나눈다.
+def para_reflow_with_gpt(openai_client, md_text, limit=PARA_REFLOW_DEFAULT_LIMIT, model=PARA_REFLOW_MODEL):
+    """기준 글자 수를 넘는 문단만 GPT에게 나눌 자리를 받아 나눈다.
     반환 (새 본문 또는 None, 안내 문구). None이면 원본을 그대로 쓴다."""
-    _, runs = para_find_runs(md_text)
-    targets = [(i + 1, r[2]) for i, r in enumerate(runs) if len(r[2]) >= 2]
+    targets = para_long_targets(md_text, limit)
     if not targets:
-        return None, "나눌 문단 없음(원본 유지)"
+        return None, f"{limit}자 넘는 문단 없음 - GPT 호출 안 함(원본 유지)"
     parts = []
-    for rid, sents in targets:
-        parts.append(f"[묶음 {rid}]")
-        parts.extend(f"{k}. ({len(s)}자) {s}" for k, s in enumerate(sents, 1))
+    for pid, sents, total in targets:
+        parts.append(f"[문단 {pid}] (전체 {total}자)")
+        parts.extend(f"{k}. ({len(x)}자) {x}" for k, x in enumerate(sents, 1))
         parts.append("")
     resp = openai_client.chat.completions.create(
         model=model,
-        messages=[{"role": "user", "content": PARA_REFLOW_RULES + "\n\n" + "\n".join(parts)}],
+        messages=[{"role": "user",
+                   "content": PARA_REFLOW_RULES.format(limit=limit) + "\n\n" + "\n".join(parts)}],
         temperature=0,
-        max_tokens=1500,
+        max_tokens=800,
         response_format={"type": "json_object"},
     )
     raw = (resp.choices[0].message.content or "").strip()
@@ -677,21 +686,24 @@ def para_reflow_with_gpt(openai_client, md_text, model=PARA_REFLOW_MODEL):
     except Exception:
         m = re.search(r'\{.*\}', raw, re.S)
         data = json.loads(m.group(0)) if m else {}
-    runs_groups = {}
-    for k, v in (data.get("runs") or {}).items():
+    wanted = {pid for pid, _, _ in targets}
+    splits = {}
+    for k, v in (data.get("paragraphs") or {}).items():
         try:
-            runs_groups[int(k)] = v
+            k = int(k)
         except (TypeError, ValueError):
-            pass
-    new_text, changed, invalid = para_apply_groups(md_text, runs_groups)
+            continue
+        if k in wanted:
+            splits[k] = v
+    new_text, changed, invalid = para_apply_splits(md_text, splits)
     if not para_same_text(md_text, new_text):
         return None, "대조 실패 - 원본 유지"
-    if new_text == md_text:
-        return None, "바꿀 문단 없음(원본 유지)" + (f", 잘못된 응답 {invalid}곳 무시" if invalid else "")
-    msg = f"문단 {changed}곳 정리 완료"
+    note = f"{limit}자 넘는 문단 {len(targets)}개 중 {changed}개 나눔"
     if invalid:
-        msg += f"(잘못된 응답 {invalid}곳은 원래대로)"
-    return new_text, msg
+        note += f"(잘못된 응답 {invalid}개는 그대로)"
+    if new_text == md_text:
+        return None, note + " - 바뀐 것 없음(원본 유지)"
+    return new_text, note
 
 
 def extract_posting_core(md_text, title=""):
@@ -8593,13 +8605,27 @@ class MarkdownExtractorGUI:
         self.web2nd_dup_threshold_var.trace_add("write", _save_web2nd_dup_threshold)
 
         # [2026-10-05 신규] 저장 전 모바일 문단 정리(GPT) - 기본 꺼짐. 켜 두면
-        # "✅ 최종 확정" 때 게시판 판정과 함께 백그라운드로 돌고, 결과가 본문칸에
-        # 바로 반영된다(para_reflow_with_gpt 참고). 글 1개당 GPT 호출 1번.
+        # "✅ 최종 확정" 때 게시판 판정과 함께 백그라운드로 돌고, 기준 글자 수를
+        # 넘는 문단만 나눠 본문칸에 바로 반영한다(para_reflow_with_gpt 참고).
+        # 넘는 문단이 없으면 GPT를 부르지 않고, 있으면 글 1개당 호출 1번.
         self.web2nd_para_reflow_var = tk.BooleanVar(
             value=bool(self.load_kin_ui_setting('web2nd_para_reflow', False)))
         ttk.Checkbutton(btn_frame, text="📱 문단 정리(GPT)",
                         variable=self.web2nd_para_reflow_var,
-                        command=self._web2nd_on_para_reflow_toggled).pack(side=tk.LEFT, padx=(0, 8))
+                        command=self._web2nd_on_para_reflow_toggled).pack(side=tk.LEFT, padx=(0, 2))
+        # 이 글자 수(공백 포함)를 넘는 문단만 나눈다. 재실행 후에도 유지.
+        self.web2nd_para_limit_var = tk.IntVar(
+            value=self.load_kin_ui_setting('web2nd_para_limit', PARA_REFLOW_DEFAULT_LIMIT))
+        ttk.Spinbox(btn_frame, from_=80, to=400, increment=10, width=4,
+                    textvariable=self.web2nd_para_limit_var).pack(side=tk.LEFT)
+        ttk.Label(btn_frame, text="자 넘으면").pack(side=tk.LEFT, padx=(2, 8))
+
+        def _save_web2nd_para_limit(*_):
+            try:
+                self.save_kin_ui_setting('web2nd_para_limit', int(self.web2nd_para_limit_var.get()))
+            except (tk.TclError, ValueError):
+                pass  # 입력 중 빈 값/잘못된 값이면 저장을 건너뛴다
+        self.web2nd_para_limit_var.trace_add("write", _save_web2nd_para_limit)
         self._web2nd_para_token = 0
         self._web2nd_para_pending = False
 
@@ -9028,14 +9054,19 @@ class MarkdownExtractorGUI:
             self.web2nd_para_info_var.set("📱 문단 정리: OpenAI 키가 없어 건너뜀(원본 그대로 저장)")
             return
         text = self.web2nd_text.get("1.0", "end-1c")
+        try:
+            limit = int(self.web2nd_para_limit_var.get())
+        except (tk.TclError, ValueError):
+            limit = PARA_REFLOW_DEFAULT_LIMIT
+        limit = min(400, max(80, limit))
         self._web2nd_para_token += 1
         token = self._web2nd_para_token
         self._web2nd_para_pending = True
-        self.web2nd_para_info_var.set("⏳ 문단 정리 중... (끝나면 본문칸에 바로 반영)")
+        self.web2nd_para_info_var.set(f"⏳ 문단 정리 중({limit}자 넘는 문단)... 끝나면 본문칸에 바로 반영")
 
         def worker():
             try:
-                res = para_reflow_with_gpt(self.openai_client, text)
+                res = para_reflow_with_gpt(self.openai_client, text, limit)
             except Exception as e:
                 res = (None, f"GPT 오류로 원본 유지({str(e)[:60]})")
             self.root.after(0, lambda: self._web2nd_apply_para_reflow(token, text, res))
