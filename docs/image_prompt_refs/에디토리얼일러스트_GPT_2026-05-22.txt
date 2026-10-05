@@ -1,0 +1,311 @@
+[MASTER META PROMPT — Korean Commercial Editorial Thumbnail Generator]
+
+Create a 1024x1024 square thumbnail image.
+
+Analyze the provided article title and full article content, then determine the single most emotionally compelling and visually understandable real-life moment that best represents the core concern, decision, psychological tension, practical situation, or lifestyle context described in the article.
+
+The generated image should NOT literally summarize the article and should NOT rely on obvious symbolic graphics or infographic-style visual metaphors. Instead, communicate the topic naturally through believable human behavior, realistic object interaction, subtle emotional expression, and clean commercial composition optimized for Korean editorial thumbnails.
+
+====================
+[CONTENT INPUT]
+
+Title:
+{TITLE}
+
+Article:
+{FULL_ARTICLE}
+
+====================
+
+[VISUAL OBJECTIVE]
+
+Generate a clean modern Korean commercial editorial-style illustration that immediately communicates:
+- the emotional concern
+- the practical situation
+- the lifestyle context
+- the key decision-making moment
+- the emotional meaning behind the article
+
+The image must feel:
+- trustworthy
+- modern
+- emotionally restrained
+- natural and believable but clearly illustrated
+- commercially polished
+- informative rather than dramatic
+- optimized for Korean healthcare, education, IT, automotive, finance, tax, legal, insurance, real-estate, welfare, policy, labor, or lifestyle blog content
+
+====================
+[STYLE DIRECTION]
+
+Style:
+Modern Korean commercial semi-flat editorial illustration
+
+Rendering:
+- ultra-clean thin linework
+- smooth geometric structure
+- delicate semi-flat shading
+- subtle dimensional depth
+- minimal texture rendering
+- polished commercial illustration aesthetics
+- clean Korean advertising-style composition
+- soft high-key rendering
+- simplified realistic anatomy
+
+Lighting:
+- softly diffused natural daylight
+- bright indoor lighting
+- soft shadow transitions
+- no dramatic cinematic contrast
+
+Color Palette:
+
+Select the primary color palette dynamically based on the article topic while maintaining a soft low-saturation Korean commercial editorial aesthetic.
+
+Topic-based palette guidelines:
+
+- Healthcare / Wellness:
+  refreshing mint green, soft white, muted aqua, light neutral beige
+
+- Education:
+  soft sky blue, warm ivory, muted navy accents, clean beige
+
+- IT / Technology:
+  cool blue, silver gray, muted cyan, soft graphite tones
+
+- Automotive:
+  deep navy, metallic gray, muted steel blue, dark neutral tones
+
+- Economy / Finance / Tax / Real-Estate / Welfare:
+  deep blue, muted beige, soft navy, warm gray accents
+
+- Society / Labor / Legal:
+  charcoal gray, muted brown, soft neutral beige, restrained dark blue accents
+
+Maintain:
+- low-saturation colors
+- soft commercial harmony
+- calm editorial aesthetics
+- clean Korean lifestyle advertising tone
+
+Avoid:
+- oversaturated colors
+- neon palettes
+- strong primary colors
+- excessive contrast
+
+Mood:
+- calm thoughtful concern
+- careful consideration
+- emotionally restrained realism
+- psychologically relatable
+- subtle commercial lifestyle atmosphere
+
+====================
+[CHARACTER RULES]
+
+When appropriate, generate:
+- Korean men or women matching the implied demographic
+- natural Korean appearance
+- realistic Korean fashion and hairstyle
+- clean modern styling
+- relatable everyday presentation
+
+Facial expressions should remain:
+- subtle
+- thoughtful
+- cautious
+- mildly concerned
+- focused
+- emotionally restrained
+
+Avoid:
+- exaggerated emotion
+- dramatic acting
+- panic
+- crying
+- screaming
+- comedy/cartoon expressions
+
+====================
+[COMPOSITION RULES]
+
+Preferred composition:
+- eye-level perspective
+- medium shot framing
+- centered or slightly asymmetrical layout
+- uncluttered composition
+- strong focal clarity
+- thumbnail readability prioritized
+
+The image should focus on:
+- one believable everyday action
+- one natural emotional moment
+- realistic interaction with ordinary objects
+
+Use:
+- realistic everyday objects
+- believable lifestyle situations
+- natural human behavior
+- commercially realistic environments
+
+Avoid:
+- floating symbols
+- infographic-style icons
+- abstract visual metaphors
+- glowing concept graphics
+- UI-style symbolic panels
+- artificial symbolic cards
+- exaggerated conceptual imagery
+
+The meaning of the article should be communicated naturally through:
+- facial expression
+- body language
+- object interaction
+- surrounding environment
+- practical real-life context
+
+====================
+[BACKGROUND RULES]
+
+Backgrounds should use:
+- minimalist modern Korean interiors
+- clinics
+- living rooms
+- offices
+- consultation rooms
+- cafés
+- financial consultation spaces
+- realistic lifestyle environments
+
+Include:
+- large windows
+- soft daylight
+- indoor plants
+- subtle furniture
+- clean architectural lines
+
+Avoid:
+- cluttered environments
+- chaotic decoration
+- crowded scenes
+
+====================
+[IMPORTANT NEGATIVE RULES]
+
+No readable text anywhere.
+
+All:
+- documents
+- screens
+- phones
+- labels
+- medicine bottles
+- signs
+- papers
+- cards
+- monitors
+
+must remain completely blank.
+
+Do not generate:
+- logos
+- UI text
+- subtitles
+- infographic typography
+- watermarks
+- floating icons
+- symbolic overlays
+- conceptual interface graphics
+
+Avoid:
+- photorealistic rendering
+- realistic skin pores
+- painterly brush textures
+- gritty realism
+- dramatic shadows
+- cinematic lighting
+- DSLR photography appearance
+- depth-of-field blur
+- anime styling
+- webtoon aesthetics
+- concept art rendering
+- movie poster aesthetics
+- hyper-detailed textures
+- guns
+- firearms
+- illegal drugs
+- drug abuse imagery
+- violent crime imagery
+- exposed internal organs
+- anatomical body parts
+- skeletons
+- skulls
+- gore
+- grotesque body horror
+- disturbing medical imagery
+- graphic injuries
+- disgusting or horrifying visual elements
+
+Also avoid any imagery involving guns, firearms, illegal drugs, violent crime, exposed organs, skeletons, skulls, gore, disturbing medical imagery, graphic injuries, or grotesque visual elements.
+
+====================
+[THUMBNAIL OPTIMIZATION]
+
+The image must:
+- remain visually readable at small mobile thumbnail size
+- communicate the topic within 1–2 seconds
+- maintain clean focal hierarchy
+- emphasize emotional clarity over visual complexity
+- feel premium and commercially trustworthy
+
+The final result should resemble:
+a premium Korean commercial editorial thumbnail illustration commonly used in modern Korean blogs, hospital advertisements, financial marketing materials, educational editorial content, legal informational media, IT promotional content, automotive campaigns, and lifestyle editorial platforms.
+
+The final output image prompt must always be written entirely in natural English optimized for AI image generation models, regardless of the original input language.
+
+The final output must always include the exact header:
+
+[Image Generation Prompt]
+
+====================
+[Image Generation Prompt]
+
+Generate a clean modern Korean commercial semi-flat editorial illustration, not a photograph. Use ultra-clean thin linework, smooth semi-flat shading, minimal facial texture rendering, soft high-key lighting, simplified realistic anatomy, polished Korean advertising-style composition, and subtle dimensional depth.
+
+Select colors dynamically according to the article topic while maintaining soft low-saturation commercial harmony:
+- healthcare/wellness → mint green and soft white
+- education → soft sky blue and warm ivory
+- IT/technology → cool blue and silver gray
+- automotive → deep navy and metallic gray
+- economy/finance/tax/real-estate/welfare → deep blue and muted beige
+- society/labor/legal → charcoal gray and muted brown
+
+Maintain:
+- emotionally restrained expressions
+- natural everyday behavior
+- realistic object interaction
+- uncluttered composition
+- minimalist Korean interiors
+- clean lifestyle-oriented environments
+- premium Korean commercial editorial aesthetics
+- strong thumbnail readability
+
+Communicate the topic naturally through believable human actions and realistic lifestyle situations rather than artificial symbols or infographic-style graphics.
+
+Avoid:
+- photorealistic rendering
+- painterly textures
+- dramatic cinematic lighting
+- floating icons
+- symbolic panels
+- conceptual UI graphics
+- anime styling
+- webtoon aesthetics
+- exaggerated facial acting
+- gritty realism
+- DSLR photography appearance
+- depth-of-field blur
+- hyper-detailed textures
+
+The final image should resemble a premium Korean healthcare, education, finance, legal, insurance, tax, real-estate, automotive, IT, welfare, or lifestyle commercial editorial thumbnail illustration commonly used in Korean advertisements, marketing materials, and modern Naver blog editorial content.
