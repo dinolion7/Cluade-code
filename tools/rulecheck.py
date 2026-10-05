@@ -1,4 +1,5 @@
-"""결과물의 형식 규칙을 자동으로 센다(채점 없이 무료로 비교). 사용: python3 tools/rulecheck.py <run이름>"""
+"""결과물의 형식 규칙을 자동으로 센다(채점 없이 무료로 비교).
+사용: python3 tools/rulecheck.py <run이름>  또는  python3 tools/rulecheck.py <결과 파일> <스타일(A_Claude·B_Claude·A_GPT·B_GPT)>"""
 import collections, glob, os, re, statistics, sys
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
@@ -6,6 +7,7 @@ LIMITS = {  # 스타일별 볼드 상한, 표 상한, 리스트 상한, 해시�
     'A_Claude': (4, 2, 2, (3, 5)), 'B_Claude': (4, 2, 2, (3, 5)),
     'A_GPT': (6, 2, 2, (3, 6)), 'B_GPT': (6, 3, 2, (3, 6)),
 }
+FAIL_TRACE = re.compile(r'확인되지 않|확인이 되지 않|단정하기 어렵|공식 자료가 제한|직접 확인하셔야|확인 필수|확인불가|확인 불가|퍼플렉시티|팩트체크|리서치 결과|조사 결과')
 QTABLE = {2: (0, 1), 3: (1, 1), 4: (2, 2), 5: (2, 2), 6: (2, 3), 7: (3, 3), 8: (3, 3)}
 
 
@@ -31,6 +33,7 @@ def check(style, text):
             tags = re.findall(r'(?<!\S)#[^\s#]+', l)
             break
     titles = [l for l in lines if re.match(r'# [^#]', l)]
+    title = titles[0][2:].strip() if titles else ''
     bmax, tmax, lmax, (hmin, hmax) = LIMITS[style]
     r = {
         '제목1개': len(titles) == 1,
@@ -41,7 +44,16 @@ def check(style, text):
         f'해시태그{hmin}~{hmax}': hmin <= len(tags) <= hmax,
         '인용마커없음': not re.search(r'contentReference|oaicite|【|\[\d+\]', t),
         '소제목≤8': len(subs) <= 8,
+        '제목≤60자': 0 < len(title) <= 60,
+        '제목쉼표1개': title.count(',') == 1,
+        '천단위쉼표없음': not re.search(r'\d,\d{3}', title),
+        '소제목특수문자없음': not any(re.search(r'[-:/()\[\]]', s) or s.count('?') > 1 for s in subs),
+        '해시태그기호없음': all(re.fullmatch(r'#[가-힣A-Za-z0-9]+', g) for g in tags),
+        '확인실패문장없음': not FAIL_TRACE.search(t),
     }
+    q3 = any(all(s.endswith('?') for s in subs[i:i + 3]) for i in range(len(subs) - 2))
+    if style == 'B_Claude':
+        r['질문형3연속없음'] = not q3
     if style == 'B_GPT':
         q = sum(s.endswith('?') for s in subs)
         lo, hi = QTABLE.get(len(subs), (0, len(subs)))
@@ -51,6 +63,12 @@ def check(style, text):
 
 
 def main():
+    if len(sys.argv) == 3 and os.path.isfile(sys.argv[1]):  # 결과물 한 편 점검: rulecheck.py <파일> <스타일>
+        r, n = check(sys.argv[2], open(sys.argv[1], encoding='utf-8').read())
+        for k, v in r.items():
+            print(('통과 ' if v else '실패 ') + k)
+        print(f'글자수(공백 제외) {n}')
+        return
     run = sys.argv[1]
     agg = collections.defaultdict(lambda: collections.defaultdict(list))
     for f in sorted(glob.glob(os.path.join(ROOT, 'eval', 'runs', run, '*_*', '*', '*.md'))):
