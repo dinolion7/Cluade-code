@@ -26,6 +26,7 @@
 | `tools/rulecheck.py` | 결과물 형식 점검: `python3 tools/rulecheck.py <결과 파일> <A_Claude|B_Claude|A_GPT|B_GPT>` |
 | `eval/` | 예전 모델 비교 실험 결과(참고용). `eval/samples/`는 사용자가 준 실제 최종 결과물 — 프로그램 기능 설계·시험 때 먼저 본다 |
 | `program/` | 지식인 관리 프로그램 `kin_manager.py`(Ver10.05, CRLF). 탭 구성·저장 흐름·문단 정리·바뀐 점은 `program/README.md` |
+| `program/welfare_manager.py` | 복지로 관리 프로그램(받은 그대로, final ver 10.04, 2026-10-04). 원래 파일명 welfare_collector_gui |
 | `program/policy_news_manager.py` | 정책뉴스 관리 프로그램(Ver10.06, LF). 프롬프트 한 세트(0·A·B·C), 속마음 후킹 제목 점검, 저장 전 문단 정리(GPT, 기본 꺼짐). 바뀐 점은 `program/README.md` |
 
 각 폴더의 README와 프롬프트 메모 블록(정책·복지로)·`_메모` 필드(지식인 topics)에 변경 근거가 있다.
