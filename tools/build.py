@@ -130,6 +130,15 @@ def main():
                 with open(os.path.join(DIST, f'{persona}_건강-{stage}_{model}.txt'), 'w', encoding='utf-8') as f:
                     f.write(text)
                 n += 1
+    # 앞단계(지식인 1~4)와 정책뉴스·복지로는 조립 없이 원본을 그대로 복사해, 최종본을 dist 한곳에 모은다
+    for sub, folder, skip in (('pipeline', '지식인_앞단계', 'README.md'), ('policy', '정책복지로', 'README.md')):
+        out = os.path.join(DIST, folder)
+        shutil.rmtree(out, ignore_errors=True)
+        os.makedirs(out)
+        for src in sorted(glob.glob(os.path.join(ROOT, sub, '*.md'))):
+            if os.path.basename(src) != skip:
+                shutil.copy(src, os.path.join(out, os.path.basename(src)[:-3] + '.txt'))
+                n += 1
     print(f'dist/ 에 {n}개 생성')
 
 
