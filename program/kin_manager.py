@@ -206,6 +206,13 @@
   관련 함수(semi_match_boards/semi_lookup_saved_boards/semi_collect_article_texts)를
   11)탭에서 제거. 8)2차 각색의 게시판 판정(semi_load_board_config/semi_gpt_pick_board/
   semi_keyword_pick_board)은 그대로 유지.
+
+- 2026-10-05: [주석 정리 - 코드 동작 변경 없음] 탭 번호가 바뀐 뒤 남아 있던 옛 탭 이름
+  (0)/0-1)/1)퍼플렉시티수집/2-1)/4)웹1차/5)웹2차/7)종합관리/8)반자동이식/9)통합 키워드 등)을
+  현재 탭 이름으로 바로잡고, 삭제된 기능(대안 후보 3개, 우측 캔버스, 종합완성판)을 현재
+  기능처럼 설명하던 주석, 반환값(True/False→문자열)·썸네일 폴백 등 코드와 다른 주석을
+  고침. 주석 처리된 옛 코드, "기존 코드 그대로"/"✅ 추가!"/"row=1에서 2로 변경" 같은
+  작업 메모를 삭제. 주석·독스트링 외 코드는 그대로임(AST 대조로 확인).
 """
 import re
 import os
@@ -334,8 +341,7 @@ def open_folder(path: str):
 # 생성 서비스가 우측 하단에 붙이는 워터마크 심볼은 직접 지우기 어렵다
 # (주변 배경까지 같이 뭉개짐). 대신 그 자리를 별도 이미지(앵커 이미지 —
 # 예: 인물 캐릭터)로 덮어 가리는 방식은 배경 손상 없이 간단하게 처리된다.
-# PIL(Pillow)이 없으면 8번 탭 자체를 안내 문구로 대체하고, 이 영역의
-# 함수들은 호출되지 않는다.
+# 지금은 이 함수들을 호출하는 탭이 없다(워터마크 탭은 삭제되고 코드만 남음).
 
 SUPPORTED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 WM_OUTPUT_SUBFOLDER = "_워터마크가림"
@@ -420,7 +426,7 @@ def get_current_public_ip():
 # [지식인 중복체크] 질문DB / 포스팅DB 공용 엔진 (정책뉴스 컨셉 적용)
 # - 주제(=블로그)별로 DB를 분리한다: base_folder/주제/질문DB.json, 포스팅DB.json
 # - 질문DB: 저장 시 자동 차단만 하고 삭제는 없음 (계속 누적)
-# - 포스팅DB: 저장(=포스팅) 시 자동 차단, 종합관리 탭에서 수동 삭제 가능
+# - 포스팅DB: 저장(=포스팅) 시 자동 차단, 12)포스팅 이력관리 탭에서 수동 삭제 가능
 # ════════════════════════════════════════════════════════════
 
 _KIN_NUM_PAT = re.compile(
@@ -443,7 +449,7 @@ KIN_PROMPT_CONTINUITY_NOTICE = """※ 작업 방식 안내
 """
 
 # [Ver7.81 신규, Ver8.21 수정] "8)2차각색(웹)" 전용 안내 문구. 위
-# KIN_PROMPT_CONTINUITY_NOTICE는 1)질문선별/1차각색 등 4곳에도 공용으로
+# KIN_PROMPT_CONTINUITY_NOTICE는 2)·3)·4)·7)탭의 "프롬프트만 복사"에도 공용으로
 # 쓰이므로 2차각색에만 별도로 분리했었다. [Ver8.21] 탭이 완전히 분리된
 # 지금은 한 대화창에서 2차각색만 연속으로 진행되고 인포그래픽과 번갈아
 # 오지 않으므로, 라벨 기반 구분 지시를 빼고 공용 KIN_PROMPT_CONTINUITY_
@@ -474,12 +480,10 @@ KIN_THUMBNAIL_PROMPT_CONTINUITY_NOTICE = """※ 작업 방식 안내
 
 """
 
-# [Ver7.81 신규] "자료만 복사" 시 자동으로 붙는 구분 라벨 - 8)2차각색(웹)과
-# 썸네일/인포그래픽이 같은 대화창에서 번갈아 쓰인다는 점이 확인되어, AI가
-# 매 순간 "지금 이 자료가 어느 작업 차례인지"를 헷갈리지 않도록 자료
-# 텍스트 맨 앞에 붙인다. 완성본(md_text)을 그대로 재사용하는 인포그래픽
-# 자료와, 1차각색 결과를 다듬는 2차각색 자료가 겉보기엔 둘 다 "글"이라
-# 라벨 없이는 AI 쪽에서 구분할 근거가 없다.
+# [Ver7.81 신규] 8)2차 각색 "자료만 복사" 시 원고 맨 앞에 붙는 구분 라벨.
+# 2차각색과 썸네일/인포그래픽을 같은 대화창에서 번갈아 쓰던 때 AI가 어느
+# 작업 차례인지 헷갈리지 않게 하려고 넣었다. 썸네일 쪽 라벨
+# (KIN_THUMBNAIL_MATERIAL_LABEL)은 2026-08-24부터 빈 값이라 붙지 않는다.
 KIN_WEB2ND_MATERIAL_LABEL = "[2차각색 자료]\n아래 원고를 방금 전달한 2차각색 프롬프트 규칙대로 다듬어 주세요.\n\n"
 KIN_THUMBNAIL_MATERIAL_LABEL = ""  # 기본값을 공백으로하여 지시문 제거 (2026-08-24)
 
@@ -544,18 +548,15 @@ KIN_THUMBNAIL_GROUP_MAP = {
     "교육": "교육",
     "자동차": "자동차",
 }
-# [Ver7.20 추가] KIN_THUMBNAIL_GROUP_MAP은 예전 "그룹+작업폴더 자동탐색"
-# 폴백에서만 쓰였는데 그 폴백을 제거하면서 더 이상 코드에서 참조되지
-# 않는다. 삭제하지 않고 남겨둔 이유는 "경제-A-거시경제-경기-통화-금리"
-# 처럼 현재 사용하지 않는 세부주제를 나중에 다시 쓰게 될 때 참고용으로
-# 남겨두기 위함이며, 동작에는 영향이 없다.
+# [Ver7.20] KIN_THUMBNAIL_GROUP_MAP은 예전 "그룹+작업폴더 자동탐색" 폴백용이다.
+# 폴백을 없앤 뒤로는 _get_kin_thumbnail_group만 이 값을 읽는데, 그 함수도
+# 지금은 호출되지 않는다. 나중에 세부주제를 다시 쓸 때 참고용으로 남겨 둔다.
 
-# [Ver7.20 추가] 재미나이(Gemini) 변환 프롬프트는 주제별이 아니라 전체
-# 주제 공용 1개 파일이다(도메인 스타일은 이미 썸네일 프롬프트 단계에서
-# 반영되고, 이 단계는 "GPT 문법 → 재미나이 문법" 변환만 담당하기
-# 때문). load_kin_thumbnail_prompts()/save_kin_thumbnail_prompts()가
-# 쓰는 {주제: 파일명} 딕셔너리에 이 예약 키로 함께 저장해, 별도 JSON
-# 파일을 새로 만들지 않고 기존 저장 구조를 그대로 재사용한다.
+# [Ver7.20 추가 → Ver7.58 변경] 재미나이(Gemini) 변환 프롬프트의 예전 공용 키.
+# 처음에는 전체 주제 공용 1개 파일이었고, Ver7.58부터 주제별로 지정한다
+# (_kin_gemini_key). 이 키는 주제별 값이 비어 있을 때의 폴백으로만 쓰인다
+# (_kin_get_gemini_prompt_filename). 썸네일 프롬프트와 같은 {주제: 파일명}
+# 딕셔너리에 이 예약 키로 함께 저장한다.
 KIN_THUMBNAIL_GEMINI_KEY = "__GEMINI_CONVERTER__"
 
 
@@ -603,7 +604,7 @@ def extract_question_core(title, question_text):
 
 
 # ── [Ver7.08 추가] 사전 필터링(질문 선별) 관련 파싱 함수 ──────────
-# 0단계 저장 시 자동생성_{주제}.txt에 누적되는 형식:
+# 1)질문수집 저장 시 자동생성_{주제}.txt에 누적되는 형식:
 #   \n{'='*60}\n[YYYY-MM-DD HH:MM:SS]\n{질문 원문(제목+본문)}\n
 # 을 개별 질문 블록으로 분리하고, 사전 필터링 AI 응답에서
 # "## 리서치 대상 선별 목록"만 뽑아내는 역할을 한다.
@@ -1231,19 +1232,14 @@ def open_naver_search_in_chrome(keyword: str, blog_only: bool = False) -> bool:
     return True
 
 
-#pip uninstall google-generativeai -y
-#pip install google-genai
 
 ### 주제 및 카테고리 폴더
 # Naver_blog_kin_topic_classify_config
 # 주제 카테고리 폴더 생성방식이 수동과 반자동이 조금 다름 (코드 통합하지 말 것)
 # 사람이 화면에서 보고 선택하는 구조- 드롭다운 -경제A (약어)화면 표시 -> 경제-A-거시경제-경기-통화-금리(변환 테이블 거침)
 
-# 주제 매핑 설정
-# self.kin_mapping_file = "Naver_blog_config_지식인.json"
 
 class MarkdownExtractorGUI:
-# __init__ 메서드 수정 - 처음부터 센터에 창 생성
     def __init__(self, root):
         
         self.root = root
@@ -1253,7 +1249,7 @@ class MarkdownExtractorGUI:
         # 창 크기와 위치를 한번에 설정 (처음부터 센터에 생성)
         window_width = 1650  # [Ver7.85 수정] 1500 -> 1650 ("9)썸네일/인포그래픽" 탭 신설로
         # 버튼 5개(썸네일 프롬프트 복사~프롬프트 설정)가 한 줄에 들어갈 가로 여유 확보
-        window_height = 980  # 0)주제 분류 탭에 네이버 지식인 접속 UI가 추가되어 늘어난 높이 반영
+        window_height = 980  # 1)질문수집 탭에 네이버 지식인 접속 UI가 추가되어 늘어난 높이 반영
         
         # 화면 크기 얻기
         screen_width = self.root.winfo_screenwidth()
@@ -1298,11 +1294,11 @@ class MarkdownExtractorGUI:
         # 3. 모델 설정
         # ========================================
 
-        # 1차 각색: GPT/Gemini 선택
+        # 1차 각색: GPT/Gemini/Claude 선택
         self.model_1st_type = tk.StringVar(value="GPT")
         self.gpt_model_1st = tk.StringVar(value="gpt-4.1-mini-2025-04-14")
         
-        # 2차 각색: GPT/Gemini 선택
+        # 2차 각색: GPT/Gemini/Claude 선택
         self.model_2nd_type = tk.StringVar(value="GPT")
         self.gpt_model_2nd = tk.StringVar(value="gpt-4.1-mini-2025-04-14")
         self.claude_model_1st = tk.StringVar(value="claude-sonnet-4-5")
@@ -1331,10 +1327,9 @@ class MarkdownExtractorGUI:
         self.check_gpt_folder    = tk.BooleanVar(value=True)
         self.check_gemini_folder = tk.BooleanVar(value=True)
         self.check_claude_folder = tk.BooleanVar(value=True)
-        # [Ver7.39 추가] 다중질문검색(종합완성판) "6)저장" 탭이 저장하는
-        # perplexity_종합완성판_final_articles 폴더가 중복 검사 대상에서
-        # 빠져 있던 문제 수정 - 기존 GPT/Gemini/Claude(단일질문용) 3개
-        # 체크박스와 별도로 종합완성판용 체크박스를 추가.
+        # [Ver7.39 추가] 옛 다중질문검색(종합완성판) 결과 폴더(perplexity_종합완성판_
+        # final_articles)도 10)통합 키워드 등록 중복 검사에 넣는 체크박스. 종합완성판
+        # 기능은 2026-09-25에 삭제됐지만 예전 결과 폴더 검사용으로 남아 있다.
         self.check_comprehensive_folder = tk.BooleanVar(value=True)
 
         # ========================================
@@ -1427,7 +1422,7 @@ class MarkdownExtractorGUI:
         
         ttk.Button(folder_frame, text="폴더 선택", command=self.select_folder).grid(row=0, column=1)
         
-        # 5. 탭 생성 (1단계/2단계/3단계)
+        # 4. 탭 생성
         self.notebook = ttk.Notebook(main_frame, style='ColorTab.TNotebook')
         self.notebook.grid(row=4, column=0, columnspan=2, pady=(0, 5), sticky=(tk.W, tk.E, tk.N, tk.S))
     
@@ -1435,7 +1430,7 @@ class MarkdownExtractorGUI:
         self.create_step0_tab()
         self.create_prefilter_tab()
         self.create_step0_5_tab()
-        # [Ver7.10] "텍스트→MD 변환" 워크플로우는 5)탭의 자동변환 버튼으로
+        # [Ver7.10] "텍스트→MD 변환" 워크플로우는 4)퍼플렉시티 자료검증 탭의 자동변환 버튼으로
         # 대체됐지만, 이 탭이 만드는 로그창(step1_log_text)은 self.log()가
         # 앱 전체에서 유일하게 쓰는 로그 표시 위치라 계속 필요하다.
         # → 탭은 남기고 내용만 "API설정"으로 단순화(create_step1_tab 참고).
@@ -1446,13 +1441,13 @@ class MarkdownExtractorGUI:
         self.create_web_1st_tab()
         self.create_web_2nd_tab()
         # [Ver7.85 신규] "8)2차 각색"에 섞여 있던 썸네일/인포그래픽 생성
-        # 버튼을 분리한 전용 탭 - "9)통합 키워드" 바로 앞에 배치.
+        # 버튼을 분리한 전용 탭 - "10)통합 키워드 등록" 바로 앞에 배치.
         self.create_thumbnail_tab()
         self.create_step3_tab()
         self.create_semi_migrated_tab()
         self.create_db_manage_tab()
 
-        # ── [Ver7.08 추가] 상단 "주제 선택"과 각 탭(0-1·1·4·5·7·8)의 주제
+        # ── [Ver7.08 추가] 상단 "주제 선택"과 각 탭(2·3·4·7·8·9·11·12)의 주제
         # 선택을 서로 동기화한다. 어느 한쪽에서 주제를 바꾸면 나머지
         # 전부 같은 주제로 맞춰진다. _topic_sync_lock으로 재귀 호출을
         # 막는다(동기화 도중 다시 동기화가 걸리는 것을 방지).
@@ -1499,11 +1494,11 @@ class MarkdownExtractorGUI:
         # 때마다 해당 탭 목록을 최신 상태로 다시 그린다.
         self.notebook.bind("<<NotebookTabChanged>>", self._on_notebook_tab_changed)
 
-        # 7. 진행 상황 텍스트 라벨
+        # 5. 진행 상황 텍스트 라벨
         self.progress_label = ttk.Label(main_frame, text="대기 중", foreground="blue", font=("", 9, "bold"))
         self.progress_label.grid(row=6, column=0, columnspan=2, sticky=tk.W, pady=(5, 2)) 
         
-        # 8. 프로그레스 바
+        # 6. 프로그레스 바
         self.progress = ttk.Progressbar(main_frame, mode='determinate', maximum=100)
         self.progress.grid(row=7, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5)) 
     
@@ -1527,8 +1522,8 @@ class MarkdownExtractorGUI:
 
     # ── [Ver7.08 추가] 주제 선택 동기화 ──
     def _sync_all_topic_selectors(self, new_topic, source=None):
-        """상단 '주제 선택'과 1)퍼플렉시티수집·4)웹1차·5)웹2차·
-        9)썸네일/인포그래픽·7)종합관리·8)반자동이식 탭의 주제 선택을
+        """상단 '주제 선택'과 2)질문적합분석·3)퍼플렉시티 수집·4)자료검증·7)1차 각색·8)2차 각색·
+        9)썸네일/인포그래픽·11)주제 키워드 등록·12)포스팅 이력관리 탭의 주제 선택을
         모두 new_topic(순수 주제명, "  (N개)"
         표시 접미사 제외)으로 맞춘다.
         source: 이번 동기화를 시작한 변수 이름. 그 변수 자신은 이미 원하는
@@ -1544,22 +1539,22 @@ class MarkdownExtractorGUI:
                 if self.topic_var.get() != new_topic:
                     self.topic_var.set(new_topic)
 
-            # 0-1)질문 상세분석 탭 (순수 주제명)
+            # 2)질문적합분석 탭 (순수 주제명)
             if source != 'detail_topic_var' and hasattr(self, 'detail_topic_var'):
                 if self.detail_topic_var.get() != new_topic:
                     self.detail_topic_var.set(new_topic)
 
-            # 1)퍼플렉시티수집 탭 (순수 주제명)
+            # 3)퍼플렉시티 수집 탭 (순수 주제명)
             if source != 'perp_topic_var' and hasattr(self, 'perp_topic_var'):
                 if new_topic in getattr(self, '_perplexity_filename_map', {}) and self.perp_topic_var.get() != new_topic:
                     self.perp_topic_var.set(new_topic)
 
-            # 2-1)퍼플렉시티 교차검증 탭 (순수 주제명)
+            # 4)퍼플렉시티 자료검증 탭 (순수 주제명)
             if source != 'verify_topic_var' and hasattr(self, 'verify_topic_var'):
                 if self.verify_topic_var.get() != new_topic:
                     self.verify_topic_var.set(new_topic)
 
-            # 4)웹1차 탭 ("주제명  (N개)" 표시형이라 콤보 목록에서 매칭되는 값을 찾아서 대입)
+            # 7)1차 각색 탭 ("주제명  (N개)" 표시형이라 콤보 목록에서 매칭되는 값을 찾아서 대입)
             if source != 'web1st_topic_var' and hasattr(self, 'web1st_combo'):
                 for v in self.web1st_combo['values']:
                     if v.split('  (')[0] == new_topic:
@@ -1567,7 +1562,7 @@ class MarkdownExtractorGUI:
                             self.web1st_topic_var.set(v)
                         break
 
-            # 5)웹2차 탭 ("주제명  (N개)" 표시형)
+            # 8)2차 각색 탭 ("주제명  (N개)" 표시형)
             if source != 'web2nd_topic_var' and hasattr(self, 'web2nd_combo'):
                 for v in self.web2nd_combo['values']:
                     if v.split('  (')[0] == new_topic:
@@ -1584,12 +1579,12 @@ class MarkdownExtractorGUI:
                             self.thumb_topic_var.set(v)
                         break
 
-            # 7)종합관리 탭 (순수 주제명)
+            # 12)포스팅 이력관리 탭 (순수 주제명)
             if source != 'db_manage_topic_var' and hasattr(self, 'db_manage_topic_var'):
                 if self.db_manage_topic_var.get() != new_topic:
                     self.db_manage_topic_var.set(new_topic)
 
-            # 8)반자동이식 탭 (순수 주제명)
+            # 11)주제 키워드 등록 탭 (순수 주제명)
             if source != 'semi_topic_var' and hasattr(self, 'semi_topic_var'):
                 if self.semi_topic_var.get() != new_topic:
                     self.semi_topic_var.set(new_topic)
@@ -1599,7 +1594,6 @@ class MarkdownExtractorGUI:
     # 설정파일 로딩 
     def log_startup_info(self):
         """시작 시 환경 정보 로그 출력"""
-        # 기존 result_text 로그
         self.log("=" * 60)
         self.log("📁 환경 설정 완료")
         self.log(f"   설정 파일: Naver_blog_config_지식인.json (전용 설정 파일)")
@@ -2054,8 +2048,7 @@ class MarkdownExtractorGUI:
         # 이 두 탭은 탭을 전환해 들어갈 때마다 목록이 최신 상태로 갱신되지
         # 않는 문제가 있었다(초기 로드분만 보이고, 다른 탭에서 작업한 뒤
         # 돌아와도 새로 생긴 항목이 안 뜸). 실제 탭 텍스트와 정확히 일치하도록
-        # 수정. ("9)썸네일/인포그래픽" 탭은 파일을 스캔해 만드는 목록 자체가
-        # 없는 클립보드 왕복형 탭이라 여기 등록 대상이 아님.)
+        # 수정. 탭 이름을 바꾸면 아래 키도 같이 바꿔야 한다.
         refresh_map = {
             "2)질문 상세분석": getattr(self, '_detail_refresh_list', None),
             "3)퍼플렉시티 수집": getattr(self, '_perp_refresh_list', None),
@@ -2146,7 +2139,7 @@ class MarkdownExtractorGUI:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump({'prompts': prompts}, f, ensure_ascii=False, indent=2)
 
-    # ── [Ver7.10 추가] "0-1)질문 상세분석" 탭용 주제별 프롬프트 설정.
+    # ── [Ver7.10 추가] "2)질문적합분석" 탭(질문 상세분석)용 주제별 프롬프트 설정.
     # 구조는 사전 필터링/퍼플렉시티 프롬프트 설정과 동일, 저장 파일만 다르다.
     def get_kin_detail_config_path(self):
         """질문 상세분석용 주제별 프롬프트 매핑 파일 경로 반환 (base_folder 작업폴더 안에 저장)"""
@@ -2173,7 +2166,7 @@ class MarkdownExtractorGUI:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump({'prompts': prompts}, f, ensure_ascii=False, indent=2)
 
-    # ── [Ver7.10 추가] "5)퍼플렉시티 자료검증" 탭용 주제별 프롬프트 설정.
+    # ── [Ver7.10 추가] "4)퍼플렉시티 자료검증" 탭용 주제별 프롬프트 설정.
     # 구조는 상세분석/사전필터링 프롬프트 설정과 동일, 저장 파일만 다르다.
     def get_kin_verify_config_path(self):
         """퍼플렉시티 교차검증용 주제별 프롬프트 매핑 파일 경로 반환"""
@@ -2202,12 +2195,9 @@ class MarkdownExtractorGUI:
 
     # ── [Ver7.17 추가] 썸네일 프롬프트용 주제별 매핑.
     # 구조는 위 4개(퍼플렉시티/사전필터링/상세분석/교차검증) 프롬프트
-    # 설정과 동일, 저장 파일만 다르다. 예전엔 KIN_THUMBNAIL_GROUP_MAP으로
-    # "경제/교육/자동차" 3개 그룹만 묶어 작업폴더 안 파일명을 자동으로
-    # 찾아 썼는데(건강·IT는 그룹조차 없어 아예 안 됐음), 이제 11개 주제
-    # 각각을 이 설정 화면에서 직접 지정할 수 있다. 여기서 지정된 게
-    # 있으면 그걸 최우선으로 쓰고(프롬프트 폴더 기준), 없으면 예전 방식
-    # (그룹+작업폴더 파일명 스캔)으로 자동 대체한다.
+    # 설정과 동일, 저장 파일만 다르다. 11개 주제마다 이 설정 화면에서
+    # 프롬프트 파일을 직접 지정한다(프롬프트 폴더 기준). 지정하지 않은
+    # 주제는 썸네일 프롬프트를 만들 수 없다(Ver7.20에서 자동탐색 폴백 제거).
     def get_kin_thumbnail_config_path(self):
         """썸네일 프롬프트용 주제별 매핑 파일 경로 반환"""
         base_folder = self.base_folder_var.get().strip() if hasattr(self, 'base_folder_var') else self.base_folder
@@ -2261,8 +2251,8 @@ class MarkdownExtractorGUI:
     def open_kin_thumbnail_prompt_settings(self):
         """[Ver7.58 변경] 재미나이(D) 변환 프롬프트를 전체 주제 공용 1개에서
         주제별로 각각 지정할 수 있게 확장했다 - GPT 썸네일(C)과 나란히 한
-        팝업, 한 줄에 같이 놓고 설정한다("다중질문검색"의 그룹별 C/D 동시
-        설정 팝업과 동일한 패턴). 예전에 공용 1개로 지정해둔 값은 주제별
+        팝업, 한 줄에 같이 놓고 설정한다.
+        예전에 공용 1개로 지정해둔 값은 주제별
         값이 비어있는 동안 자동으로 폴백되어(_kin_get_gemini_prompt_filename)
         마이그레이션 없이 계속 동작한다."""
         topics = [
@@ -2660,7 +2650,6 @@ class MarkdownExtractorGUI:
         ttk.Button(btn_frame, text="🗑️ 삭제", command=delete_mapping, width=12).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="💾 저장", command=save_and_close, width=12).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="❌ 닫기", command=popup.destroy, width=12).pack(side=tk.LEFT, padx=5)
-        ### 자동 매핑을 위한 메소드 그룹 ,, 하단 
 
 
     def select_folder(self):
@@ -2671,7 +2660,6 @@ class MarkdownExtractorGUI:
             self.log(f"✅ 기본 입출력 폴더 설정: {folder_path}")
     
 
-    # 1. create_output_directory 메서드 수정
     def create_output_directory(self, base_dir, topic):
         """
         Create folder structure: base_dir/topic/2025-09-10/perplexity_answers
@@ -3039,7 +3027,7 @@ class MarkdownExtractorGUI:
                     'system_instruction': system_instruction,
                     'temperature': temperature,
                     'max_output_tokens': 8192,
-                    'safety_settings': safety_settings,  # ✅ 추가!
+                    'safety_settings': safety_settings,
                 }
             )
     
@@ -3187,7 +3175,7 @@ class MarkdownExtractorGUI:
                     'system_instruction': rewrite_prompt,
                     'temperature': temperature,
                     'max_output_tokens': 8192,
-                    'safety_settings': safety_settings,  # ✅ 추가!
+                    'safety_settings': safety_settings,
                 }
             )
     
@@ -3424,7 +3412,6 @@ class MarkdownExtractorGUI:
         self.progress_label.config(text="중지 중...")
     
     
-        # 3. start_gpt_rewrite 메서드에서 폴더 확인 부분 수정
     def start_gpt_rewrite(self):
         """2단계: GPT 각색 시작"""
         try:
@@ -3490,7 +3477,7 @@ class MarkdownExtractorGUI:
                         "1차 프롬프트 파일이 선택되지 않았습니다!\n\n"
                         "2단계 탭에서 '1차 각색 프롬프트' 파일을 선택하세요."
                     )
-                    # ✅ 버튼 복구 추가!
+                    # 버튼 복구
                     self.start_rewrite_btn.config(state=tk.NORMAL)
                     self.stop_rewrite_btn.config(state=tk.DISABLED)
                     return
@@ -3504,7 +3491,7 @@ class MarkdownExtractorGUI:
                         f"경로: {prompt_1st_path}\n\n"
                         f"파일을 추가하거나 다른 파일을 선택하세요."
                     )
-                    # ✅ 버튼 복구 추가!
+                    # 버튼 복구
                     self.start_rewrite_btn.config(state=tk.NORMAL)
                     self.stop_rewrite_btn.config(state=tk.DISABLED)
                     return
@@ -3521,7 +3508,7 @@ class MarkdownExtractorGUI:
                             f"길이: {len(prompt_1st_content)}자 (최소 100자 필요)\n\n"
                             f"프롬프트 파일 내용을 점검하세요."
                         )
-                        # ✅ 버튼 복구 추가!
+                        # 버튼 복구
                         self.start_rewrite_btn.config(state=tk.NORMAL)
                         self.stop_rewrite_btn.config(state=tk.DISABLED)
                         return
@@ -3538,7 +3525,7 @@ class MarkdownExtractorGUI:
                             icon='warning'
                         )
                         if not result:
-                            # ✅ 버튼 복구 추가!
+                            # 버튼 복구
                             self.start_rewrite_btn.config(state=tk.NORMAL)
                             self.stop_rewrite_btn.config(state=tk.DISABLED)
                             return
@@ -3551,7 +3538,7 @@ class MarkdownExtractorGUI:
                         f"오류: {str(e)}\n\n"
                         f"파일 인코딩이나 권한을 확인하세요."
                     )
-                    # ✅ 버튼 복구 추가!
+                    # 버튼 복구
                     self.start_rewrite_btn.config(state=tk.NORMAL)
                     self.stop_rewrite_btn.config(state=tk.DISABLED)
                     return
@@ -3564,7 +3551,7 @@ class MarkdownExtractorGUI:
                         "2차 프롬프트 파일이 선택되지 않았습니다!\n\n"
                         "2단계 탭에서 '2차 각색 프롬프트' 파일을 선택하세요."
                     )
-                    # ✅ 버튼 복구 추가!
+                    # 버튼 복구
                     self.start_rewrite_btn.config(state=tk.NORMAL)
                     self.stop_rewrite_btn.config(state=tk.DISABLED)
                     return
@@ -3578,7 +3565,7 @@ class MarkdownExtractorGUI:
                         f"경로: {prompt_2nd_path}\n\n"
                         f"파일을 추가하거나 다른 파일을 선택하세요."
                     )
-                    # ✅ 버튼 복구 추가!
+                    # 버튼 복구
                     self.start_rewrite_btn.config(state=tk.NORMAL)
                     self.stop_rewrite_btn.config(state=tk.DISABLED)
                     return
@@ -3595,7 +3582,7 @@ class MarkdownExtractorGUI:
                             f"길이: {len(prompt_2nd_content)}자 (최소 100자 필요)\n\n"
                             f"프롬프트 파일 내용을 점검하세요."
                         )
-                        # ✅ 버튼 복구 추가!
+                        # 버튼 복구
                         self.start_rewrite_btn.config(state=tk.NORMAL)
                         self.stop_rewrite_btn.config(state=tk.DISABLED)
                         return
@@ -3612,7 +3599,7 @@ class MarkdownExtractorGUI:
                             icon='warning'
                         )
                         if not result:
-                            # ✅ 버튼 복구 추가!
+                            # 버튼 복구
                             self.start_rewrite_btn.config(state=tk.NORMAL)
                             self.stop_rewrite_btn.config(state=tk.DISABLED)
                             return
@@ -3625,7 +3612,7 @@ class MarkdownExtractorGUI:
                         f"오류: {str(e)}\n\n"
                         f"파일 인코딩이나 권한을 확인하세요."
                     )
-                    # ✅ 버튼 복구 추가!
+                    # 버튼 복구
                     self.start_rewrite_btn.config(state=tk.NORMAL)
                     self.stop_rewrite_btn.config(state=tk.DISABLED)
                     return
@@ -3736,7 +3723,7 @@ class MarkdownExtractorGUI:
                 else:
                     if not os.path.exists(perplexity_folder):
                         messagebox.showerror("오류", "1단계에서 생성된 perplexity_answers 폴더가 없습니다.\n먼저 1단계를 실행하세요.")
-                        # ✅ 버튼 복구 추가!
+                        # 버튼 복구
                         self.start_rewrite_btn.config(state=tk.NORMAL)
                         self.stop_rewrite_btn.config(state=tk.DISABLED)
                         return
@@ -3746,7 +3733,7 @@ class MarkdownExtractorGUI:
 
                 if not md_files:
                     messagebox.showwarning("알림", "처리할 MD 파일이 없습니다.")
-                    # ✅ 버튼 복구 추가!
+                    # 버튼 복구
                     self.start_rewrite_btn.config(state=tk.NORMAL)
                     self.stop_rewrite_btn.config(state=tk.DISABLED)
                     return
@@ -3770,7 +3757,7 @@ class MarkdownExtractorGUI:
     
         except Exception as e:
             messagebox.showerror("오류", str(e))
-            # ✅ 버튼 복구 추가!
+            # 버튼 복구
             self.start_rewrite_btn.config(state=tk.NORMAL)
             self.stop_rewrite_btn.config(state=tk.DISABLED)
 
@@ -4595,7 +4582,7 @@ class MarkdownExtractorGUI:
         update_env_value('network_mode', self.network_mode_var_kin.get())
 
     def create_step0_tab(self):
-        """0단계: 주제 분류 탭"""
+        """1)질문수집 탭 (주제 분류 + 원문 수집)"""
         step0_frame = ttk.Frame(self.notebook, padding="10")
         self.notebook.add(step0_frame, text="1)질문수집")
         step0_frame.columnconfigure(1, weight=1)
@@ -4720,7 +4707,7 @@ class MarkdownExtractorGUI:
         mode = self.classify_mode.get()
         threading.Thread(target=self.classify_topic_worker, args=(text, mode), daemon=True).start()
 
-    # 저정 전 지식인 형태의 질문인지 검증
+    # 저장 전 지식인 형태의 질문인지 검증
     def _is_kin_format(self, text: str) -> bool:
         """네이버 지식인 질문 형식 검증"""
         lines = [l.strip() for l in text.strip().split('\n') if l.strip()]
@@ -4824,7 +4811,7 @@ class MarkdownExtractorGUI:
             file_path = os.path.join(base_folder, filename)
 
             # [Ver8.32 신규] 저장 전 중복 체크 - 정식 질문DB 중복판정
-            # (check_question_duplicate)은 여전히 "0-1)사전 필터링" 단계
+            # (check_question_duplicate)은 여전히 "2)질문적합분석" 탭
             # 몫이지만(이 탭은 원문 수집만 담당, 바로 아래 Ver7.08 주석
             # 참고), 같은 질문을 실수로 두 번 붙여넣고 저장하는 사고를
             # 막는 가벼운 안전망은 필요하다. "3)퍼플렉시티 수집"의
@@ -4859,11 +4846,11 @@ class MarkdownExtractorGUI:
                     if not proceed:
                         return
 
-            # [Ver7.08 변경] 0단계는 이제 "수집"만 담당한다. 적합성 사전
+            # [Ver7.08 변경] 이 탭(1)질문수집)은 이제 "수집"만 담당한다. 적합성 사전
             # 필터링(상품추천형/단일기관행정형/순수고민상담형/해외교육/
             # 개인특정가능 등 배제)을 거쳐 통과한 질문만 질문DB에 넣는
             # 방식으로 역할을 분리했다. 질문DB 등록 및 그에 따른 중복
-            # 차단은 "0-1) 사전 필터링" 탭에서 처리한다. 여기서는 원문을
+            # 차단은 "2)질문적합분석" 탭에서 처리한다. 여기서는 원문을
             # 자동생성_{주제}.txt에 그대로 누적 저장만 한다.
             from datetime import datetime
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -4883,7 +4870,6 @@ class MarkdownExtractorGUI:
             self.classify_result.delete("1.0", tk.END)
             self.classify_result.config(state=tk.DISABLED)
 
-            #messagebox.showinfo("저장 완료", f"저장되었습니다.\n파일: {filename}")
             self.log(f"저장되었습니다.\n파일: {filename}")
         
         except Exception as e:
@@ -5033,7 +5019,6 @@ class MarkdownExtractorGUI:
 
             response1 = self.openai_client.chat.completions.create(
                 model="gpt-4.1-mini-2025-04-14",
-                #model="gpt-4.1-nano",
                 messages=[{"role": "user", "content": prompt_stage1}],
                 temperature=0,
                 max_tokens=120
@@ -5089,7 +5074,6 @@ class MarkdownExtractorGUI:
 
             response2 = self.openai_client.chat.completions.create(
                 model="gpt-4.1-mini-2025-04-14",
-                #model="gpt-4.1-nano",
                 messages=[{"role": "user", "content": prompt_stage2}],
                 temperature=0,
                 max_tokens=80
@@ -5364,11 +5348,11 @@ class MarkdownExtractorGUI:
         ttk.Button(btn_frame, text="저장", command=do_save).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="취소", command=popup.destroy).pack(side=tk.LEFT, padx=5)
 
-    # ── [Ver7.10 추가] "0-1)질문 상세분석" 탭용 프롬프트 설정 팝업.
+    # ── [Ver7.10 추가] "2)질문적합분석" 탭용 프롬프트 설정 팝업.
     # 구조는 open_kin_prefilter_prompt_settings와 동일하며, 저장 대상
     # 파일만 Naver_blog_config_kin_detail.json으로 다르다. {questions_batch}
     # 같은 치환 자리는 없음 — 프롬프트 뒤에 선택한 질문(제목+본문)이
-    # 그대로 이어붙는 방식(1)/4)/5)탭과 동일).
+    # 그대로 이어붙는 방식(3)/4)/7)탭과 동일).
     def open_kin_detail_prompt_settings(self):
         topics = [
             "경제-A-거시경제-경기-통화-금리", "경제-B-금융-대출-신용-투자-보험-연금상품",
@@ -5423,7 +5407,7 @@ class MarkdownExtractorGUI:
         ttk.Button(btn_frame, text="저장", command=do_save).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="취소", command=popup.destroy).pack(side=tk.LEFT, padx=5)
 
-    # ── [Ver7.10 추가] "5)퍼플렉시티 자료검증" 탭용 프롬프트 설정 팝업.
+    # ── [Ver7.10 추가] "4)퍼플렉시티 자료검증" 탭용 프롬프트 설정 팝업.
     # 구조는 open_kin_detail_prompt_settings와 동일, 저장 파일만 다르다.
     def open_kin_verify_prompt_settings(self):
         topics = [
@@ -5674,9 +5658,8 @@ class MarkdownExtractorGUI:
         ttk.Button(btn_frame, text="🔄 새로고침", command=refresh_list).pack(side=tk.LEFT, padx=(0, 8))
         ttk.Button(btn_frame, text="닫기", command=popup.destroy).pack(side=tk.RIGHT)
 
-    # ══════════════════════════════════════════════════════════
     # ════════════════════════════════════════════════════════════
-    # [Ver7.17 신규] 좌우분할 탭 5곳(0-1/1/2-1/4/5) 공용 "사용" 셀 갱신 헬퍼
+    # [Ver7.17 신규] 좌우분할 탭 5곳(2/3/4/7/8) 공용 "사용" 셀 갱신 헬퍼
     # ────────────────────────────────────────────────────────────
     # 문제: 기존엔 "복사" 버튼을 누른 그 순간 usage[title]=True를 즉시
     # 기록하고 목록 전체를 delete()+insert()로 다시 그렸다. 그 결과
@@ -5725,19 +5708,19 @@ class MarkdownExtractorGUI:
                 pass
         refresh_fn()
 
-    # [Ver7.08 추가] 0-1단계: 사전 필터링(질문 선별) 탭
-    # 자동생성_{주제}.txt(0단계에서 수집만 해둔 원문)를 사전 필터링
-    # 프롬프트와 함께 웹 AI에 보내 적합성 심사 → 통과된 질문만
-    # 질문DB.json에 추가 → 원본 수집 파일은 사용 후 비운다.
+    # [Ver7.08 신설 → Ver7.10 개편] 2)질문적합분석 탭(함수 이름은 prefilter 그대로).
+    # 처음에는 "사전 필터링(질문 선별)" 탭이었고 Ver7.10에서 "질문 상세분석"으로
+    # 바뀌었다. 아래쪽 _prefilter_* 함수들은 옛 사전 필터링 화면용으로, 지금은
+    # 호출하는 곳이 없다.
     # ══════════════════════════════════════════════════════════
     def create_prefilter_tab(self):
-        """0-1단계: 질문 상세분석 (가치판단+관련질문확장+키워드전략+리서치브리프)
+        """2)질문적합분석 탭: 질문 상세분석 (가치판단+관련질문확장+키워드전략+리서치브리프)
         [Ver7.10 변경] 기존 "사전 필터링"(배치 전체를 퍼플렉시티+클로드로 교차검증
         하던 방식)을 완전히 대체. 새 파이프라인:
-        질문DB → 여기(0-1) → 1)퍼플렉시티수집 → (검증단계, 추후 추가) → 4)1차각색 → 5)2차각색
+        질문DB → 여기(2) → 3)퍼플렉시티 수집 → 4)자료검증 → 7)1차 각색 → 8)2차 각색
         질문 1건을 골라 도메인별 프롬프트와 함께 웹으로 보내고, 돌아온 상세분석
-        결과를 원본 질문과 함께 research_brief_{모델} 폴더에 저장해 1)탭으로 넘긴다.
-        좌(질문DB 목록) / 우(붙여넣기·저장) 좌우분할은 1)/4)/5)탭과 동일한 패턴."""
+        결과를 원본 질문과 함께 research_brief_{모델} 폴더에 저장해 3)탭으로 넘긴다.
+        좌(질문DB 목록) / 우(붙여넣기·저장) 좌우분할은 3)/4)/7)/8)탭과 동일한 패턴."""
         frame = ttk.Frame(self.notebook, padding="6")
         self.notebook.add(frame, text="2)질문적합분석(클로드)")
         frame.columnconfigure(0, weight=1)
@@ -5771,10 +5754,10 @@ class MarkdownExtractorGUI:
             values=topics, state="readonly", width=50, height=11
         ).pack(side=tk.LEFT)
 
-        # [Ver7.10 복원] 0)탭이 쌓아둔 자동생성_{주제}.txt(원본 수집)를
+        # [Ver7.10 복원] 1)질문수집 탭이 쌓아둔 자동생성_{주제}.txt(원본 수집)를
         # 질문DB로 이관하는 통로. 예전 "사전 필터링" 탭이 하던 역할 중
         # "질문DB에 넣는다"는 부분만 남기고, AI 교차검증·선별 판단은
-        # 이제 0-1)탭 자체(웹 AI에 보내는 상세분석 프롬프트의 0단계
+        # 이제 이 탭 자체(웹 AI에 보내는 상세분석 프롬프트의 0단계
         # 판정)가 대신하므로 여기서는 단순 이관 + 중복체크만 한다.
         import_row = ttk.Frame(left)
         import_row.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 4))
@@ -5923,7 +5906,7 @@ class MarkdownExtractorGUI:
             "write", lambda *_: self.save_kin_ui_setting('hide_used_detail_picker', self.detail_hide_used_var.get()))
         self._detail_refresh_list()
 
-    # ── [Ver7.10 추가] 0-1)탭 왼쪽 질문 목록(좌우분할)용 헬퍼 ──
+    # ── [Ver7.10 추가] 2)탭 왼쪽 질문 목록(좌우분할)용 헬퍼 ──
     def _detail_get_usage_path(self, topic):
         base_folder = self.base_folder_var.get().strip() or self.base_folder
         return os.path.join(base_folder, topic, "질문_상세분석_사용여부.json")
@@ -5935,10 +5918,10 @@ class MarkdownExtractorGUI:
         save_json_db(self._detail_get_usage_path(topic), usage_list)
 
     def _detail_import_collected(self):
-        """[Ver7.10 복원] 0)탭이 자동생성_{주제}.txt에 누적해둔 원본 수집
+        """[Ver7.10 복원] 1)탭이 자동생성_{주제}.txt에 누적해둔 원본 수집
         질문을 질문DB로 이관한다. 예전 "사전 필터링" 탭이 하던 이관+
         중복체크 역할만 남기고, AI 판단(적합성 심사)은 이제 이 값 자체가
-        새 0-1)탭 프롬프트의 0단계가 대신하므로 여기서는 하지 않는다.
+        이 탭 프롬프트의 0단계가 대신하므로 여기서는 하지 않는다.
         형태 B(Q&A 클러스터)도 원문 그대로(절단 없이) 넘어간다."""
         topic = self.detail_topic_var.get()
         base_folder = self.base_folder_var.get().strip() or self.base_folder
@@ -5996,7 +5979,7 @@ class MarkdownExtractorGUI:
 
         save_json_db(question_db_path, question_records)
 
-        # 이관 끝난 원본 파일은 비운다 (0)탭이 다음에 또 누적해서 쓸 수 있게)
+        # 이관 끝난 원본 파일은 비운다 (1)탭이 다음에 또 누적해서 쓸 수 있게)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write('')
 
@@ -6238,7 +6221,7 @@ class MarkdownExtractorGUI:
     # 같이 지운다. 그 뒤 단계(퍼플렉시티 원고·검증본·포스팅)는 AI가 새로
     # 지어낸 제목을 쓰기 때문에 프로그램적으로 원본 질문과 확실하게
     # 연결할 방법이 없어 자동 연쇄삭제 대상에서 제외한다(잘못 지우는
-    # 사고 방지). 그 단계는 각 탭의 "사용여부 토글" 또는 11)포스팅
+    # 사고 방지). 그 단계는 각 탭의 "사용여부 토글" 또는 12)포스팅
     # 이력관리 탭에서 별도로 정리하면 된다.
     def _detail_delete_selected(self):
         sel = self.detail_list_tree.selection()
@@ -6353,7 +6336,7 @@ class MarkdownExtractorGUI:
         # 검색이 필요 없지만(원고가 이미 검증된 상태), 프롬프트 쪽에 금지
         # 문구를 넣어도(1차+2차 각색 프롬프트 전체) 실수로 켜져 있을 경우를
         # 대비한 안전망을 저장 시점에도 걸어둔다. 이 함수를 거치는 모든
-        # 저장(0-1/1/2-1/7/8탭 - 1차·2차 각색 포함)에 공통 적용된다.
+        # 저장(2/4/7/8탭 - 1차·2차 각색 포함)에 공통 적용된다.
         text = re.sub(r':contentReference\[oaicite:\d+\]\{index=\d+\}', '', text)
         text = re.sub(r'【[^【】]*†[^【】]*】', '', text)  # 【...†...】 인용 마커(†가 있을 때만 - 일반 【】 강조는 보존)
         text = re.sub(r'\^\[[^\]]*\]', '', text)          # ^[...] 각주 문법
@@ -6380,7 +6363,7 @@ class MarkdownExtractorGUI:
 
     def _detail_save_result(self):
         """상세분석 결과를 원본 질문과 함께 research_brief_{모델} 폴더에 저장.
-        [Ver7.10] 1)탭이 이 파일을 그대로 스캔해서 다음 단계로 넘겨받는다."""
+        [Ver7.10] 3)탭이 이 파일을 그대로 스캔해서 다음 단계로 넘겨받는다."""
         text = self._strip_ai_ui_chrome(self.detail_text.get("1.0", tk.END).strip())
         if not text:
             messagebox.showwarning("저장 오류", "저장할 분석 결과가 없습니다.")
@@ -6395,7 +6378,7 @@ class MarkdownExtractorGUI:
             return
 
         # [Ver7.10 추가] 상세분석 프롬프트는 0단계에서 "보류" 판정이면 리서치
-        # 브리프 없이 거기서 끝난다. 보류인 채로 저장하면 1)탭에 무의미한
+        # 브리프 없이 거기서 끝난다. 보류인 채로 저장하면 3)탭에 무의미한
         # 항목이 올라가니, 저장 전에 한 번 확인만 받는다(막지는 않음).
         if re.search(r'판정\s*:\s*보류(?!\()', text):
             if not messagebox.askyesno(
@@ -6458,7 +6441,7 @@ class MarkdownExtractorGUI:
 
 
     def _prefilter_load_collected(self):
-        """자동생성_{주제}.txt(0단계 수집 원문)를 불러와 개별 질문으로 분리, 미리보기에 표시"""
+        """자동생성_{주제}.txt(1)질문수집 원문)를 불러와 개별 질문으로 분리, 미리보기에 표시"""
         try:
             topic = self.prefilter_topic_var.get()
             base_folder = self.base_folder_var.get().strip() or self.base_folder
@@ -6689,10 +6672,10 @@ class MarkdownExtractorGUI:
             messagebox.showerror("오류", f"저장 중 오류 발생:\n{e}")
 
     def create_step0_5_tab(self):
-        """0.5단계: 퍼플렉시티 수집 내용 저장 탭
-        [Ver7.10 변경] 왼쪽 목록의 소스가 질문DB에서 "0-1)질문 상세분석" 탭이
+        """3)퍼플렉시티 수집 탭: 퍼플렉시티 수집 내용 저장
+        [Ver7.10 변경] 왼쪽 목록의 소스가 질문DB에서 "2)질문적합분석" 탭이
         만들어내는 리서치 브리프(research_brief_{모델} 폴더)로 바뀌었다.
-        파이프라인: 질문DB → 0-1)질문 상세분석 → 1)퍼플렉시티수집(여기) → ..."""
+        파이프라인: 질문DB → 2)질문적합분석 → 3)퍼플렉시티 수집(여기) → ..."""
         frame = ttk.Frame(self.notebook, padding="6")
         self.notebook.add(frame, text="3)퍼플렉시티 수집")
         frame.columnconfigure(0, weight=1)
@@ -6717,7 +6700,7 @@ class MarkdownExtractorGUI:
         }
         topics = list(self._perplexity_filename_map.keys())
 
-        # ── 왼쪽: 리서치 브리프 선택 (0-1탭 결과물) ──
+        # ── 왼쪽: 리서치 브리프 선택 (2)탭 결과물) ──
         left = ttk.Frame(paned, padding=(4, 4, 8, 4))
         paned.add(left, weight=2)
         left.columnconfigure(0, weight=1)
@@ -6801,13 +6784,13 @@ class MarkdownExtractorGUI:
         list_btn_frame2.grid(row=7, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(4, 0))
         ttk.Button(list_btn_frame2, text="사용여부 토글",
                    command=self._perp_toggle_used).pack(side=tk.LEFT, padx=(0, 4))
-        # [Ver7.76 추가] 사용자 요청: "1)질문수집"·"2)질문 상세분석"에는
+        # [Ver7.76 추가] 사용자 요청: "1)질문수집"·"2)질문적합분석"에는
         # 삭제 버튼이 있는데 이후 단계(퍼플렉시티 수집·1차 각색·2차 각색)
         # 에는 없어서, 여기서 더 진행하고 싶지 않은 자료를 지우려면 매번
         # 앞 탭으로 되돌아가야 하는 불편함이 있었음. 여기서 목록에 뜬
         # "이 단계의 원본 파일"(research_brief MD)을 바로 지울 수 있게 함
         # (질문DB 자체는 건드리지 않음 - 질문DB 삭제는 여전히 2)질문
-        # 상세분석 탭의 역할, 여긴 "이 단계 자료"만 지움).
+        # 적합분석 탭의 역할, 여긴 "이 단계 자료"만 지움).
         ttk.Button(list_btn_frame2, text="🗑️ 선택 삭제",
                    command=self._perp_delete_selected).pack(side=tk.LEFT, padx=(0, 4))
         ttk.Button(list_btn_frame2, text="🔄 새로고침",
@@ -6867,8 +6850,8 @@ class MarkdownExtractorGUI:
         self._update_perp_filename()
         self._perp_refresh_list()
 
-    # ── [Ver7.10 추가] 1)탭 왼쪽 목록(좌우분할)용 헬퍼 — 소스가
-    # "0-1)질문 상세분석" 탭이 저장한 research_brief_{모델} 폴더로 바뀜 ──
+    # ── [Ver7.10 추가] 3)탭 왼쪽 목록(좌우분할)용 헬퍼 — 소스가
+    # "2)질문적합분석" 탭이 저장한 research_brief_{모델} 폴더로 바뀜 ──
     def _scan_research_brief_items(self, base_folder, topic):
         """base/주제/날짜/research_brief_*/ 안의 상세분석 결과 MD 파일들을 스캔.
         [Ver7.10 버그수정] 저장 폴더명이 'research_brief_{모델}'(접두사+모델)
@@ -6951,7 +6934,7 @@ class MarkdownExtractorGUI:
             else:
                 self.perp_list_count_var.set(f"총 {total}개")
 
-    # [Ver7.10 추가] 0-1)탭이 저장한 전체 상세분석 결과(가치판단+관련질문
+    # [Ver7.10 추가] 2)탭이 저장한 전체 상세분석 결과(가치판단+관련질문
     # 확장+키워드전략+리서치브리프 4개 섹션)에서, 실제로 퍼플렉시티에
     # 붙여넣도록 설계된 "## 퍼플렉시티 리서치 브리프" 밑 ---...--- 블록만
     # 뽑아낸다. 나머지 판정/근거 텍스트는 디스크 파일엔 그대로 남지만
@@ -7085,11 +7068,11 @@ class MarkdownExtractorGUI:
 
     def _perp_delete_selected(self):
         """[Ver7.76 신규] "3)퍼플렉시티 수집" 목록에 뜬 research_brief MD
-        파일을 여러 개 선택해 한번에 삭제한다. "2)질문 상세분석"의
+        파일을 여러 개 선택해 한번에 삭제한다. "2)질문적합분석"의
         _detail_delete_selected와 달리 여기서는 질문DB 자체는 건드리지
         않는다(이미 질문DB→질문상세분석에서 상세분석까지 끝난, "이
         단계"의 산출물만 지운다는 의미) - 질문 자체를 지우고 싶으면
-        여전히 "2)질문 상세분석" 탭에서 지워야 한다."""
+        여전히 "2)질문적합분석" 탭에서 지워야 한다."""
         sel = self.perp_list_tree.selection()
         if not sel:
             messagebox.showwarning("알림", "삭제할 항목을 먼저 선택하세요.")
@@ -7250,7 +7233,7 @@ class MarkdownExtractorGUI:
 
 
     def create_step1_tab(self):
-        """[Ver7.10 변경] 예전 "텍스트→MD 변환" 워크플로우는 2-1)탭의
+        """[Ver7.10 변경] 예전 "텍스트→MD 변환" 워크플로우는 4)퍼플렉시티 자료검증 탭의
         자동변환 버튼으로 대체됐다. 이 탭은 그 UI(파일선택+변환 버튼)를
         빼고, 앱 전체 로그 표시창 + API 키 설정만 남긴다 — self.log()가
         전역에서 이 로그창 하나에 의존하기 때문에 완전히 없앨 수는 없다."""
@@ -7295,13 +7278,13 @@ class MarkdownExtractorGUI:
         step1_frame.columnconfigure(0, weight=1)
 
     def create_kin_verify_tab(self):
-        """2-1단계: 퍼플렉시티 결과 교차검증
-        [Ver7.10 신설] 1)퍼플렉시티수집 → 2)텍스트→MD변환(perplexity_answers)
-        다음, 4)1차각색(웹) 이전에 들어가는 검증단계. 2)탭이 만든 개별
+        """4)퍼플렉시티 자료검증 탭: 퍼플렉시티 결과 교차검증
+        [Ver7.10 신설] 3)퍼플렉시티 수집 → 텍스트→MD 자동변환(perplexity_answers)
+        다음, 7)1차 각색 이전에 들어가는 검증단계. 자동변환으로 만든 개별
         MD(퍼플렉시티 원문 그대로)를 골라 도메인별 교차검증 프롬프트와
         함께 웹 AI(클로드)에 보내고, 돌아온 검증 결과에서 "## 검증된
         자료" 섹션만 추출해 perplexity_[모델]_verified 폴더에 저장한다.
-        이 저장분을 4)탭이 원자료로 그대로 이어받는다(1)/4)/5)탭과
+        이 저장분을 7)탭이 원자료로 그대로 이어받는다(3)/7)/8)탭과
         동일한 좌우분할 패턴)."""
         frame = ttk.Frame(self.notebook, padding="6")
         self.notebook.add(frame, text="4)퍼플렉시티 자료검증(클로드)")
@@ -7337,7 +7320,7 @@ class MarkdownExtractorGUI:
         ).pack(side=tk.LEFT)
 
         # [Ver7.10 추가] 예전 "2)텍스트→MD 변환" 탭 기능을 주제 기준으로
-        # 자동화한 버튼. 1)탭이 저장해둔 지식인-[주제]-퍼플렉시티생성MD.txt를
+        # 자동화한 버튼. 3)탭이 저장해둔 지식인-[주제]-퍼플렉시티생성MD.txt를
         # 읽어 개별 perplexity_answers/*.md로 변환하고, 왼쪽 목록을 바로
         # 새로고침한다. 파일 선택도, 별도 탭 이동도 필요 없다.
         ttk.Button(left, text="📥 새 퍼플렉시티 자료 가져오기 (자동 MD변환)",
@@ -7471,11 +7454,11 @@ class MarkdownExtractorGUI:
             "write", lambda *_: self.save_kin_ui_setting('hide_used_verify_picker', self.verify_hide_used_var.get()))
         self._verify_refresh_list()
 
-    # ── [Ver7.10 추가] 2-1)탭 왼쪽 목록(좌우분할)용 헬퍼 ──
+    # ── [Ver7.10 추가] 4)탭 왼쪽 목록(좌우분할)용 헬퍼 ──
     # [Ver7.10 추가] 예전 "2)텍스트→MD 변환" 탭을 대체하는 자동화 함수.
-    # 파일을 직접 선택할 필요 없이, 주제 하나만 넘기면 1)탭이 저장해둔
+    # 파일을 직접 선택할 필요 없이, 주제 하나만 넘기면 3)탭이 저장해둔
     # 지식인-[주제]-퍼플렉시티생성MD.txt를 찾아서 개별 MD로 변환한다.
-    # process_text_string/create_output_directory는 2)탭 UI에 의존하지
+    # process_text_string/create_output_directory는 예전 변환 탭 UI에 의존하지
     # 않는 공용 로직이라 그대로 재사용한다.
     def _auto_convert_perplexity_to_md(self, topic):
         base_dir = self.base_folder_var.get().strip() or self.base_folder
@@ -7532,7 +7515,7 @@ class MarkdownExtractorGUI:
         return True
 
     def _verify_import_and_convert(self):
-        """2-1)탭 '📥 새 퍼플렉시티 자료 가져오기' 버튼 - 현재 선택된 주제
+        """4)탭 '📥 새 퍼플렉시티 자료 가져오기' 버튼 - 현재 선택된 주제
         기준으로 자동 MD변환 실행 후 왼쪽 목록을 바로 새로고침한다."""
         topic = self.verify_topic_var.get()
         ok = self._auto_convert_perplexity_to_md(topic)
@@ -7749,7 +7732,7 @@ class MarkdownExtractorGUI:
     def _verify_save_result(self):
         """검증 결과 전체(검증요약+검증상세+검증된자료)에서 '## 검증된
         자료' 섹션만 뽑아 perplexity_[모델]_verified 폴더에 저장.
-        [Ver7.10] 4)탭이 이 파일을 그대로 스캔해서 다음 단계로 넘겨받는다."""
+        [Ver7.10] 7)탭이 이 파일을 그대로 스캔해서 다음 단계로 넘겨받는다."""
         raw_text = self._strip_ai_ui_chrome(self.verify_text.get("1.0", tk.END).strip())
         if not raw_text:
             messagebox.showwarning("저장 오류", "저장할 검증 결과가 없습니다.")
@@ -7808,7 +7791,7 @@ class MarkdownExtractorGUI:
         self._verify_selected_item = None
 
     def create_step2_tab(self):
-        """2단계: GPT 각색 탭 (재설계)"""
+        """6)자동각색(API) 탭"""
         step2_frame = ttk.Frame(self.notebook, padding="10")
         self.notebook.add(step2_frame, text="6)자동각색(API)")
         
@@ -8072,11 +8055,8 @@ class MarkdownExtractorGUI:
             self.gpt_2nd_label.grid_remove()   # label 숨김
     
     # ============================================================
-    # 웹 2차 각색 결과 저장 탭 (반자동)
+    # 매핑설정 조회(주제별 1차/2차 프롬프트·모델) + 각 탭 목록 스캔 헬퍼
     # ============================================================
-    # ──────────────────────────────────────────────────────
-    # 2차 각색용 자료 선택 팝업 (프롬프트+자료 복사)
-    # ──────────────────────────────────────────────────────
     def _get_prompt2nd_for_topic(self, topic):
         """매핑설정에서 해당 주제의 2차 프롬프트 내용을 가져온다 (주제 일치하는 첫번째 항목 사용)"""
         for key, mapping in getattr(self, 'kin_mappings', {}).items():
@@ -8242,9 +8222,9 @@ class MarkdownExtractorGUI:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(usage, f, ensure_ascii=False, indent=2)
 
-    # ── [Ver7.10 추가] 2-1)퍼플렉시티 교차검증 탭용 ──
+    # ── [Ver7.10 추가] 4)퍼플렉시티 자료검증 탭용 ──
     # perplexity_answers(2단계 산출물)를 검증한 뒤 저장하는 곳(*_verified
-    # 폴더)을 스캔한다. 4)1차각색(웹) 탭은 이제 perplexity_answers가 아니라
+    # 폴더)을 스캔한다. 7)1차 각색 탭은 이제 perplexity_answers가 아니라
     # 여기(검증완료본)를 원자료로 쓴다.
     def _scan_verified_items(self, base_folder, topic):
         """base/주제/날짜/perplexity_[모델]_verified/ 안의 교차검증
@@ -8309,7 +8289,7 @@ class MarkdownExtractorGUI:
 
 
     def create_web_1st_tab(self):
-        """4)1차각색(웹)→저장 — 5)클로드웹2차각색→저장과 동일한 컨셉.
+        """7)1차 각색 탭 — 8)2차 각색 탭과 동일한 컨셉.
         [Ver7.10 변경] 팝업으로 자료를 고르던 방식이 불편하다는 피드백에 따라
         좌(자료 목록·실시간 선택) / 우(붙여넣기·저장) 좌우분할 상시표시로 변경."""
         frame = ttk.Frame(self.notebook, padding="6")
@@ -8320,7 +8300,7 @@ class MarkdownExtractorGUI:
         paned = ttk.PanedWindow(frame, orient=tk.HORIZONTAL)
         paned.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
-        # ── 왼쪽: 1차 각색용 자료(2단계 원본 MD) 목록 ──
+        # ── 왼쪽: 1차 각색용 자료(검증완료본 MD) 목록 ──
         left = ttk.Frame(paned, padding=(4, 4, 8, 4))
         paned.add(left, weight=2)
         left.columnconfigure(0, weight=1)
@@ -8552,7 +8532,7 @@ class MarkdownExtractorGUI:
         self.web1st_topic_var.trace_add("write", lambda *_: self._web1st_refresh_list())
         # [Ver7.10 추가] 주제 매핑설정에 등록된 1차 모델이 있으면 저장 모델
         # 라디오버튼을 자동으로 그 값으로 맞춘다(_get_mapping_model_and_prompt
-        # 는 6)자동각색 탭 배너에도 쓰는 동일 로직 재사용).
+        # 는 상단 배너에도 쓰는 동일 로직 재사용).
         self.web1st_topic_var.trace_add("write", lambda *_: self._web1st_auto_select_model())
         self.web1st_hide_used_var.trace_add("write", lambda *_: self._web1st_refresh_list())
         self.web1st_hide_used_var.trace_add(
@@ -8572,8 +8552,8 @@ class MarkdownExtractorGUI:
         if model in ("Claude", "GPT", "Gemini"):
             self.web1st_model_var.set(model)
 
-    # ── [Ver7.10 추가] 4)탭 왼쪽 목록(좌우분할)용 헬퍼 — open_raw_material_picker
-    # 팝업의 로직을 그대로 상시표시 목록용으로 옮긴 것 ──
+    # ── [Ver7.10 추가] 7)탭 왼쪽 목록(좌우분할)용 헬퍼 — 예전 원자료 선택 팝업의
+    # 로직을 그대로 상시표시 목록용으로 옮긴 것 ──
     def _web1st_refresh_list(self):
         if not hasattr(self, 'web1st_list_tree'):
             return
@@ -8936,7 +8916,7 @@ class MarkdownExtractorGUI:
         self._web1st_selected_item = None  # [Ver7.17 추가]
 
     def create_web_2nd_tab(self):
-        """2.5단계: 웹 2차 각색 결과 저장 탭
+        """8)2차 각색 탭: 웹 2차 각색 결과 저장
         [Ver7.10 변경] 팝업으로 자료를 고르던 방식이 불편하다는 피드백에 따라
         좌(자료 목록·실시간 선택) / 우(붙여넣기·저장) 좌우분할 상시표시로 변경."""
         frame = ttk.Frame(self.notebook, padding="6")
@@ -9054,13 +9034,10 @@ class MarkdownExtractorGUI:
         list_scroll.grid(row=0, column=1, sticky=(tk.N, tk.S))
 
         self.web2nd_list_tree.bind("<Double-1>", lambda e: self._web2nd_copy_selected())
-        # [Ver9.08 추가] 트리뷰 자체 휠 스크롤을 명시적으로 바인딩하고 반드시
-        # "break"를 반환한다. Tk는 위젯 자체(인스턴스) 바인딩 → 클래스
-        # 바인딩 → 전역("all") 바인딩 순으로 같은 이벤트를 계속 전달하는데,
-        # break 없이 두면 트리뷰 위에서 휠을 굴려도 그 이벤트가 계속 흘러가
-        # 우측 패널 캔버스(right_canvas)까지 같이 스크롤시키는 간섭이
-        # 있었다("트리뷰 스크롤할 땐 우측 스크롤이 움직이지 않게 해" 요청).
-        # break로 이 위젯 선에서 이벤트를 확실히 끊어 독립적으로만 움직이게 함.
+        # [Ver9.08 추가] 트리뷰 자체 휠 스크롤을 명시적으로 바인딩하고 "break"를
+        # 반환해, 휠 이벤트가 클래스·전역 바인딩으로 넘어가 다른 위젯까지 스크롤하지
+        # 않게 한다(당시 우측 패널 캔버스가 같이 움직이던 문제 대응 - 그 캔버스는
+        # 2026-09-27에 삭제됨).
         def _web2nd_tree_on_wheel(event):
             if getattr(event, 'num', None) == 4:
                 self.web2nd_list_tree.yview_scroll(-1, "units")
@@ -9116,7 +9093,7 @@ class MarkdownExtractorGUI:
         # [2026-09-16 4차] 우측 패널 전체를 스크롤 없이 한 화면에 담고 싶다는
         # 요청에 따라, 각 행 사이 pady(세로 여백)를 전반적으로 줄였다 - 보기에
         # 답답하지 않은 선에서 조금씩만(4→2~3, 6→4, 8→5~6, 12→8 등) 줄여서
-        # 스크롤 영역(scrollregion) 총 높이를 낮췄다.
+        # 패널 총 높이를 낮췄다.
         # 저장 모델 선택
         ttk.Label(right, text="저장 모델:").grid(row=0, column=0, sticky=tk.W, pady=2)
         self.web2nd_model_var = tk.StringVar(value="Claude")
@@ -9234,21 +9211,10 @@ class MarkdownExtractorGUI:
                   font=("", 9, "bold")).grid(
             row=6, column=0, columnspan=2, sticky=tk.W, pady=(4, 0))
 
-        # ── [2026-09-15 2차 재설계] 제목 후보 확정 영역 - 탈락/회피 목록
-        # 제거, 제목 라벨을 화면 폭에 맞춰 넓게, 버튼 구성 단순화 ──
-        # (2026-09-15 1차에서는 후보별 ☐탈락 체크 + 회피 목록 복사까지
-        # 만들었으나, "라디오로 고르고 최종확정하면 되니 탈락은 굳이
-        # 필요없다"는 판단에 따라 탈락/회피 관련 기능은 전부 제거한다.
-        # 제목 라벨은 액션 버튼과 같은 줄에 있으면 wraplength가 좁게
-        # 고정돼 화면 폭을 못 쓰는 문제가 있어, 제목 줄과 버튼 줄을
-        # 분리하고 wraplength를 title_gen_box 실제 폭에 맞춰 동적으로
-        # 갱신한다(_web2nd_on_title_box_resize). 버튼은 "🔍 블로그" →
-        # "🔍 블로그탭검색"으로 이름을 명확히 하고, "🔍 통합"은 제거,
-        # 그 자리에 "📋 제목복사"를 넣는다.
-        # [2026-09-16 4차] 맨 하단 프레임(title_gen_box) 안쪽 아래 여백이
-        # 스크롤을 유발할 만큼 남는다는 지적 - LabelFrame 기본 padding="6"은
-        # 4면 모두 동일해서 아래쪽도 6px씩 비었다. 위/아래만 좁혀서
-        # (top 4, bottom 2) 그 공백을 줄인다.
+        # ── 제목 확정 영역 ──
+        # 제목 줄과 버튼 줄을 나누고, 라벨 wraplength는 title_gen_box 실제 폭에
+        # 맞춰 갱신한다(_web2nd_on_title_box_resize). 프레임 padding은 위 4/아래 2로
+        # 줄여 아래 여백을 없앴다(2026-09-16).
         title_gen_box = ttk.LabelFrame(
             right, text="✅ 제목 확정 (네이버 실측) - 확정해야 저장 가능", padding=(6, 4, 6, 2))
         title_gen_box.grid(row=7, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(5, 0))
@@ -9307,27 +9273,22 @@ class MarkdownExtractorGUI:
                   foreground="gray", font=("", 9)).pack(side=tk.LEFT)
         self.web2nd_topic_var.trace_add("write", lambda *_: self._web2nd_on_topic_changed_board())
 
-        # [화면폭 활용] 제목 라디오/사전체크 라벨의 wraplength를 title_gen_box
+        # [화면폭 활용] 확정 상태 라벨의 wraplength를 title_gen_box
         # 실제 폭에 맞춰 동적으로 갱신하기 위해 대상 위젯을 여기 모아둔다
         # (_web2nd_on_title_box_resize 참고).
         self._web2nd_title_wrap_widgets = []
 
-        # [2026-09-26 변경] 초기 선택값을 -1(미선택)에서 3("직접 입력으로
-        # 확정")으로 변경 - 사용자 요청.
+        # 라디오 버튼은 "직접 입력으로 확정"(값 3) 하나만 남아 있다(후보 1~3은
+        # 2026-09-27 삭제). 값은 화면 표시용이며 저장 로직에서는 읽지 않는다.
         self.web2nd_title_radio_var = tk.IntVar(value=3)
 
-        # [2026-09-16 1차] "직접 입력으로 확정"을 후보 3개보다 위로
-        # 올린다 - 실제로는 후보를 참고해 마지막에 직접 다듬어 확정하는
-        # 경우가 많아, 매번 후보 아래로 스크롤해서 찾아야 했다. 입력창은
-        # 고정폭(width=42) 대신 grid + columnconfigure(weight=1)로 패널
-        # 폭에 맞춰 늘어나게 해 제목이 최대한 길게 보이도록 한다.
+        # "직접 입력으로 확정" 입력창은 grid + columnconfigure(weight=1)로 패널 폭에
+        # 맞춰 늘어나 제목이 최대한 길게 보이도록 한다.
         manual_block = ttk.Frame(title_gen_box)
         manual_block.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
         manual_block.columnconfigure(0, weight=1)
         # [2026-09-16 4차] "직접 입력으로 확정" 문구 뒤에 입력 중인 제목의
-        # 글자수를 실시간으로 표시 - 후보 3개 쪽은 사전체크 결과에 글자수를
-        # 같이 보여주므로(아래), 직접입력 쪽도 타이핑하는 대로 바로 보이게
-        # 맞췄다.
+        # 글자수를 실시간으로 표시한다.
         self.web2nd_working_title_var = tk.StringVar(value="")
         self.web2nd_manual_title_label_var = tk.StringVar(value="직접 입력으로 확정 (0자)")
 
@@ -9403,8 +9364,8 @@ class MarkdownExtractorGUI:
         if hasattr(self, 'web2nd_model_display_var'):
             self.web2nd_model_display_var.set(f"각색모델:{model or '미지정'}")
 
-    # ── [Ver7.10 추가] 5)탭 왼쪽 목록(좌우분할)용 헬퍼 — open_1st_draft_picker
-    # 팝업의 로직을 그대로 상시표시 목록용으로 옮긴 것 ──
+    # ── [Ver7.10 추가] 8)탭 왼쪽 목록(좌우분할)용 헬퍼 — 예전 1차 초안 선택 팝업의
+    # 로직을 그대로 상시표시 목록용으로 옮긴 것 ──
     def _web2nd_refresh_list(self):
         if not hasattr(self, 'web2nd_list_tree'):
             return
@@ -9759,8 +9720,8 @@ class MarkdownExtractorGUI:
     def _on_web2nd_modified(self, event=None):
         """텍스트 변경 감지 -> 제목 자동 추출
         [Ver9.08 최종] 사용자가 새로 붙여넣거나 직접 고친 경우는 이전에
-        확정해둔 제목 후보를 무효화한다(저장 버튼도 다시 비활성화됨 -
-        _extract_web2nd_title 참고). 단, "✅ 이 제목으로 확정" 버튼이
+        확정해둔 제목을 무효화한다(저장 버튼도 다시 비활성화됨 -
+        _extract_web2nd_title 참고). 단, "✅ 최종 확정" 버튼이
         코드로 H1 줄만 바꿔 쓰는 경우(_web2nd_programmatic_edit)는
         방금 확정한 상태 그대로 유지해야 하므로 무효화하지 않는다."""
         if self.web2nd_text.edit_modified():
@@ -9814,7 +9775,7 @@ class MarkdownExtractorGUI:
         self.web2nd_filename_var.set(filename)
         self._update_web2nd_path_preview()
         # [Ver9.08 최종] "저장"은 더 이상 H1 인식만으로 열리지 않는다.
-        # 제목 후보를 확정(_web2nd_title_confirmed)해야만 열리도록 해서,
+        # 제목을 확정(_web2nd_title_confirmed)해야만 열리도록 해서,
         # 확정 절차 없이 저장되는 경로를 원천 차단한다.
         if getattr(self, '_web2nd_title_confirmed', False):
             self.web2nd_save_btn.config(state=tk.NORMAL)
@@ -9852,8 +9813,8 @@ class MarkdownExtractorGUI:
 
     def _web2nd_clear_manual_title(self):
         """[2026-09-16 3차 신규] "🗑 제목 지우기" 버튼 - "직접 입력으로
-        확정" 입력창(web2nd_working_title_var)만 비운다(후보 3개나
-        라디오 선택 상태에는 영향 없음)."""
+        확정" 입력창(web2nd_working_title_var)만 비운다.
+        """
         self.web2nd_working_title_var.set("")
 
     def _update_web2nd_path_preview(self):
@@ -10090,14 +10051,14 @@ class MarkdownExtractorGUI:
     # "몇 % 겹침"이라는 숫자만 보여주면 사람이 판단할 근거가 없다는 지적을
     # 반영해, 실제로 겹치는 문구/숫자와 기존·신규 글의 도입부·마무리 원문
     # 스니펫(DB에 이미 저장돼 있던 것 -- 원본 MD가 삭제됐어도 이건 남아있음)을
-    # 나란히 보여준다. force_save_mode=True면 하단에 "그래도 저장/취소"
-    # 버튼이 뜨고, 그 선택 결과(True/False)를 반환한다. False(미리보기용)면
-    # 그냥 정보 확인용 "닫기" 버튼만 뜬다.
+    # 나란히 보여준다. force_save_mode=True면 하단에 "취소/다른 글로 저장/덮어쓰기"
+    # 버튼이 뜨고 "cancel"/"append"/"overwrite"를 반환한다(Ver7.45). False(미리보기용)면
+    # 정보 확인용 "닫기" 버튼만 뜬다.
     def _show_kin_dup_detail(self, r, force_save_mode=False):
         """[Ver7.45 변경] force_save_mode=True일 때 버튼이 "취소"/"그래도
         저장" 둘뿐이라, 사실은 같은 글을 재저장하는 상황에서도 "그래도
         저장"을 누르면 포스팅DB에 사실상 같은 기록이 하나 더 쌓이는 문제가
-        있었다(11)포스팅 이력관리에 거의 동일한 글이 중복으로 보이는 원인).
+        있었다(12)포스팅 이력관리에 거의 동일한 글이 중복으로 보이는 원인).
         "🔁 덮어쓰기(같은 글 - 기존 기록 교체)" 버튼을 추가해 선택지를
         분리했다 - 반환값도 True/False에서 "cancel"/"append"/"overwrite"
         문자열로 바뀐다. force_save_mode=False(미리보기 전용)일 때는 버튼이
@@ -10807,7 +10768,7 @@ class MarkdownExtractorGUI:
 
     def _thumb_refresh_list(self):
         """[Ver7.87 신규] "9)썸네일/인포그래픽" 탭 좌측 목록 새로고침 -
-        "5)웹2차 각색" 등 다른 탭들의 _web2nd_refresh_list와 동일한 패턴."""
+        "8)2차 각색" 등 다른 탭들의 _web2nd_refresh_list와 동일한 패턴."""
         if not hasattr(self, 'thumb_list_tree'):
             return
         base = self.base_folder_var.get().strip() or self.base_folder
@@ -10990,7 +10951,7 @@ class MarkdownExtractorGUI:
 
     # 통합키워드 관리
     def create_step3_tab(self):
-        """3단계: 통합 키워드 관리 탭"""
+        """10)통합 키워드 등록 탭"""
         step3_frame = ttk.Frame(self.notebook, padding="10")
         self.notebook.add(step3_frame, text="10)통합 키워드 등록")
         
@@ -11020,7 +10981,7 @@ class MarkdownExtractorGUI:
 
 
         # ========================================
-        # ✅ 새로 추가: 모델 폴더 선택
+        # 모델 폴더 선택
         # ========================================
         model_select_frame = ttk.LabelFrame(step3_frame, text="사용된 모델의 최종 결과물 폴더 선택", padding="10")
         model_select_frame.grid(row=2, column=0, columnspan=3, pady=(0, 10), sticky=(tk.W, tk.E))
@@ -11032,17 +10993,14 @@ class MarkdownExtractorGUI:
             variable=self.check_gemini_folder).grid(row=0, column=1, sticky=tk.W, padx=10, pady=5)
         ttk.Checkbutton(model_select_frame, text="Claude 최종 (perplexity_Claude_final_articles)",
             variable=self.check_claude_folder).grid(row=0, column=2, sticky=tk.W, padx=10, pady=5)
-        # [Ver7.39 추가] 다중질문검색(종합완성판) 저장 폴더도 중복 검사 대상에 포함
+        # [Ver7.39 추가] 옛 종합완성판 결과 폴더도 중복 검사 대상에 포함(기능은 2026-09-25 삭제)
         ttk.Checkbutton(model_select_frame, text="종합완성판 최종 (perplexity_종합완성판_final_articles)",
             variable=self.check_comprehensive_folder).grid(row=0, column=3, sticky=tk.W, padx=10, pady=5)
         
-        # ========================================
-        # 기존 코드 계속 (row 번호만 +1)
-        # ========================================
         
         # 중복률 설정
         threshold_frame = ttk.Frame(step3_frame)
-        threshold_frame.grid(row=3, column=0, columnspan=3, pady=10)  # ← row=1에서 2로 변경
+        threshold_frame.grid(row=3, column=0, columnspan=3, pady=10)
         
         ttk.Label(threshold_frame, text="중복률 임계값:").grid(row=0, column=0, sticky=tk.W, pady=5)
         
@@ -11062,7 +11020,7 @@ class MarkdownExtractorGUI:
         
         # 실행 버튼
         button_frame = ttk.Frame(step3_frame)
-        button_frame.grid(row=4, column=0, columnspan=3, pady=20)  # ← row=2에서 3으로 변경
+        button_frame.grid(row=4, column=0, columnspan=3, pady=20)
         
         self.step3_check_button = ttk.Button(button_frame, text="🔍 전체 날짜 중복 검사", command=self.start_all_dates_duplicate_check)
         self.step3_check_button.grid(row=0, column=0, padx=5)
@@ -11095,7 +11053,7 @@ class MarkdownExtractorGUI:
 
         # 진행 상황
         progress_frame = ttk.LabelFrame(step3_frame, text="엑셀 중복 체크 진행 상황", padding="5")
-        progress_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=10)  # ← row=3에서 4로 변경
+        progress_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=10)
         
         self.step3_progress_var = tk.StringVar(value="대기 중...")
         ttk.Label(progress_frame, textvariable=self.step3_progress_var).grid(row=0, column=0, sticky=tk.W)
@@ -11107,10 +11065,10 @@ class MarkdownExtractorGUI:
         progress_frame.columnconfigure(0, weight=1)
 
     # ──────────────────────────────────────────────────────
-    # 종합관리 : 포스팅DB 조회 / 삭제 (주제=블로그 별로 관리)
+    # 12)포스팅 이력관리 : 포스팅DB 조회 / 삭제 (주제=블로그 별로 관리)
     # ──────────────────────────────────────────────────────
     def create_db_manage_tab(self):
-        """포스팅DB 종합관리 탭 - 주제별 조회 + 수동 삭제 (DB만 삭제, MD 파일은 유지)"""
+        """12)포스팅 이력관리 탭 - 주제별 조회 + 수동 삭제 (DB만 삭제, MD 파일은 유지)"""
         frame = ttk.Frame(self.notebook, padding="10")
         self.notebook.add(frame, text="12)포스팅 이력관리")
         frame.columnconfigure(0, weight=1)
@@ -11658,7 +11616,7 @@ class MarkdownExtractorGUI:
         if self.check_claude_folder.get():
             folders.append("perplexity_Claude_final_articles")
 
-        # [Ver7.39 추가] 다중질문검색(종합완성판) 저장 폴더
+        # [Ver7.39 추가] 옛 종합완성판 결과 폴더(기능은 2026-09-25 삭제)
         if self.check_comprehensive_folder.get():
             folders.append("perplexity_종합완성판_final_articles")
 
@@ -11685,8 +11643,8 @@ class MarkdownExtractorGUI:
         return candidate
 
     # ---------------------------------------
-    # ✅ 호환용 find_matching_keywords (삭제 금지)
-    # 기존 3단계 코드에서 호출되므로 반드시 존재해야 함
+    # find_matching_keywords (삭제 금지)
+    # 10)·11)탭 중복 검사에서 호출한다
     # 2025-12-28 로직 업데이트
     # ---------------------------------------
     def find_matching_keywords(self, new_title, existing_keywords):
@@ -11697,13 +11655,8 @@ class MarkdownExtractorGUI:
             if not new_title or not existing_keywords:
                 return [], 0.0
     
-            # ===== 헬퍼 함수 ===== 조사 기본
-            #def remove_josa(word):
-            #    """단어에서 조사 제거"""
-            #    josa_pattern = r'(은|는|이|가|을|를|에|의|도|와|과|로|으로|에서|부터|까지|만|라도|이나|나|든지|거나|에게|께서|한테|보고|더러)$'
-            #    return re.sub(josa_pattern, '', word)
             
-            # ===== 헬퍼 함수 ===== 조사 추가 최적안
+            # ===== 헬퍼 함수 ===== 조사 제거
             def remove_josa(word):
                 """단어에서 조사 제거 (실전 9000개 기반 최적화)"""
                 # 기본 조사 제거
@@ -11851,7 +11804,7 @@ class MarkdownExtractorGUI:
             return [], 0.0
 
     def start_all_dates_duplicate_check(self):
-        """3단계-1: 전체 날짜 중복 검사 시작"""
+        """10)탭: 전체 날짜 중복 검사 시작"""
         try:
             # 확인 팝업
             result = messagebox.askyesno(
@@ -11893,7 +11846,7 @@ class MarkdownExtractorGUI:
             self.log("🔍 전체 주제 폴더 중복 검사를 시작합니다...")
     
             # ========================================
-            # ✅ 선택된 폴더 확인 (추가)
+            # 선택된 폴더 확인
             # ========================================
             selected_folders = self.get_selected_model_folders()
             
@@ -11903,9 +11856,6 @@ class MarkdownExtractorGUI:
             
             self.log(f"📂 검사 대상: {', '.join(selected_folders)}")
     
-            # ========================================
-            # 기존 코드 그대로
-            # ========================================
             # 작업 폴더 설정
             work_folder = self.base_folder_var.get().strip()
             if not work_folder:
@@ -11937,7 +11887,7 @@ class MarkdownExtractorGUI:
                         continue
                     
                     # ========================================
-                    # ✅ 수정: 선택된 모델 폴더들 모두 검사 (기존 단일 폴더 대신 반복)
+                    # 선택된 모델 폴더들 모두 검사
                     # ========================================
                     for folder_name in selected_folders:
                         final_folder = os.path.join(date_path, folder_name)
@@ -11945,9 +11895,6 @@ class MarkdownExtractorGUI:
                         if not os.path.exists(final_folder):
                             continue
                         
-                        # ========================================
-                        # 기존 코드 그대로
-                        # ========================================
                         # MD 파일들 수집 (평문 저장 + 제목별 폴더 저장 두 방식 모두 지원)
                         for entry in os.listdir(final_folder):
                             entry_path = os.path.join(final_folder, entry)
@@ -11968,9 +11915,6 @@ class MarkdownExtractorGUI:
             
             self.log(f"📊 총 {len(all_md_files)}개 파일 발견")
             
-            # ========================================
-            # 기존 코드 완전히 그대로
-            # ========================================
             # 기존 키워드 로드
             existing_keywords = []
             if os.path.exists(all_keyword_file):
@@ -12198,7 +12142,7 @@ class MarkdownExtractorGUI:
 
 
     def add_keywords_to_all_excel(self):
-        """3단계-2: 통합파일에 키워드 추가"""
+        """10)탭: 통합파일에 키워드 추가"""
         try:
             # 확인 팝업
             result = messagebox.askyesno(
@@ -12317,13 +12261,13 @@ class MarkdownExtractorGUI:
             self.show_error("키워드 오류", f"키워드 추가 중 오류가 발생했습니다:\n{str(e)}")
 
     def move_rejected_files_step3(self):
-        """3단계: X 표시된 파일들을 중복 폴더로 이동"""
+        """10)탭: X 표시된 파일들을 중복 폴더로 이동"""
         try:
             self.root.after(0, lambda: self.step3_progress_var.set("X 표시 파일 이동 중..."))
             self.log("🗂️ X 표시된 파일 이동을 시작합니다...")
             
             # ========================================
-            # ✅ 선택된 폴더 확인 (추가)
+            # 선택된 폴더 확인
             # ========================================
             selected_folders = self.get_selected_model_folders()
             
@@ -12333,9 +12277,6 @@ class MarkdownExtractorGUI:
             
             self.log(f"📂 이동 대상 폴더: {', '.join(selected_folders)}")
             
-            # ========================================
-            # 기존 코드 그대로
-            # ========================================
             # 엑셀 파일 읽기
             work_folder = self.base_folder_var.get().strip()
             if not work_folder:
@@ -12423,7 +12364,7 @@ class MarkdownExtractorGUI:
                         continue
                     
                     # ========================================
-                    # ✅ 수정: 선택된 모든 모델 폴더에서 검색 (기존 단일 폴더 대신 반복)
+                    # 선택된 모든 모델 폴더에서 검색
                     # ========================================
                     for folder_name in selected_folders:
                         final_folder = os.path.join(date_path, folder_name)
@@ -12431,9 +12372,6 @@ class MarkdownExtractorGUI:
                         if not os.path.exists(final_folder):
                             continue
                         
-                        # ========================================
-                        # 기존 코드 그대로
-                        # ========================================
                         # MD 파일 찾기
                         for filename in os.listdir(final_folder):
                             if not filename.endswith('.md'):
@@ -12448,7 +12386,7 @@ class MarkdownExtractorGUI:
                             # 제목이 일치하면 중복 폴더로 이동
                             if normalized_file == normalized_target:
                                 # ========================================
-                                # ✅ 수정: 모델별 중복 폴더 구분 (기존 단일 폴더 대신)
+                                # 모델별 중복 폴더 구분
                                 # ========================================
                                 if "GPT" in folder_name:
                                     duplicate_folder = os.path.join(date_path, "perplexity_GPT_duplicated")
@@ -12464,9 +12402,6 @@ class MarkdownExtractorGUI:
                                 src_path = os.path.join(final_folder, filename)
                                 dst_path = os.path.join(duplicate_folder, filename)
                                 
-                                # ========================================
-                                # 기존 코드 그대로
-                                # ========================================
                                 import shutil
                                 shutil.move(src_path, dst_path)
                                 moved_count += 1
@@ -12484,9 +12419,6 @@ class MarkdownExtractorGUI:
                     not_found_count += 1
                     self.log(f"❌ 파일을 찾지 못함: {title} (주제: {topic_folder})")
             
-            # ========================================
-            # 기존 코드 완전히 그대로
-            # ========================================
             # 최종 결과
             self.root.after(0, lambda: self.step3_progressbar.configure(value=100))
             
@@ -12551,16 +12483,9 @@ class MarkdownExtractorGUI:
         최종본이 하나도 없던(이번에 옮길 게 없는) 주제는 삭제 대상이
         아니므로 무관한 진행 중 작업은 건드리지 않는다."""
 
-        # [경제통합 개선 - 재수정] 이전 버전은 경제-A~G 폴더 자체를 "경제통합"
-        # 폴더 아래로 shutil.move해서 원래 위치에서 사라지게 했으나, 실제
-        # 요구사항은 "경제 카테고리 폴더는 그대로 유지하고, final_articles
-        # 안의 완성 MD 파일만 경제통합으로 모아달라"는 것이었음. 폴더 이동을
-        # 완전히 제거하고 파일 복사(shutil.copy2)만 하도록 재작성.
-        # [Ver7.54 변경] 복사 후 원본을 남겨두던 것을, 사용자 요청으로 다시
-        # "파일 단위 이동"으로 변경 - 단, 경제-A~G 카테고리 폴더 자체를
-        # 통째로 옮기는 게 아니라 그 안의 완성 파일/제목별 폴더만 이동한다
-        # (카테고리 폴더 구조 자체는 유지). 아래 ECON_TOPICS 목록이 경제
-        # 카테고리로 고정되어 있으므로 다른 주제는 이 변경의 영향을 받지 않음.
+        # 경제-A~G 카테고리 폴더 자체는 그대로 두고, 그 안 final_articles의 완성
+        # 파일/제목별 폴더만 경제통합으로 이동한다(Ver7.54부터 복사 대신 이동).
+        # 아래 ECON_TOPICS가 경제 카테고리로 고정돼 있어 다른 주제는 영향이 없다.
         ECON_TOPICS = [
             "경제-A-거시경제-경기-통화-금리",
             "경제-B-금융-대출-신용-투자-보험-연금상품",
@@ -12863,7 +12788,7 @@ class MarkdownExtractorGUI:
             config['check_gpt_folder']    = self.check_gpt_folder.get()
             config['check_gemini_folder'] = self.check_gemini_folder.get()
             config['check_claude_folder'] = self.check_claude_folder.get()
-            # [Ver7.39 추가]
+            # [Ver7.39 추가] 옛 종합완성판 폴더 검사 여부
             config['check_comprehensive_folder'] = self.check_comprehensive_folder.get()
             config['claude_model_1st'] = self.claude_model_1st.get()
             config['claude_model_2nd'] = self.claude_model_2nd.get()
@@ -12903,7 +12828,7 @@ class MarkdownExtractorGUI:
                 self.check_gpt_folder.set(config.get('check_gpt_folder', True))
                 self.check_gemini_folder.set(config.get('check_gemini_folder', True))
                 self.check_claude_folder.set(config.get('check_claude_folder', True))
-                # [Ver7.39 추가]
+                # [Ver7.39 추가] 옛 종합완성판 폴더 검사 여부
                 self.check_comprehensive_folder.set(config.get('check_comprehensive_folder', True))
                 self.claude_model_1st.set(config.get('claude_model_1st', 'claude-sonnet-4-5'))
                 self.claude_model_2nd.set(config.get('claude_model_2nd', 'claude-sonnet-4-5'))
@@ -12984,7 +12909,7 @@ class MarkdownExtractorGUI:
     # ══════════════════════════════════════════════════════════
     # [Ver7.10 추가] 반자동 프로그램의 "5단계: 중복 검사" + "6단계: 최종
     # 처리(포스팅 폴더로 이동)" 로직을 완전히 별도의 새 탭으로 그대로
-    # 이식한 것. 기존 "9)통합 키워드 관리" 탭의 변수·함수는 일절 건드리지
+    # 이식한 것. 기존 "10)통합 키워드 등록" 탭의 변수·함수는 일절 건드리지
     # 않고, semi_ 접두어가 붙은 독립된 함수들로만 동작한다.
     # 반자동과의 차이점(의도적 조정): 반자동은 항상 "작업폴더에서 찾은
     # 첫 번째 주제 폴더"만 처리했지만, 수동 프로그램은 다른 모든 탭이
@@ -12994,7 +12919,7 @@ class MarkdownExtractorGUI:
     # ══════════════════════════════════════════════════════════
 
     def create_semi_migrated_tab(self):
-        """반자동 이식 탭: 주제별 중복검사 + 최종처리(포스팅 폴더 이동)"""
+        """11)주제 키워드 등록 탭(반자동 이식): 주제별 중복검사 + 최종처리(포스팅 폴더 이동)"""
         tab = ttk.Frame(self.notebook, padding="10")
         self.notebook.add(tab, text="11)주제 키워드 등록")
         tab.columnconfigure(1, weight=1)
@@ -13100,9 +13025,9 @@ class MarkdownExtractorGUI:
 
         # 중복률 임계값
         # [Ver7.20 버그수정] 이 탭 전용 변수(semi_threshold_var)를 별도로 만들어
-        # 썼더니 config에 저장되는 대상은 9)통합 키워드의 step3_threshold_var뿐이라
+        # 썼더니 config에 저장되는 대상은 10)통합 키워드 등록의 step3_threshold_var뿐이라
         # 재시작 시 항상 기본값 50으로 초기화되는 문제가 있었다. 중복률 판정
-        # 로직이 9)통합 키워드와 완전히 동일하므로 별도 저장 로직을 새로 만드는
+        # 로직이 10)통합 키워드 등록과 완전히 동일하므로 별도 저장 로직을 새로 만드는
         # 대신 step3_threshold_var를 그대로 공유해서 쓴다 - 값이 이미 저장/로드
         # 되는 변수라 이 탭에서 입력한 값도 함께 자동으로 저장/복원된다(두 탭이
         # 같은 값을 공유하게 됨).
@@ -13389,7 +13314,7 @@ class MarkdownExtractorGUI:
     # 포스팅DB.json 없이도) 게시판 번호를 알 수 있도록, 같은 폴더
     # (perplexity_{모델}_final_articles/)에 같이 두는 초경량 사이드카
     # 파일. 포스팅DB처럼 본문·요약 등은 담지 않고 "제목\t카테고리번호"
-    # 한 줄씩만 담는다. 추가(저장)/변경(다시 판정 후 재저장)/삭제(종합관리
+    # 한 줄씩만 담는다. 추가(저장)/변경(다시 판정 후 재저장)/삭제(12)탭
     # 수동 삭제)가 전부 포스팅DB와 같은 시점에 같이 반영되어야 한다.
     KIN_SIDECAR_FILENAME = "게시판목록.txt"
 
@@ -13443,7 +13368,7 @@ class MarkdownExtractorGUI:
         self._kin_sidecar_write(final_folder, items)
 
     def _kin_sidecar_remove(self, final_folder, title):
-        """제목이 일치하는 줄을 사이드카에서 지운다(종합관리 수동 삭제와 연동)."""
+        """제목이 일치하는 줄을 사이드카에서 지운다(12)포스팅 이력관리 수동 삭제와 연동)."""
         if not final_folder:
             return
         norm = lambda s: self.sanitize_filename(s or "").lower()
