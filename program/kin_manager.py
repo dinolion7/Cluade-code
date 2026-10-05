@@ -213,6 +213,21 @@
   기능처럼 설명하던 주석, 반환값(True/False→문자열)·썸네일 폴백 등 코드와 다른 주석을
   고침. 주석 처리된 옛 코드, "기존 코드 그대로"/"✅ 추가!"/"row=1에서 2로 변경" 같은
   작업 메모를 삭제. 주석·독스트링 외 코드는 그대로임(AST 대조로 확인).
+
+- Ver10.05 (2026-10-05): (1) "8)2차 각색"에 저장 전 모바일 문단 정리 신설 - "📱 문단
+  정리(GPT)" 체크(기본 꺼짐, ui_settings의 web2nd_para_reflow)를 켜 두면 "✅ 최종 확정"
+  때 게시판 판정과 함께 백그라운드로 돈다. GPT(gpt-4.1-mini)는 문장 번호 묶음만 JSON으로
+  답하고 코드가 원래 문장 사이에 빈 줄만 넣어 조립한다(para_* 함수). 제목·소제목·표·
+  리스트·해시태그 줄은 잠그고, 공백 뺀 전후 본문이 다르거나 응답이 잘못되면 원본 유지.
+  진행 중이면 저장을 막고, 끝나면 본문칸에 바로 반영(제목 확정 상태 유지). (2) 포스팅DB
+  중복비교용 도입부·마무리를 "앞 5줄" 대신 글자 수(200자)로만 자르게 변경 - 문단을 잘게
+  나눠 저장해도 같은 범위를 비교한다. (3) 버그 수정: 탭 전환 새로고침 표의 "2)질문 상세
+  분석" 키를 실제 탭 이름 "2)질문적합분석(클로드)"으로 고쳐 2)탭 목록이 다시 자동 갱신됨.
+  크롬 열기 실패 팝업이 예외 변수(e2)를 늦게 참조해 NameError가 나던 것 수정. (4) 호출하는
+  곳이 없던 코드 삭제 - 워터마크 함수·상수와 PIL 임포트, 옛 사전필터링(_prefilter_* 4개,
+  parse_prefilter_selection, KIN_PREFILTER_FINAL_REVIEW_PROMPT, prefilter 설정 함수·팝업),
+  open_perplexity_question_picker, _copy_web2nd_title, 썸네일 그룹 탐색 2개와
+  KIN_THUMBNAIL_GROUP_MAP, select_classifier_file.
 """
 import re
 import os
@@ -246,14 +261,6 @@ try:
 except ImportError:
     SELENIUM_OK = False
 
-# [Ver7.31 신규] 이미지 워터마크 가리기 탭(8번)용 - 정책뉴스 프로그램에서
-# 이식. 없으면 그 탭만 안내 문구로 대체되고 나머지 프로그램 동작에는
-# 영향 없음(pip install pillow).
-try:
-    from PIL import Image
-    PIL_OK = True
-except ImportError:
-    PIL_OK = False
 
 # 다른 오토포스팅 프로그램들과 동일 폴더에서 실행된다는 전제로 chrome_profile1/env.txt 경로 계산
 if getattr(sys, 'frozen', False):
@@ -333,83 +340,6 @@ def open_folder(path: str):
             subprocess.run(["xdg-open", path])
     except Exception as e:
         messagebox.showerror("오류", f"폴더를 열 수 없습니다: {e}")
-
-# ════════════════════════════════════════════════════════════
-# [Ver7.31 이식] 이미지 워터마크 가리기 (앵커 이미지 합성)
-# ════════════════════════════════════════════════════════════
-# 정책뉴스 프로그램(TAB9)에서 그대로 이식. 재미나이(Gemini) 등 AI 이미지
-# 생성 서비스가 우측 하단에 붙이는 워터마크 심볼은 직접 지우기 어렵다
-# (주변 배경까지 같이 뭉개짐). 대신 그 자리를 별도 이미지(앵커 이미지 —
-# 예: 인물 캐릭터)로 덮어 가리는 방식은 배경 손상 없이 간단하게 처리된다.
-# 지금은 이 함수들을 호출하는 탭이 없다(워터마크 탭은 삭제되고 코드만 남음).
-
-SUPPORTED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
-WM_OUTPUT_SUBFOLDER = "_워터마크가림"
-
-
-def _wm_find_images(folder: str, recursive: bool) -> list:
-    """대상 폴더에서 처리할 이미지 파일 경로 목록을 모은다.
-    recursive=False면 folder 바로 안(1단계)만, True면 모든 하위 폴더까지 포함한다.
-    합성 결과가 저장되는 WM_OUTPUT_SUBFOLDER는 재귀 스캔에서 항상 제외한다 —
-    재실행 시 이미 처리된 결과물을 원본으로 오인해 또 처리하는 것을 막기 위함."""
-    results = []
-    if not os.path.isdir(folder):
-        return results
-    if recursive:
-        for root, dirs, files in os.walk(folder):
-            dirs[:] = [d for d in dirs if not d.startswith(WM_OUTPUT_SUBFOLDER)]
-            for fn in sorted(files):
-                if os.path.splitext(fn)[1].lower() in SUPPORTED_IMAGE_EXTS:
-                    results.append(os.path.join(root, fn))
-    else:
-        for fn in sorted(os.listdir(folder)):
-            fp = os.path.join(folder, fn)
-            if os.path.isfile(fp) and os.path.splitext(fn)[1].lower() in SUPPORTED_IMAGE_EXTS:
-                results.append(fp)
-    return results
-
-
-def composite_anchor_on_image(image_path: str, anchor_img, width_ratio: float = 0.22,
-                               margin_x_ratio: float = 0.02, margin_y_ratio: float = 0.0):
-    """base 이미지 우측 하단에 anchor_img(미리 로드된 RGBA PIL Image)를
-    비율에 맞게 리사이즈해 합성한 새 PIL Image를 반환한다(원본 객체는 안 건드림).
-    - width_ratio   : 앵커 이미지 폭 = base 폭 * width_ratio (워터마크를 확실히
-                       덮을 만큼 충분히 크게, 기본 22%)
-    - margin_x_ratio: 오른쪽 여백 = base 폭 * margin_x_ratio
-    - margin_y_ratio: 아래쪽 여백 = base 높이 * margin_y_ratio (기본 0 = 바닥에
-                       딱 붙임)
-    JPG처럼 알파 채널이 없는 포맷은 최종적으로 RGB로 되돌려 저장 호환성을 유지한다."""
-    base = Image.open(image_path)
-    orig_mode = base.mode
-    base = base.convert("RGBA")
-    bw, bh = base.size
-
-    aw = max(1, int(bw * width_ratio))
-    ah = max(1, int(anchor_img.height * (aw / anchor_img.width)))
-    anchor_resized = anchor_img.resize((aw, ah), Image.LANCZOS)
-
-    margin_x = int(bw * margin_x_ratio)
-    margin_y = int(bh * margin_y_ratio)
-    x = max(0, bw - aw - margin_x)
-    y = max(0, bh - ah - margin_y)
-
-    base.paste(anchor_resized, (x, y), anchor_resized)
-
-    if orig_mode != "RGBA":
-        base = base.convert("RGB")
-    return base
-
-
-def _wm_output_path(src_path: str, target_folder: str, keep_original: bool) -> str:
-    """'원본 유지' 옵션이면 target_folder 아래 WM_OUTPUT_SUBFOLDER 안에
-    원본과 같은 상대경로 구조를 그대로 살려 저장 경로를 만든다. 원본
-    덮어쓰기 옵션이면 같은 폴더·같은 파일명(확장자만 교체)으로 만든다.
-    합성 결과는 원본 확장자와 무관하게 항상 PNG로 저장한다."""
-    if keep_original:
-        rel = os.path.relpath(src_path, target_folder)
-        rel_png = os.path.splitext(rel)[0] + ".png"
-        return os.path.join(target_folder, WM_OUTPUT_SUBFOLDER, rel_png)
-    return os.path.splitext(src_path)[0] + ".png"
 
 
 def get_current_public_ip():
@@ -524,33 +454,6 @@ def _kin_is_specific_number(token):
         return False
     return token.endswith(_KIN_SPECIFIC_NUM_SUFFIXES)
 
-# [Ver7.05 수정] 썸네일 스타일 템플릿은 별도 폴더가 아니라, 지금 쓰는
-# 작업 폴더(base_folder_var) 안에 그냥 놓고 쓴다. 실제 파일명 예시:
-#   지식인_경제6개주제통합_썸네일_프롬프트_V1.md
-#   지식인_교육_썸네일_프롬프트_V1.md
-#   지식인_자동차_썸네일_프롬프트_V1.md
-# 파일명을 고정하지 않고 "그룹 키워드가 포함된 .md 파일"을 작업 폴더
-# 안에서 찾는 방식이라, 나중에 V2·V3로 올려도 코드 수정 없이 그대로
-# 작동한다(여러 버전이 같이 있으면 파일명 정렬상 가장 나중 버전을 사용).
-
-# 주제(폴더명) → 썸네일 스타일 그룹 키워드. 경제 A~G는 포스팅 프로그램이
-# 동일해 유사 패턴에 걸리는 걸 피하기 위해 "경제" 하나로 통합.
-# 건강·IT는 아직 템플릿이 없어 매핑하지 않음(템플릿 준비되면 한 줄만
-# 추가하면 됨).
-KIN_THUMBNAIL_GROUP_MAP = {
-    "경제-A-거시경제-경기-통화-금리":             "경제",
-    "경제-B-금융-대출-신용-투자-보험-연금상품":    "경제",
-    "경제-C-세금-조세제도-연말정산":               "경제",
-    "경제-D-고용-노동-근로관계-취업지원":          "경제",
-    "경제-E-복지연금-사회보험-국민연금-생활지원":  "경제",
-    "경제-F-법률-행정-행정절차-가사":              "경제",
-    "경제-G-부동산-임대차-매매-등기":              "경제",
-    "교육": "교육",
-    "자동차": "자동차",
-}
-# [Ver7.20] KIN_THUMBNAIL_GROUP_MAP은 예전 "그룹+작업폴더 자동탐색" 폴백용이다.
-# 폴백을 없앤 뒤로는 _get_kin_thumbnail_group만 이 값을 읽는데, 그 함수도
-# 지금은 호출되지 않는다. 나중에 세부주제를 다시 쓸 때 참고용으로 남겨 둔다.
 
 # [Ver7.20 추가 → Ver7.58 변경] 재미나이(Gemini) 변환 프롬프트의 예전 공용 키.
 # 처음에는 전체 주제 공용 1개 파일이었고, Ver7.58부터 주제별로 지정한다
@@ -603,11 +506,10 @@ def extract_question_core(title, question_text):
     }
 
 
-# ── [Ver7.08 추가] 사전 필터링(질문 선별) 관련 파싱 함수 ──────────
+# ── [Ver7.08 추가] 수집 질문 파싱 함수 ──────────
 # 1)질문수집 저장 시 자동생성_{주제}.txt에 누적되는 형식:
 #   \n{'='*60}\n[YYYY-MM-DD HH:MM:SS]\n{질문 원문(제목+본문)}\n
-# 을 개별 질문 블록으로 분리하고, 사전 필터링 AI 응답에서
-# "## 리서치 대상 선별 목록"만 뽑아내는 역할을 한다.
+# 을 개별 질문 블록으로 분리한다.
 
 def parse_collected_kin_questions(raw_text):
     """자동생성_{주제}.txt 원문(누적된 여러 질문)을 개별 질문 블록으로 분리.
@@ -629,122 +531,167 @@ def parse_collected_kin_questions(raw_text):
     return questions
 
 
+# ══════════════════════════════════════════════════════════
+# [2026-10-05 신규] 저장 전 모바일 문단 정리 (8)2차 각색, 기본 꺼짐)
+# ──────────────────────────────────────────────────────────
+# 각색 결과의 일반 문단만 모바일에서 읽기 좋게 다시 묶는다. GPT는 본문을
+# 다시 쓰지 않고 "문장 번호를 어떻게 묶을지"만 JSON으로 답하고, 실제 조립은
+# 코드가 원래 문장 그대로 한다 - 문단 사이에 빈 줄(포스팅 프로그램의 문단
+# 구분)만 넣으므로 글자가 바뀔 수 없다. 그래도 마지막에 공백·줄바꿈을 모두
+# 뺀 전후 본문을 대조해 한 글자라도 다르면 원본을 그대로 쓴다.
+# 제목·소제목·해시태그(#), 표(|), 리스트(- * + 1.), 인용(>), 이미지,
+# 코드펜스, 구분선, 굵은 글씨만 있는 줄, [[강조]] 줄은 건드리지 않는다.
+# ══════════════════════════════════════════════════════════
+PARA_REFLOW_MODEL = "gpt-4.1-mini-2025-04-14"
 
-def parse_prefilter_selection(ai_response_text):
-    """사전 필터링 AI 응답에서 최종 선별 목록만 추출.
-    [Ver7.09] 우선 [SELECTED_START]~[SELECTED_END] 사이의
-    "번호|질문 문장" 고정 포맷(신규 프롬프트)을 파싱한다. 정규식이
-    아니라 '|' 분리라서 AI가 마크다운 스타일을 조금 바꿔도 깨지지
-    않는다. 이 표시가 없는 옛 프롬프트 응답이면 '## 리서치 대상
-    선별 목록' 아래 번호 목록(마크다운)을 예비로 파싱한다(하위호환).
-    반환: [(번호:int, 질문문장:str), ...]"""
-    m = re.search(r'\[SELECTED_START\](.*?)\[SELECTED_END\]', ai_response_text, re.S)
-    if m:
-        items = []
-        for line in m.group(1).split('\n'):
-            line = line.strip()
-            if not line or '|' not in line:
-                continue
-            num_part, _, sentence = line.partition('|')
-            num_part = num_part.strip()
-            sentence = sentence.strip()
-            if num_part.isdigit() and sentence:
-                items.append((int(num_part), sentence))
-        return items
+_PARA_LOCK_PAT = re.compile(
+    r'^\s*(?:#|\||>|!\[|[-*+]\s|\d+[.)]\s|`{3,}|-{3,}\s*$|\*\*[^*].*\*\*\s*$|\[\[)')
+# 문장 끝: . ! ? … 뒤에 닫는 따옴표·괄호가 붙을 수 있고, 그 뒤가 공백이어야 한다
+# ("1.5", "2026.10.5" 같은 숫자 안의 점은 뒤에 공백이 없어 나뉘지 않는다).
+_PARA_SENT_END_PAT = re.compile(r'[.!?…][)"\'”’」』\]]*(?=\s)')
 
-    # ── 예비(구버전) 파싱: [SELECTED_START] 표시가 없는 옛 프롬프트 응답 ──
-    m2 = re.search(r'##\s*리서치\s*대상\s*선별\s*목록.*?\n(.*?)(?:\n##\s|\Z)', ai_response_text, re.S)
-    if not m2:
-        return []
-    items = []
-    for line in m2.group(1).split('\n'):
-        line = line.strip()
-        mm = re.match(r'^[-*]?\s*(\d+)[\.\)]\s*(.+)$', line)
-        if mm:
-            items.append((int(mm.group(1)), mm.group(2).strip()))
-    return items
+PARA_REFLOW_RULES = (
+    "당신은 네이버 블로그 글을 모바일 화면에서 읽기 좋게 문단만 다시 나누는 편집자입니다.\n"
+    "아래 [묶음]마다 번호가 붙은 문장 목록이 있습니다. 문장은 고치지 않고, 이어지는 문장들을\n"
+    "몇 개씩 한 문단으로 묶을지만 정합니다.\n\n"
+    "[기준]\n"
+    "- 한 문단은 약 120자 안팎(괄호 안은 그 문장의 글자 수)\n"
+    "- 60자 이상인 긴 문장은 혼자 한 문단\n"
+    "- 짧은 문장은 2~3개를 한 문단으로 묶음\n"
+    "- 떼면 뜻이 끊기는 문장(조건·예외, 숫자·기준, 원인·결과)은 150자까지 한 문단으로 묶음\n"
+    "- 순서는 바꾸지 않고, 모든 문장 번호를 한 번씩만, 앞에서부터 차례대로 씀\n\n"
+    "[출력]\n"
+    '아래 JSON만 출력합니다: {"runs": {"묶음번호": [[1, 2], [3], [4, 5]], ...}}'
+)
 
 
-# ── [Ver7.10 추가] "클로드 최종 검토" 버튼용 내장 프롬프트 ─────────
-# 같은 질문 목록을 퍼플렉시티·클로드 두 AI에 각각 돌린 사전 필터링
-# 결과를 받아, 하나의 최종 결과로 병합하는 메타 프롬프트. 외부 파일이
-# 아니라 프로그램 코드에 직접 심어둔다(사용자 요청). {perplexity_result},
-# {claude_result} 자리에 두 결과 붙여넣기 박스 내용이 그대로 들어간다.
-KIN_PREFILTER_FINAL_REVIEW_PROMPT = """[역할]
-당신은 네이버 지식인 질문 사전 필터링 결과를 최종 검토하는 감수자입니다.
-아래에 동일한 [입력 질문 목록]을 서로 다른 두 AI가 각각 심사한 결과가 주어집니다:
-- [퍼플렉시티 결과]
-- [클로드 결과]
+def para_split_sentences(line):
+    """한 줄을 문장 단위로 나눈다(공백은 그대로 둔 채 잘라서 다시 이어 붙이면 원문과 같다)."""
+    out, start = [], 0
+    for m in _PARA_SENT_END_PAT.finditer(line):
+        out.append(line[start:m.end()].strip())
+        start = m.end()
+    rest = line[start:].strip()
+    if rest:
+        out.append(rest)
+    return [s for s in out if s]
 
-각 결과는 번호별로 "적합 / 재구성 필요 / 부적합" 판정과 사유, 그리고 통과한
-질문의 재구성 문장을 담고 있습니다. 이 두 결과를 비교해서 최종 하나의
-결과로 병합하는 것이 당신의 역할입니다.
 
-[병합 규칙]
-1. 두 결과가 같은 번호에 대해 같은 방향(포함 vs 배제)으로 판정했다면 그대로
-   채택합니다. 재구성 문장이 서로 다르게 쓰였다면, 개인정보(구체적 성적·
-   특정 학교명·거주지역 등)를 더 완전히 제거하면서도 원래 질문의 정보
-   수요를 가장 정확히 담은 문장을 선택하거나, 필요하면 더 다듬습니다.
-2. 두 결과가 방향(포함 vs 배제)에서 서로 엇갈리면, 다수결로 넘기지 말고
-   아래 원래 배제 규칙 5가지와 재구성 판단 기준을 다시 직접 적용해서
-   스스로 최종 판정을 내립니다.
-   - ① 상품 추천형: "추천해주세요"라는 표현과 함께 특정 문제집명·강의명·
-     강사명·학원명이 질문의 핵심인 경우. 단, 그 이름을 지워도 남는
-     일반적 정보 수요(학습 전략·선택 기준 등)가 있다면 "재구성 필요"로
-     살립니다. 지우면 질문 자체가 성립하지 않을 때만 "부적합"입니다.
-   - ② 단일 기관 행정형: 특정 학교/대학 한 곳의 내부 행정 규정(성적 산출
-     방식, 휴학 신청 절차, 자체 평가 기준 등)만 묻는 경우.
-   - ③ 순수 고민상담형: 사실 정보가 아니라 개인적 의견·위로·심리적
-     조언을 원하는 경우. 단, "정보 자체"(예: 전과 시 생기부 준비 방향,
-     제도 비교)를 묻는 부분이 함께 있다면 그 정보 수요만 뽑아 "재구성
-     필요"로 살립니다. 순수하게 "계속할지 말지" 감정적 조언만 원하면
-     "부적합"입니다.
-   - ④ 해외 대학·해외 교육제도
-   - ⑤ 개인 특정 가능
-3. 판정이 엇갈렸던 번호는 [최종 판정 상세] 표에 두 AI의 원래 판정과 최종
-   판정, 그리고 어떤 규칙을 적용해 그렇게 결정했는지 1문장 사유를 남깁니다.
-   이 사유는 표에만 적고, 아래 SELECTED 블록의 질문 문장 안에는 절대
-   섞지 않습니다.
-4. 두 AI 모두 심사요약(총 N건 중 적합/재구성/부적합 건수)의 숫자와 실제
-   표 내용이 서로 안 맞는 경우가 잦았습니다. 최종 결과의 심사요약 숫자는
-   반드시 최종 판정 상세 내용을 실제로 세어서 채웁니다.
+def para_find_runs(md_text):
+    """본문을 줄 단위로 보고, 잠금 줄 사이에 있는 일반 문단 덩어리(run)를 찾는다.
+    반환: (lines, runs) - runs는 [(시작줄, 끝줄, [문장, ...]), ...]이며 끝줄 포함.
+    run은 일반 문단 줄로 시작하고 끝나며, 사이의 빈 줄(기존 문단 구분)을 포함한다."""
+    lines = md_text.split('\n')
+    kinds = []
+    for ln in lines:
+        if not ln.strip():
+            kinds.append('B')
+        elif _PARA_LOCK_PAT.match(ln):
+            kinds.append('L')
+        else:
+            kinds.append('P')
+    runs, i, n = [], 0, len(lines)
+    while i < n:
+        if kinds[i] != 'P':
+            i += 1
+            continue
+        j = i
+        k = i + 1
+        while k < n and kinds[k] in ('P', 'B'):
+            if kinds[k] == 'P':
+                j = k
+            k += 1
+        sents = []
+        for ln in lines[i:j + 1]:
+            if ln.strip():
+                sents.extend(para_split_sentences(ln))
+        runs.append((i, j, sents))
+        i = j + 1
+    return lines, runs
 
-[최종 출력 형식]
 
-전체 문서를 하나의 코드블럭으로 감싸서 출력합니다.
+def para_valid_groups(groups, n):
+    """GPT가 준 묶음이 1..n을 순서대로 한 번씩만 덮는지 확인."""
+    if not isinstance(groups, list) or not groups:
+        return False
+    flat = []
+    for g in groups:
+        if not isinstance(g, list) or not g:
+            return False
+        flat.extend(g)
+    return flat == list(range(1, n + 1))
 
-##### 병합 요약
-- 총 N건 중 두 결과 일치 A건 / 판정 엇갈려 재검토 B건 / 최종 포함(적합+재구성완료) C건 / 최종 배제(부적합) D건
 
-## 최종 판정 상세 (두 결과가 엇갈렸던 항목만)
+def para_apply_groups(md_text, runs_groups):
+    """runs_groups({run 순번(1부터): [[1,2],[3]]})대로 문단을 다시 조립한다.
+    묶음이 잘못된 run은 원래 모양 그대로 둔다. 반환 (새 본문, 바뀐 run 수, 잘못된 run 수)."""
+    lines, runs = para_find_runs(md_text)
+    changed = invalid = 0
+    for idx in range(len(runs), 0, -1):
+        s, e, sents = runs[idx - 1]
+        groups = runs_groups.get(idx)
+        if groups is None:
+            continue
+        if not para_valid_groups(groups, len(sents)):
+            invalid += 1
+            continue
+        new_paras = [" ".join(sents[k - 1] for k in g) for g in groups]
+        new_lines = []
+        for p_i, p in enumerate(new_paras):
+            if p_i:
+                new_lines.append("")
+            new_lines.append(p)
+        if new_lines != lines[s:e + 1]:
+            changed += 1
+        lines[s:e + 1] = new_lines
+    return "\n".join(lines), changed, invalid
 
-| 번호 | 퍼플렉시티 판정 | 클로드 판정 | 최종 판정 | 최종 사유 |
-|---|---|---|---|---|
-| (엇갈렸던 항목만 나열, 일치했던 항목은 생략) |
 
-## 리서치 대상 선별 목록 (최종)
+def para_same_text(a, b):
+    """공백·줄바꿈을 모두 뺀 글자가 같은지(문단 정리 안전장치)."""
+    return re.sub(r'\s', '', a) == re.sub(r'\s', '', b)
 
-이 섹션은 프로그램이 그대로 파싱합니다. 아래 형식을 한 글자도 벗어나지 않고 지킵니다.
 
-- 시작 줄과 종료 줄을 정확히 그대로, 각각 단독 줄로 출력합니다: `[SELECTED_START]` 그리고 `[SELECTED_END]`
-- 그 사이에는 최종 통과된 질문마다 한 줄씩, 다음 형식만 사용합니다: `원래 번호|질문 문장`
-- 번호는 [입력 질문 목록]에서의 원래 번호를 그대로 사용합니다(두 AI가 매긴 번호와 동일).
-- 질문 문장 안에는 줄바꿈과 `|` 문자를 절대 사용하지 않습니다.
-- 부적합으로 최종 결정된 항목은 이 목록에 포함하지 않습니다.
-- 통과 항목이 하나도 없어도 `[SELECTED_START]`와 `[SELECTED_END]` 두 줄은 반드시 출력하고, 그 사이는 비워둡니다.
-
-[SELECTED_START]
-(여기에 번호|질문 문장 형식으로 한 줄씩)
-[SELECTED_END]
-
----
-
-[퍼플렉시티 결과]
-{perplexity_result}
-
-[클로드 결과]
-{claude_result}
-"""
+def para_reflow_with_gpt(openai_client, md_text, model=PARA_REFLOW_MODEL):
+    """GPT에게 문장 묶음만 받아 문단을 다시 나눈다.
+    반환 (새 본문 또는 None, 안내 문구). None이면 원본을 그대로 쓴다."""
+    _, runs = para_find_runs(md_text)
+    targets = [(i + 1, r[2]) for i, r in enumerate(runs) if len(r[2]) >= 2]
+    if not targets:
+        return None, "나눌 문단 없음(원본 유지)"
+    parts = []
+    for rid, sents in targets:
+        parts.append(f"[묶음 {rid}]")
+        parts.extend(f"{k}. ({len(s)}자) {s}" for k, s in enumerate(sents, 1))
+        parts.append("")
+    resp = openai_client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": PARA_REFLOW_RULES + "\n\n" + "\n".join(parts)}],
+        temperature=0,
+        max_tokens=1500,
+        response_format={"type": "json_object"},
+    )
+    raw = (resp.choices[0].message.content or "").strip()
+    try:
+        data = json.loads(raw)
+    except Exception:
+        m = re.search(r'\{.*\}', raw, re.S)
+        data = json.loads(m.group(0)) if m else {}
+    runs_groups = {}
+    for k, v in (data.get("runs") or {}).items():
+        try:
+            runs_groups[int(k)] = v
+        except (TypeError, ValueError):
+            pass
+    new_text, changed, invalid = para_apply_groups(md_text, runs_groups)
+    if not para_same_text(md_text, new_text):
+        return None, "대조 실패 - 원본 유지"
+    if new_text == md_text:
+        return None, "바꿀 문단 없음(원본 유지)" + (f", 잘못된 응답 {invalid}곳 무시" if invalid else "")
+    msg = f"문단 {changed}곳 정리 완료"
+    if invalid:
+        msg += f"(잘못된 응답 {invalid}곳은 원래대로)"
+    return new_text, msg
 
 
 def extract_posting_core(md_text, title=""):
@@ -758,7 +705,9 @@ def extract_posting_core(md_text, title=""):
             break
         if line.strip() and not line.strip().startswith("#"):
             intro_lines.append(line.strip())
-    intro = " ".join(intro_lines[:5])
+    # [2026-10-05] 줄 수(앞 5줄) 대신 글자 수(아래 200자)로만 자른다 - 문단을
+    # 잘게 나눠 저장해도(저장 전 문단 정리) 같은 범위를 비교하게 하려는 것.
+    intro = " ".join(intro_lines)
 
     # 마무리: 마지막 ## 섹션 이후 텍스트
     last_idx = 0
@@ -769,7 +718,7 @@ def extract_posting_core(md_text, title=""):
     for line in lines[last_idx:]:
         if line.strip() and not line.strip().startswith("#"):
             summary_lines.append(line.strip())
-    summary = " ".join(summary_lines[:5])
+    summary = " ".join(summary_lines)
 
     numbers = list(set(_KIN_NUM_PAT.findall(md_text)))[:10]
 
@@ -979,7 +928,6 @@ def check_question_vs_posting_duplicate(q_core, posting_records, danger=70):
 
     results.sort(key=lambda x: (x.get("hard_match", False), x["rate"]), reverse=True)
     return results
-
 
 
 def check_posting_duplicate(new_core, records, warn=50, danger=70):
@@ -1232,7 +1180,6 @@ def open_naver_search_in_chrome(keyword: str, blog_only: bool = False) -> bool:
     return True
 
 
-
 ### 주제 및 카테고리 폴더
 # Naver_blog_kin_topic_classify_config
 # 주제 카테고리 폴더 생성방식이 수동과 반자동이 조금 다름 (코드 통합하지 말 것)
@@ -1243,7 +1190,7 @@ class MarkdownExtractorGUI:
     def __init__(self, root):
         
         self.root = root
-        self.root.title("네이버 지식인의 질문을 퍼플렉시티 웹에서 수집한 후 GPT/Claude/Gemini로 각색하는 프로그램(수동작업)_2026-09-28_Ver 9.28")
+        self.root.title("네이버 지식인의 질문을 퍼플렉시티 웹에서 수집한 후 GPT/Claude/Gemini로 각색하는 프로그램(수동작업)_2026-10-05_Ver 10.05")
         self._shared_chrome_driver = None  # 네이버 지식인 접속용 공유 크롬(chrome_profile1) 인스턴스
 
         # 창 크기와 위치를 한번에 설정 (처음부터 센터에 생성)
@@ -1274,7 +1221,6 @@ class MarkdownExtractorGUI:
         # ========================================
         self.base_folder = "Naver_blog_지식인_수동_markdown_work_folder"
         os.makedirs(self.base_folder, exist_ok=True)
-        
         
         
         self.prompt_folder = "Naver_blog_sub_prompts"
@@ -2050,7 +1996,7 @@ class MarkdownExtractorGUI:
         # 돌아와도 새로 생긴 항목이 안 뜸). 실제 탭 텍스트와 정확히 일치하도록
         # 수정. 탭 이름을 바꾸면 아래 키도 같이 바꿔야 한다.
         refresh_map = {
-            "2)질문 상세분석": getattr(self, '_detail_refresh_list', None),
+            "2)질문적합분석(클로드)": getattr(self, '_detail_refresh_list', None),
             "3)퍼플렉시티 수집": getattr(self, '_perp_refresh_list', None),
             "4)퍼플렉시티 자료검증(클로드)": getattr(self, '_verify_refresh_list', None),
             "7)1차 각색": getattr(self, '_web1st_refresh_list', None),
@@ -2113,34 +2059,9 @@ class MarkdownExtractorGUI:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump({'prompts': prompts}, f, ensure_ascii=False, indent=2)
 
-    # ── [Ver7.08 추가] 사전 필터링(질문 선별)용 주제별 프롬프트 매핑 ──
-    def get_kin_prefilter_config_path(self):
-        """사전 필터링용 주제별 프롬프트 매핑 파일 경로 반환 (base_folder 작업폴더 안에 저장)"""
-        base_folder = self.base_folder_var.get().strip() if hasattr(self, 'base_folder_var') else self.base_folder
-        base_folder = base_folder or self.base_folder
-        os.makedirs(base_folder, exist_ok=True)
-        return os.path.join(base_folder, "Naver_blog_config_kin_prefilter.json")
-
-    def load_kin_prefilter_prompts(self):
-        """사전 필터링용 주제별 프롬프트 매핑 로드"""
-        path = self.get_kin_prefilter_config_path()
-        if not os.path.exists(path):
-            return {}
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            return data.get('prompts', {})
-        except Exception:
-            return {}
-
-    def save_kin_prefilter_prompts(self, prompts):
-        """사전 필터링용 주제별 프롬프트 매핑 저장"""
-        path = self.get_kin_prefilter_config_path()
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump({'prompts': prompts}, f, ensure_ascii=False, indent=2)
 
     # ── [Ver7.10 추가] "2)질문적합분석" 탭(질문 상세분석)용 주제별 프롬프트 설정.
-    # 구조는 사전 필터링/퍼플렉시티 프롬프트 설정과 동일, 저장 파일만 다르다.
+    # 구조는 퍼플렉시티 프롬프트 설정과 동일, 저장 파일만 다르다.
     def get_kin_detail_config_path(self):
         """질문 상세분석용 주제별 프롬프트 매핑 파일 경로 반환 (base_folder 작업폴더 안에 저장)"""
         base_folder = self.base_folder_var.get().strip() if hasattr(self, 'base_folder_var') else self.base_folder
@@ -2167,7 +2088,7 @@ class MarkdownExtractorGUI:
             json.dump({'prompts': prompts}, f, ensure_ascii=False, indent=2)
 
     # ── [Ver7.10 추가] "4)퍼플렉시티 자료검증" 탭용 주제별 프롬프트 설정.
-    # 구조는 상세분석/사전필터링 프롬프트 설정과 동일, 저장 파일만 다르다.
+    # 구조는 상세분석 프롬프트 설정과 동일, 저장 파일만 다르다.
     def get_kin_verify_config_path(self):
         """퍼플렉시티 교차검증용 주제별 프롬프트 매핑 파일 경로 반환"""
         base_folder = self.base_folder_var.get().strip() if hasattr(self, 'base_folder_var') else self.base_folder
@@ -2194,7 +2115,7 @@ class MarkdownExtractorGUI:
             json.dump({'prompts': prompts}, f, ensure_ascii=False, indent=2)
 
     # ── [Ver7.17 추가] 썸네일 프롬프트용 주제별 매핑.
-    # 구조는 위 4개(퍼플렉시티/사전필터링/상세분석/교차검증) 프롬프트
+    # 구조는 위 3개(퍼플렉시티/상세분석/교차검증) 프롬프트
     # 설정과 동일, 저장 파일만 다르다. 11개 주제마다 이 설정 화면에서
     # 프롬프트 파일을 직접 지정한다(프롬프트 폴더 기준). 지정하지 않은
     # 주제는 썸네일 프롬프트를 만들 수 없다(Ver7.20에서 자동탐색 폴백 제거).
@@ -3046,7 +2967,6 @@ class MarkdownExtractorGUI:
             error_msg = str(e)
             self.show_error("Gemini 오류", f"Gemini 1차 각색 에러:\n{error_msg}")
             raise Exception(f"Gemini 1차 각색 최종 실패: {error_msg}")
-
 
 
     # 2차 각색 모델 선택
@@ -4526,7 +4446,7 @@ class MarkdownExtractorGUI:
                 try:
                     driver = self._get_or_create_shared_chrome()
                 except Exception as e2:
-                    self.root.after(0, lambda: messagebox.showerror("크롬 열기 실패", str(e2)))
+                    self.root.after(0, lambda m=str(e2): messagebox.showerror("크롬 열기 실패", m))
                     return
 
             try:
@@ -5291,65 +5211,9 @@ class MarkdownExtractorGUI:
         ttk.Button(btn_frame, text="저장", command=do_save).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="취소", command=popup.destroy).pack(side=tk.LEFT, padx=5)
 
-    def open_kin_prefilter_prompt_settings(self):
-        """[Ver7.08 추가] 사전 필터링(질문 선별)용 주제별 프롬프트 설정 팝업.
-        구조는 open_kin_perplexity_prompt_settings와 동일하며, 저장 대상
-        파일만 Naver_blog_config_kin_prefilter.json으로 다르다."""
-        topics = [
-            "경제-A-거시경제-경기-통화-금리", "경제-B-금융-대출-신용-투자-보험-연금상품",
-            "경제-C-세금-조세제도-연말정산", "경제-D-고용-노동-근로관계-취업지원",
-            "경제-E-복지연금-사회보험-국민연금-생활지원", "경제-F-법률-행정-행정절차-가사",
-            "경제-G-부동산-임대차-매매-등기", "건강", "교육", "자동차", "IT"
-        ]
-        current = self.load_kin_prefilter_prompts()
-
-        popup = tk.Toplevel(self.root)
-        popup.title("사전 필터링 프롬프트 설정 (주제별)")
-        screen_width = popup.winfo_screenwidth()
-        screen_height = popup.winfo_screenheight()
-        w, h = 900, 500
-        popup.geometry(f"{w}x{h}+{(screen_width-w)//2}+{(screen_height-h)//2}")
-        popup.transient(self.root)
-        popup.grab_set()
-
-        ttk.Label(popup, text="주제별로 사전 필터링(질문 선별)용 프롬프트 파일을 지정하세요.\n"
-                              "(프롬프트 파일 안에 {questions_batch} 자리에 불러온 질문 목록이 자동으로 채워집니다.)",
-                  foreground="gray", justify=tk.LEFT).pack(anchor="w", padx=10, pady=(10, 5))
-
-        body = ttk.Frame(popup, padding=10)
-        body.pack(fill=tk.BOTH, expand=True)
-        body.columnconfigure(1, weight=1)
-
-        prompt_vars = {}
-        for i, topic in enumerate(topics):
-            ttk.Label(body, text=topic).grid(row=i, column=0, sticky=tk.W, pady=3, padx=(0, 8))
-            var = tk.StringVar(value=current.get(topic, ""))
-            prompt_vars[topic] = var
-            ttk.Entry(body, textvariable=var, width=60).grid(row=i, column=1, sticky=(tk.W, tk.E), padx=5, pady=3)
-
-            def browse(v=var):
-                pf = self.prompt_folder_var.get().strip() if hasattr(self, 'prompt_folder_var') else "."
-                path = filedialog.askopenfilename(
-                    title="사전 필터링 프롬프트 파일 선택", initialdir=pf or ".",
-                    filetypes=[("텍스트 파일", "*.txt"), ("모든 파일", "*.*")])
-                if path:
-                    v.set(os.path.basename(path))
-
-            ttk.Button(body, text="찾기", command=browse).grid(row=i, column=2, padx=5, pady=3)
-
-        def do_save():
-            new_prompts = {t: v.get().strip() for t, v in prompt_vars.items() if v.get().strip()}
-            self.save_kin_prefilter_prompts(new_prompts)
-            self.log(f"💾 사전 필터링 프롬프트 설정 저장 완료: {len(new_prompts)}개")
-            popup.destroy()
-
-        btn_frame = ttk.Frame(popup)
-        btn_frame.pack(pady=10)
-        ttk.Button(btn_frame, text="저장", command=do_save).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="취소", command=popup.destroy).pack(side=tk.LEFT, padx=5)
 
     # ── [Ver7.10 추가] "2)질문적합분석" 탭용 프롬프트 설정 팝업.
-    # 구조는 open_kin_prefilter_prompt_settings와 동일하며, 저장 대상
+    # 구조는 open_kin_perplexity_prompt_settings와 동일하며, 저장 대상
     # 파일만 Naver_blog_config_kin_detail.json으로 다르다. {questions_batch}
     # 같은 치환 자리는 없음 — 프롬프트 뒤에 선택한 질문(제목+본문)이
     # 그대로 이어붙는 방식(3)/4)/7)탭과 동일).
@@ -5463,200 +5327,6 @@ class MarkdownExtractorGUI:
         ttk.Button(btn_frame, text="저장", command=do_save).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="취소", command=popup.destroy).pack(side=tk.LEFT, padx=5)
 
-    def open_perplexity_question_picker(self):
-        """질문DB에서 질문을 골라 퍼플렉시티 프롬프트와 함께 클립보드로 복사하는 팝업"""
-        base_folder = self.base_folder_var.get().strip() or self.base_folder
-
-        popup = tk.Toplevel(self.root)
-        popup.title("질문 선택 → 퍼플렉시티 프롬프트와 함께 복사")
-        screen_width = popup.winfo_screenwidth()
-        screen_height = popup.winfo_screenheight()
-        w, h = 1300, 640
-        popup.geometry(f"{w}x{h}+{(screen_width-w)//2}+{(screen_height-h)//2}")
-        popup.transient(self.root)
-        popup.grab_set()
-
-        topics = [
-            "경제-A-거시경제-경기-통화-금리", "경제-B-금융-대출-신용-투자-보험-연금상품",
-            "경제-C-세금-조세제도-연말정산", "경제-D-고용-노동-근로관계-취업지원",
-            "경제-E-복지연금-사회보험-국민연금-생활지원", "경제-F-법률-행정-행정절차-가사",
-            "경제-G-부동산-임대차-매매-등기", "건강", "교육", "자동차", "IT"
-        ]
-
-        top_frame = ttk.Frame(popup, padding=10)
-        top_frame.pack(fill=tk.X)
-        ttk.Label(top_frame, text="주제:").pack(side=tk.LEFT, padx=(0, 5))
-
-        default_topic = self.perp_topic_var.get() if hasattr(self, 'perp_topic_var') else topics[0]
-        topic_var = tk.StringVar(value=default_topic if default_topic in topics else topics[0])
-        ttk.Combobox(top_frame, textvariable=topic_var, values=topics, state="readonly", width=40, height=11).pack(side=tk.LEFT, padx=(0, 10))
-
-        hide_used_var = tk.BooleanVar(value=self.load_kin_ui_setting('hide_used_perplexity_picker', False))
-        ttk.Checkbutton(top_frame, text="사용한 질문 숨기기", variable=hide_used_var).pack(side=tk.LEFT, padx=(10, 0))
-
-        list_frame = ttk.Frame(popup, padding=(10, 0, 10, 10))
-        list_frame.pack(fill=tk.BOTH, expand=True)
-
-        columns = ("used", "title", "date")
-        tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=18)
-        tree.heading("used", text="사용")
-        tree.heading("title", text="질문 제목")
-        tree.heading("date", text="저장일")
-        tree.column("used", width=50, anchor=tk.CENTER)
-        tree.column("title", width=850)
-        tree.column("date", width=100, anchor=tk.CENTER)
-        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=tree.yview)
-        tree.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        records_cache = {'records': []}
-
-        def get_usage_path(topic):
-            return os.path.join(base_folder, topic, "질문_퍼플렉시티_사용여부.json")
-
-        def load_usage(topic):
-            return load_json_db(get_usage_path(topic))
-
-        def save_usage(topic, usage_list):
-            save_json_db(get_usage_path(topic), usage_list)
-
-        def refresh_list():
-            tree.delete(*tree.get_children())
-            topic = topic_var.get()
-            db_path = get_question_db_path(base_folder, topic)
-            records = load_json_db(db_path)
-            records_cache['records'] = records
-
-            usage_raw = load_usage(topic)
-            used_titles = set(usage_raw) if isinstance(usage_raw, list) else set()
-
-            for i, r in enumerate(records):
-                used = r.get("title", "") in used_titles
-                if hide_used_var.get() and used:
-                    continue
-                tree.insert("", tk.END, iid=str(i), values=(
-                    "✅" if used else "", r.get("title", ""), r.get("date", "")
-                ))
-
-        topic_var.trace_add("write", lambda *_: refresh_list())
-        hide_used_var.trace_add("write", lambda *_: refresh_list())
-        hide_used_var.trace_add("write", lambda *_: self.save_kin_ui_setting('hide_used_perplexity_picker', hide_used_var.get()))
-        refresh_list()
-
-        def copy_selected():
-            sel = tree.selection()
-            if not sel:
-                messagebox.showwarning("알림", "복사할 질문을 먼저 선택하세요.")
-                return
-            idx = int(sel[0])
-            record = records_cache['records'][idx]
-            topic = topic_var.get()
-
-            prompts = self.load_kin_perplexity_prompts()
-            prompt_filename = prompts.get(topic, "")
-            if not prompt_filename:
-                messagebox.showwarning(
-                    "퍼플렉시티 프롬프트 없음",
-                    f"'{topic}' 주제에 등록된 퍼플렉시티 프롬프트가 없습니다.\n"
-                    f"'퍼플렉시티 프롬프트 설정'에서 먼저 등록하세요."
-                )
-                return
-
-            prompt_folder = self.prompt_folder_var.get().strip() if hasattr(self, 'prompt_folder_var') else self.prompt_folder
-            prompt_path = os.path.join(prompt_folder, prompt_filename)
-            try:
-                with open(prompt_path, 'r', encoding='utf-8') as f:
-                    prompt_text = f.read()
-            except Exception as e:
-                messagebox.showerror("오류", f"프롬프트 파일을 읽을 수 없습니다:\n{prompt_path}\n{e}")
-                return
-
-            content = (
-                f"{prompt_text}\n\n"
-                f"───────────────────\n"
-                f"[지식인 질문]\n"
-                f"제목: {record.get('title', '')}\n"
-                f"본문: {record.get('body', '')}\n"
-            )
-
-            popup.clipboard_clear()
-            popup.clipboard_append(content)
-
-            # 사용여부 표시
-            usage_raw = load_usage(topic)
-            used_titles = list(usage_raw) if isinstance(usage_raw, list) else []
-            if record.get("title", "") not in used_titles:
-                used_titles.append(record.get("title", ""))
-            save_usage(topic, used_titles)
-            refresh_list()
-
-            self.log(f"📋 퍼플렉시티용 질문 복사 완료 (프롬프트: {prompt_filename}): {record.get('title','')}")
-            messagebox.showinfo("복사 완료", "프롬프트 + 질문이 클립보드에 복사되었습니다.\n퍼플렉시티 웹에 붙여넣으세요.")
-
-        def copy_prompt_only():
-            topic = topic_var.get()
-            prompts = self.load_kin_perplexity_prompts()
-            prompt_filename = prompts.get(topic, "")
-            if not prompt_filename:
-                messagebox.showwarning(
-                    "퍼플렉시티 프롬프트 없음",
-                    f"'{topic}' 주제에 등록된 퍼플렉시티 프롬프트가 없습니다.\n"
-                    f"'퍼플렉시티 프롬프트 설정'에서 먼저 등록하세요."
-                )
-                return
-            prompt_folder = self.prompt_folder_var.get().strip() if hasattr(self, 'prompt_folder_var') else self.prompt_folder
-            prompt_path = os.path.join(prompt_folder, prompt_filename)
-            try:
-                with open(prompt_path, 'r', encoding='utf-8') as f:
-                    prompt_text = f.read()
-            except Exception as e:
-                messagebox.showerror("오류", f"프롬프트 파일을 읽을 수 없습니다:\n{prompt_path}\n{e}")
-                return
-            popup.clipboard_clear()
-            popup.clipboard_append(KIN_PROMPT_CONTINUITY_NOTICE + prompt_text)
-            messagebox.showinfo("복사 완료", "프롬프트만 클립보드에 복사되었습니다.")
-
-        def copy_question_only():
-            sel = tree.selection()
-            if not sel:
-                messagebox.showwarning("알림", "복사할 질문을 먼저 선택하세요.")
-                return
-            idx = int(sel[0])
-            record = records_cache['records'][idx]
-            content = f"제목: {record.get('title', '')}\n본문: {record.get('body', '')}\n"
-            popup.clipboard_clear()
-            popup.clipboard_append(content)
-            messagebox.showinfo("복사 완료", "질문만 클립보드에 복사되었습니다.")
-
-        def toggle_used():
-            sel = tree.selection()
-            if not sel:
-                messagebox.showwarning("알림", "항목을 먼저 선택하세요.")
-                return
-            idx = int(sel[0])
-            record = records_cache['records'][idx]
-            topic = topic_var.get()
-            title = record.get("title", "")
-
-            usage_raw = load_usage(topic)
-            used_titles = list(usage_raw) if isinstance(usage_raw, list) else []
-            if title in used_titles:
-                used_titles.remove(title)  # 취소 (사용 안 함으로 되돌리기)
-            else:
-                used_titles.append(title)  # 사용함으로 체크
-            save_usage(topic, used_titles)
-            refresh_list()
-
-        btn_frame = ttk.Frame(popup, padding=(10, 0, 10, 10))
-        btn_frame.pack(fill=tk.X)
-        ttk.Button(btn_frame, text="📋 프롬프트+질문 복사", command=copy_selected).pack(side=tk.LEFT, padx=(0, 8))
-        ttk.Button(btn_frame, text="프롬프트만 복사", command=copy_prompt_only).pack(side=tk.LEFT, padx=(0, 8))
-        ttk.Button(btn_frame, text="질문만 복사", command=copy_question_only).pack(side=tk.LEFT, padx=(0, 8))
-        ttk.Button(btn_frame, text="사용여부 토글", command=toggle_used).pack(side=tk.LEFT, padx=(0, 8))
-        ttk.Button(btn_frame, text="🔄 새로고침", command=refresh_list).pack(side=tk.LEFT, padx=(0, 8))
-        ttk.Button(btn_frame, text="닫기", command=popup.destroy).pack(side=tk.RIGHT)
 
     # ════════════════════════════════════════════════════════════
     # [Ver7.17 신규] 좌우분할 탭 5곳(2/3/4/7/8) 공용 "사용" 셀 갱신 헬퍼
@@ -5710,8 +5380,7 @@ class MarkdownExtractorGUI:
 
     # [Ver7.08 신설 → Ver7.10 개편] 2)질문적합분석 탭(함수 이름은 prefilter 그대로).
     # 처음에는 "사전 필터링(질문 선별)" 탭이었고 Ver7.10에서 "질문 상세분석"으로
-    # 바뀌었다. 아래쪽 _prefilter_* 함수들은 옛 사전 필터링 화면용으로, 지금은
-    # 호출하는 곳이 없다.
+    # 바뀌었다. 옛 사전 필터링 화면용 함수들은 2026-10-05에 삭제했다.
     # ══════════════════════════════════════════════════════════
     def create_prefilter_tab(self):
         """2)질문적합분석 탭: 질문 상세분석 (가치판단+관련질문확장+키워드전략+리서치브리프)
@@ -6439,237 +6108,6 @@ class MarkdownExtractorGUI:
         self.detail_target_var.set("(왼쪽에서 질문을 복사하면 여기에 표시됩니다)")
         self._detail_selected_item = None
 
-
-    def _prefilter_load_collected(self):
-        """자동생성_{주제}.txt(1)질문수집 원문)를 불러와 개별 질문으로 분리, 미리보기에 표시"""
-        try:
-            topic = self.prefilter_topic_var.get()
-            base_folder = self.base_folder_var.get().strip() or self.base_folder
-            filename = f"자동생성_{topic}.txt"
-            file_path = os.path.join(base_folder, filename)
-
-            if not os.path.exists(file_path):
-                messagebox.showwarning("알림", f"수집된 질문 파일이 없습니다:\n{file_path}")
-                return
-
-            with open(file_path, 'r', encoding='utf-8') as f:
-                raw = f.read()
-
-            if not raw.strip():
-                messagebox.showinfo("알림", "수집된 질문이 없습니다. (파일이 비어 있음)")
-                return
-
-            questions = parse_collected_kin_questions(raw)
-            if not questions:
-                messagebox.showwarning("알림", "질문을 파싱하지 못했습니다. 파일 형식을 확인하세요.")
-                return
-
-            self._prefilter_loaded_questions = questions
-            self._prefilter_loaded_path = file_path
-            self.prefilter_loaded_count_var.set(f"불러온 질문: {len(questions)}건")
-
-            preview_lines = [f"[질문 {i}] {q['title']}" for i, q in enumerate(questions, 1)]
-            self.prefilter_preview_text.config(state=tk.NORMAL)
-            self.prefilter_preview_text.delete("1.0", tk.END)
-            self.prefilter_preview_text.insert("1.0", "\n".join(preview_lines))
-            self.prefilter_preview_text.config(state=tk.DISABLED)
-
-            self.log(f"📂 사전 필터링용 질문 불러오기 완료 [{topic}]: {len(questions)}건 ({filename})")
-
-        except Exception as e:
-            self.log(f"❌ 수집된 질문 불러오기 오류: {e}")
-            messagebox.showerror("오류", f"불러오기 중 오류 발생:\n{e}")
-
-    def _prefilter_copy_prompt(self):
-        """사전 필터링 프롬프트({questions_batch} 채운 상태)를 클립보드에 복사"""
-        try:
-            topic = self.prefilter_topic_var.get()
-            loaded = getattr(self, '_prefilter_loaded_questions', [])
-            if not loaded:
-                messagebox.showwarning("알림", "먼저 '📂 수집된 질문 불러오기'를 실행하세요.")
-                return
-
-            prompts = self.load_kin_prefilter_prompts()
-            prompt_filename = prompts.get(topic, "")
-            if not prompt_filename:
-                messagebox.showwarning(
-                    "사전 필터링 프롬프트 없음",
-                    f"'{topic}' 주제에 등록된 사전 필터링 프롬프트가 없습니다.\n"
-                    f"'⚙️ 사전 필터링 프롬프트 설정'에서 먼저 등록하세요."
-                )
-                return
-
-            prompt_folder = self.prompt_folder_var.get().strip() if hasattr(self, 'prompt_folder_var') else self.prompt_folder
-            prompt_path = os.path.join(prompt_folder, prompt_filename)
-            try:
-                with open(prompt_path, 'r', encoding='utf-8') as f:
-                    prompt_text = f.read()
-            except Exception as e:
-                messagebox.showerror("오류", f"프롬프트 파일을 읽을 수 없습니다:\n{prompt_path}\n{e}")
-                return
-
-            batch_text = "\n\n".join(
-                f"[질문 {i}]\n제목: {q['title']}\n내용: {q['body']}"
-                for i, q in enumerate(loaded, 1)
-            )
-            final_prompt = prompt_text.replace("{questions_batch}", batch_text)
-
-            self.root.clipboard_clear()
-            self.root.clipboard_append(final_prompt)
-
-            self.log(f"📋 사전 필터링 프롬프트 복사 완료 [{topic}]: 질문 {len(loaded)}건 (프롬프트: {prompt_filename})")
-            messagebox.showinfo("복사 완료", f"프롬프트 + 질문 {len(loaded)}건이 클립보드에 복사되었습니다.\n웹 AI에 붙여넣으세요.")
-
-        except Exception as e:
-            self.log(f"❌ 프롬프트 복사 오류: {e}")
-            messagebox.showerror("오류", f"복사 중 오류 발생:\n{e}")
-
-    def _prefilter_claude_final_review(self):
-        """퍼플렉시티/클로드 두 결과 박스 내용을 내장된 최종검토 프롬프트에
-        채워 넣어 클립보드로 복사한다. 이 텍스트를 웹 클로드에 붙여넣고,
-        돌아온 응답을 '③ 최종 병합 결과' 칸에 붙여넣으면 저장할 수 있다."""
-        try:
-            perp_text = self.prefilter_result_perp_text.get("1.0", tk.END).strip()
-            claude_text = self.prefilter_result_claude_text.get("1.0", tk.END).strip()
-
-            if not perp_text or not claude_text:
-                messagebox.showwarning(
-                    "알림",
-                    "퍼플렉시티 결과와 클로드 결과를 먼저 둘 다 붙여넣으세요.\n"
-                    "(왼쪽: 퍼플렉시티 결과 / 오른쪽: 클로드 결과)"
-                )
-                return
-
-            final_prompt = KIN_PREFILTER_FINAL_REVIEW_PROMPT.format(
-                perplexity_result=perp_text, claude_result=claude_text
-            )
-
-            self.root.clipboard_clear()
-            self.root.clipboard_append(final_prompt)
-
-            self.log("🧭 클로드 최종 검토 프롬프트 복사 완료 (퍼플렉시티 결과 + 클로드 결과 포함)")
-            messagebox.showinfo(
-                "복사 완료",
-                "최종 검토 프롬프트가 클립보드에 복사되었습니다.\n"
-                "웹 클로드에 붙여넣고, 돌아온 응답을 ③ 최종 병합 결과 칸에 붙여넣은 뒤 저장하세요."
-            )
-
-        except Exception as e:
-            self.log(f"❌ 클로드 최종 검토 프롬프트 복사 오류: {e}")
-            messagebox.showerror("오류", f"복사 중 오류 발생:\n{e}")
-
-    def _prefilter_save_selected_to_db(self):
-        """③ 최종 병합 결과(클로드 최종 검토 응답)에서 '리서치 대상 선별 목록'만
-        뽑아 질문DB에 추가하고, 사용이 끝난 원본 수집 파일(자동생성_{주제}.txt)은
-        내용을 비운다."""
-        try:
-            topic = self.prefilter_topic_var.get()
-            base_folder = self.base_folder_var.get().strip() or self.base_folder
-
-            ai_text = self.prefilter_final_text.get("1.0", tk.END).strip()
-            if not ai_text:
-                messagebox.showwarning(
-                    "알림",
-                    "③ 최종 병합 결과가 비어 있습니다.\n"
-                    "'🧭 클로드 최종 검토'로 복사한 내용을 웹 클로드에 붙여넣고,\n"
-                    "돌아온 응답을 맨 아래 '최종 병합 결과' 칸에 붙여넣으세요."
-                )
-                return
-
-            loaded = getattr(self, '_prefilter_loaded_questions', [])
-            if not loaded:
-                messagebox.showwarning("알림", "먼저 '📂 수집된 질문 불러오기'로 원본 질문을 불러오세요.")
-                return
-
-            selection = parse_prefilter_selection(ai_text)
-            if not selection:
-                messagebox.showerror(
-                    "파싱 실패",
-                    "최종 병합 결과에서 '[SELECTED_START]~[SELECTED_END]' 블록을 찾지 못했습니다.\n"
-                    "클로드 최종 검토 응답 전체를 그대로 붙여넣었는지 확인하세요."
-                )
-                return
-
-            question_db_path = get_question_db_path(base_folder, topic)
-            os.makedirs(get_topic_folder_path(base_folder, topic), exist_ok=True)
-            question_records = load_json_db(question_db_path)
-            # [Ver7.75 추가] _detail_import_collected와 동일한 이유로,
-            # 포스팅DB와도 참고용 교차 체크(차단 아님)를 추가한다.
-            posting_db_path = get_posting_db_path(base_folder, topic)
-            posting_records = load_json_db(posting_db_path)
-
-            from datetime import datetime
-            today = datetime.now().strftime("%Y-%m-%d")
-
-            added = 0
-            skipped_dup = []
-            posting_warns = []
-            for num, sentence in selection:
-                # 원본 본문(숫자·상세정보)을 같이 확보해두면 중복비교 정확도가 올라간다.
-                orig_body = loaded[num - 1]['body'] if 1 <= num <= len(loaded) else ""
-                core = extract_question_core(sentence, orig_body or sentence)
-
-                dup_results = check_question_duplicate(core, question_records, danger=70)
-                if dup_results:
-                    skipped_dup.append((sentence, dup_results[0]))
-                    continue
-
-                posting_hits = check_question_vs_posting_duplicate(core, posting_records, danger=70)
-                if posting_hits:
-                    posting_warns.append((sentence, posting_hits[0]))
-
-                core["date"] = today
-                question_records.append(core)
-                added += 1
-
-            save_json_db(question_db_path, question_records)
-
-            # 사용 끝난 원본 수집 파일 비우기 (1단계 convert_text와 동일한 방식)
-            src_path = getattr(self, '_prefilter_loaded_path', None)
-            if src_path and os.path.exists(src_path):
-                with open(src_path, 'w', encoding='utf-8') as f:
-                    f.write('')
-
-            self.log(
-                f"✅ 사전 필터링 완료 [{topic}]: 최종 선별 {len(selection)}건 중 "
-                f"질문DB 추가 {added}건 / 중복 제외 {len(skipped_dup)}건"
-            )
-            if skipped_dup:
-                for sentence, dup in skipped_dup:
-                    self.log(f"   ⛔ 중복 제외({dup['rate']}%): {sentence}")
-            if posting_warns:
-                self.log(f"   💡 이미 포스팅된 것과 비슷해 보이는 질문 {len(posting_warns)}건(참고용, 질문DB에는 그대로 추가됨):")
-                for sentence, hit in posting_warns:
-                    self.log(f"      ⚠️ {sentence} ↔ 기존 포스팅 '{hit['title']}' ({hit['rate']}%)")
-
-            posting_warn_note = (
-                f"\n\n💡 참고: 이미 포스팅된 글과 비슷해 보이는 질문이 {len(posting_warns)}건 있습니다 "
-                f"(질문DB에는 그대로 추가했습니다 - 아래 목록, 자세한 내용은 로그 확인).\n" +
-                "\n".join(f"  • {sentence} ↔ 기존 '{hit['title']}' ({hit['rate']}%)" for sentence, hit in posting_warns[:10]) +
-                (f"\n  … 외 {len(posting_warns) - 10}건 더" if len(posting_warns) > 10 else "")
-            ) if posting_warns else ""
-
-            messagebox.showinfo(
-                "완료",
-                f"질문DB에 {added}건 저장했습니다. (중복 제외 {len(skipped_dup)}건)\n\n"
-                f"원본 수집 파일(자동생성_{topic}.txt)을 비웠습니다."
-                f"{posting_warn_note}"
-            )
-
-            # 화면 초기화 (퍼플렉시티/클로드/최종병합 3개 박스 + 미리보기 전부)
-            self.prefilter_result_perp_text.delete("1.0", tk.END)
-            self.prefilter_result_claude_text.delete("1.0", tk.END)
-            self.prefilter_final_text.delete("1.0", tk.END)
-            self.prefilter_preview_text.config(state=tk.NORMAL)
-            self.prefilter_preview_text.delete("1.0", tk.END)
-            self.prefilter_preview_text.config(state=tk.DISABLED)
-            self.prefilter_loaded_count_var.set("불러온 질문: 0건")
-            self._prefilter_loaded_questions = []
-            self._prefilter_loaded_path = None
-
-        except Exception as e:
-            self.log(f"❌ 사전 필터링 저장 오류: {e}")
-            messagebox.showerror("오류", f"저장 중 오류 발생:\n{e}")
 
     def create_step0_5_tab(self):
         """3)퍼플렉시티 수집 탭: 퍼플렉시티 수집 내용 저장
@@ -7995,31 +7433,6 @@ class MarkdownExtractorGUI:
         self.save_model_settings_to_config()
 
 
-
-    #############  아래 코드는 사용안하지만 삭제 보류 ##############################################
-    #새로 만든 Naver_blog_kin_topic_classify_config 폴더 방식으로 전환했으니:
-    #select_classifier_file → 더 이상 필요 없음
-    #classifier_file_var → config 저장/로드에서 제거 가능
-    #단, 당장 건드리면 config 저장/로드 부분도 같이 수정해야 함
-    def select_classifier_file(self):
-        """주제 분류 JSON 파일 선택"""
-        initial_dir = self.prompt_folder_var.get().strip()
-        if not initial_dir or not os.path.exists(initial_dir):
-            initial_dir = self.base_folder_var.get().strip() or "."
-    
-        file_path = filedialog.askopenfilename(
-            title="주제 분류 파일 선택",
-            initialdir=initial_dir,
-            filetypes=[
-                ("JSON 파일", "*.json"),
-                ("모든 파일", "*.*")
-            ]
-        )
-        if file_path:
-            self.classifier_file_var.set(os.path.basename(file_path))
-            self.save_model_settings_to_config()
-            self.log(f"✅ 주제 분류 파일 설정: {os.path.basename(file_path)}")
-
     def update_model_1st_state(self):
         """1차 모델 타입에 따라 버전 표시 변경"""
         if self.model_1st_type.get() == "GPT":
@@ -8285,7 +7698,6 @@ class MarkdownExtractorGUI:
         if m:
             return m.group(1).strip()
         return full_text.strip()
-
 
 
     def create_web_1st_tab(self):
@@ -9180,6 +8592,17 @@ class MarkdownExtractorGUI:
                 pass  # 스핀박스 입력 중 빈 값/잘못된 값일 때는 저장을 건너뛴다
         self.web2nd_dup_threshold_var.trace_add("write", _save_web2nd_dup_threshold)
 
+        # [2026-10-05 신규] 저장 전 모바일 문단 정리(GPT) - 기본 꺼짐. 켜 두면
+        # "✅ 최종 확정" 때 게시판 판정과 함께 백그라운드로 돌고, 결과가 본문칸에
+        # 바로 반영된다(para_reflow_with_gpt 참고). 글 1개당 GPT 호출 1번.
+        self.web2nd_para_reflow_var = tk.BooleanVar(
+            value=bool(self.load_kin_ui_setting('web2nd_para_reflow', False)))
+        ttk.Checkbutton(btn_frame, text="📱 문단 정리(GPT)",
+                        variable=self.web2nd_para_reflow_var,
+                        command=self._web2nd_on_para_reflow_toggled).pack(side=tk.LEFT, padx=(0, 8))
+        self._web2nd_para_token = 0
+        self._web2nd_para_pending = False
+
         self.web2nd_save_btn = ttk.Button(
             btn_frame, text="저장",
             command=self.save_web_2nd_result, state=tk.DISABLED
@@ -9317,6 +8740,12 @@ class MarkdownExtractorGUI:
                                           foreground="darkred", wraplength=460, justify=tk.LEFT)
         confirm_status_label.grid(row=3, column=0, sticky=tk.W, pady=(4, 0))
         self._web2nd_title_wrap_widgets.append(confirm_status_label)
+        # [2026-10-05 신규] 저장 전 문단 정리 진행 상태
+        self.web2nd_para_info_var = tk.StringVar(value="")
+        para_info_label = ttk.Label(title_gen_box, textvariable=self.web2nd_para_info_var,
+                                    foreground="gray", wraplength=460, justify=tk.LEFT)
+        para_info_label.grid(row=4, column=0, sticky=tk.W, pady=(2, 0))
+        self._web2nd_title_wrap_widgets.append(para_info_label)
 
         # [화면폭 활용] title_gen_box 폭이 바뀔 때마다(창 크기 조절,
         # 좌우분할 경계 이동 등) 위 라벨들의 wraplength를 실제 폭에 맞춰
@@ -9410,6 +8839,7 @@ class MarkdownExtractorGUI:
         if hasattr(self, 'web2nd_working_title_var'):
             self.web2nd_working_title_var.set("")
         self._web2nd_reset_board_ui()
+        self._web2nd_reset_para_reflow()
 
     # ── [2026-09-27 2차 신규] 8)2차 각색: 게시판 자동 판정 ──
     def _web2nd_board_topic(self):
@@ -9570,6 +9000,69 @@ class MarkdownExtractorGUI:
         self.log(f"🎯 2차 제목 확정: {confirmed_title}")
         # [2026-09-27 2차] 제목이 확정되면 게시판을 자동 판정한다.
         self._web2nd_start_board_classify()
+        # [2026-10-05] 켜져 있으면 저장 전 문단 정리도 같이 돌린다.
+        self._web2nd_start_para_reflow()
+
+    # ── [2026-10-05 신규] 8)2차 각색: 저장 전 모바일 문단 정리 ──
+    def _web2nd_reset_para_reflow(self):
+        """진행 중인 문단 정리 결과가 뒤늦게 도착해도 무시되도록 토큰을 올린다."""
+        self._web2nd_para_token = getattr(self, '_web2nd_para_token', 0) + 1
+        self._web2nd_para_pending = False
+        if hasattr(self, 'web2nd_para_info_var'):
+            self.web2nd_para_info_var.set("")
+
+    def _web2nd_on_para_reflow_toggled(self):
+        """체크 상태를 저장하고, 이미 제목을 확정한 상태에서 켜면 바로 한 번 돌린다."""
+        on = bool(self.web2nd_para_reflow_var.get())
+        self.save_kin_ui_setting('web2nd_para_reflow', on)
+        if not on:
+            self._web2nd_reset_para_reflow()
+        elif getattr(self, '_web2nd_title_confirmed', False):
+            self._web2nd_start_para_reflow()
+
+    def _web2nd_start_para_reflow(self):
+        """체크가 켜져 있으면 지금 본문으로 문단 정리를 백그라운드에서 돌린다."""
+        if not (hasattr(self, 'web2nd_para_reflow_var') and self.web2nd_para_reflow_var.get()):
+            return
+        if not self.openai_client:
+            self.web2nd_para_info_var.set("📱 문단 정리: OpenAI 키가 없어 건너뜀(원본 그대로 저장)")
+            return
+        text = self.web2nd_text.get("1.0", "end-1c")
+        self._web2nd_para_token += 1
+        token = self._web2nd_para_token
+        self._web2nd_para_pending = True
+        self.web2nd_para_info_var.set("⏳ 문단 정리 중... (끝나면 본문칸에 바로 반영)")
+
+        def worker():
+            try:
+                res = para_reflow_with_gpt(self.openai_client, text)
+            except Exception as e:
+                res = (None, f"GPT 오류로 원본 유지({str(e)[:60]})")
+            self.root.after(0, lambda: self._web2nd_apply_para_reflow(token, text, res))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _web2nd_apply_para_reflow(self, token, sent_text, res):
+        if token != self._web2nd_para_token:
+            return  # 그 사이 새 글/초기화 - 오래된 결과 폐기
+        self._web2nd_para_pending = False
+        new_text, msg = res
+        if self.web2nd_text.get("1.0", "end-1c") != sent_text:
+            self.web2nd_para_info_var.set("📱 문단 정리: 그 사이 본문이 바뀌어 결과를 버림(지금 본문 그대로 저장)")
+            return
+        if new_text is None:
+            self.web2nd_para_info_var.set(f"📱 문단 정리: {msg}")
+            self.log(f"📱 문단 정리: {msg}")
+            return
+        # 제목 확정 상태가 풀리지 않도록 프로그램 자체 편집 표시를 세운다
+        # (_web2nd_apply_confirmed_title과 같은 방식).
+        self._web2nd_programmatic_edit = True
+        self.web2nd_text.delete("1.0", tk.END)
+        self.web2nd_text.insert("1.0", new_text)
+        self._extract_web2nd_title()
+        self._update_web2nd_char_count()
+        self.web2nd_para_info_var.set(f"📱 {msg} - 확인 후 저장하세요")
+        self.log(f"📱 문단 정리: {msg}")
 
     def _web2nd_confirm_selected_title(self):
         """[2026-09-15 1차 신규 → 2026-09-27 3차 단순화] 하단 "✅ 최종 확정"
@@ -9863,36 +9356,10 @@ class MarkdownExtractorGUI:
         except Exception as e:
             messagebox.showerror("오류", f"폴더를 여는 중 오류가 발생했습니다:\n{e}")
 
-    # [수정] 미리보기 라벨에 이미 값이 있는지와 무관하게, 텍스트박스 내용에서
-    # 직접(바로) H1 제목을 뽑아 클립보드로 복사한다. "제목 재추출" 버튼을
-    # 먼저 누를 필요 없음 — 마크다운이 붙여져 있으면 그걸로 바로 추출한다.
-    def _copy_web2nd_title(self):
-        text = self.web2nd_text.get("1.0", tk.END).strip()
-        if not text:
-            messagebox.showwarning("알림", "마크다운을 먼저 붙여넣으세요.")
-            return
 
-        title = None
-        for line in text.split('\n'):
-            s = line.strip()
-            if s.startswith('# ') and not s.startswith('## '):
-                title = s[2:].strip()
-                break
-
-        if not title or len(title) < 3:
-            messagebox.showwarning("알림", "H1 제목을 찾을 수 없습니다 (첫 줄이 '# 제목' 형식인지 확인하세요).")
-            return
-
-        # [Ver7.10 추가] 제목 중간/끝 어디에 물음표가 있든 전부 제거
-        title = title.replace('?', '').replace('？', '').strip()
-
-        self.root.clipboard_clear()
-        self.root.clipboard_append(title)
-        self.log(f"📋 제목 복사 완료: {title}")
-
-    # [Ver8.21 신규] "9)썸네일/인포그래픽" 탭용 제목 복사 - _copy_web2nd_title과
-    # 로직은 동일하되(H1 제목 추출 + 물음표 제거) 대상 위젯만 web2nd_text가
-    # 아니라 thumb_text(9)탭 본문칸)로 바꿨다. 인포그래픽 이미지 파일명에
+    # [Ver8.21 신규] "9)썸네일/인포그래픽" 탭용 제목 복사 - thumb_text(9)탭
+    # 본문칸)에서 H1 제목을 뽑아 물음표를 지우고 복사한다(8)탭에 있던 같은
+    # 기능의 _copy_web2nd_title은 2026-10-05 삭제). 인포그래픽 이미지 파일명에
     # 제목을 쓰는 용도이므로 8)탭이 아니라 9)탭에 있어야 한다는 사용자 확인
     # 반영(기존 버튼은 8)탭에서 제거하고 이쪽으로 이동).
     def _copy_thumb_title(self):
@@ -10217,6 +9684,10 @@ class MarkdownExtractorGUI:
         if not text or not filename:
             messagebox.showwarning("저장 오류", "저장할 내용 또는 파일명이 없습니다.")
             return
+        # [2026-10-05] 문단 정리가 아직 진행 중이면 끝난 뒤 저장한다.
+        if getattr(self, '_web2nd_para_pending', False):
+            messagebox.showinfo("알림", "문단 정리가 아직 진행 중입니다. 본문칸에 반영된 뒤 다시 저장하세요.")
+            return
 
         from datetime import datetime
         today    = datetime.now().strftime("%Y-%m-%d")
@@ -10330,30 +9801,6 @@ class MarkdownExtractorGUI:
             self.log("웹2차 저장 실패: {}".format(str(e)))
             messagebox.showerror("저장 실패", "파일 저장 중 오류 발생:\n{}".format(str(e)))
 
-    # [Ver7.04 추가] 썸네일 인포그래픽 프롬프트
-    def _get_kin_thumbnail_group(self, topic: str) -> str:
-        """주제(폴더명)를 썸네일 스타일 그룹명으로 변환. 매핑에 없으면
-        빈 문자열(아직 템플릿 준비 안 된 주제)."""
-        return KIN_THUMBNAIL_GROUP_MAP.get(topic, "")
-
-    def _get_kin_thumbnail_template_path(self, group: str):
-        """작업 폴더(base_folder_var) 안에서 그룹 키워드가 포함된
-        '썸네일_프롬프트' .md 파일을 찾는다. 여러 버전(V1, V2...)이
-        같이 있으면 파일명 정렬상 가장 나중 것을 쓴다(보통 버전이
-        더 큰 쪽). 못 찾으면 None."""
-        work_folder = self.base_folder_var.get().strip() if hasattr(self, 'base_folder_var') else self.base_folder
-        work_folder = work_folder or self.base_folder
-        if not os.path.isdir(work_folder):
-            return None
-        candidates = [
-            fname for fname in os.listdir(work_folder)
-            if fname.endswith(".md") and "썸네일" in fname
-            and "프롬프트" in fname and group in fname
-        ]
-        if not candidates:
-            return None
-        candidates.sort()  # 파일명 끝의 V1/V2/V3... 사전순 정렬 -> 최신판 우선
-        return os.path.join(work_folder, candidates[-1])
 
     def _build_kin_thumbnail_prompt(self, topic: str, md_text: str):
         """주제별 스타일 템플릿 + 완성 본문을 합쳐 클로드에게 그대로
@@ -12138,7 +11585,6 @@ class MarkdownExtractorGUI:
             
         except Exception as e:
             self.log(f"❌ 엑셀 파일 열기 오류: {str(e)}")
-
 
 
     def add_keywords_to_all_excel(self):
