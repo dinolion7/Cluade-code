@@ -218,10 +218,10 @@
   정리(GPT)" 체크(기본 꺼짐)와 기준 글자 수 칸(기본 150자, 80~400, ui_settings의
   web2nd_para_reflow/web2nd_para_limit)을 두고, 켜 두면 "✅ 최종 확정" 때 게시판 판정과
   함께 백그라운드로 돈다. 기존 문단 구분은 그대로 두고 기준을 넘는 문단만 나눈다(합치지
-  않음). 나누는 자리는 문장 사이뿐이고, 어디서 나눌지·나눌지 말지는 GPT가 문맥으로 판단한다.
+  않음). 나누는 자리는 한 문단에 한 곳, 첫 문장 뒤(앞) 또는 마지막 문장 앞(뒤)이고, GPT가
+  문맥을 읽고 앞/뒤/없음 중 하나를 고른다(어색하면 그대로).
   도입부, 여러 줄 블록(시적 줄바꿈), [[가 섞인 문단, 해시태그 바로 앞 면책 문장은 나누지 않는다. 넘는 문단이
-  없으면 GPT를 부르지 않는다. GPT(gpt-4.1-mini)는 나눌 자리(문장 번호
-  묶음)만 JSON으로 답하고 코드가 원래 문장 그대로 이어 붙이며 나눈 자리에만 빈 줄을 넣는다
+  없으면 GPT를 부르지 않는다. GPT(gpt-4.1-mini)는 앞/뒤/없음만 JSON으로 답하고 코드가 원래 문장 그대로 이어 붙이며 나눈 자리에만 빈 줄을 넣는다
   (para_* 함수). 제목·소제목·표·리스트·해시태그 줄은 잠그고, 공백 뺀 전후 본문이 다르거나
   응답이 잘못되면 원본 유지.
   진행 중이면 저장을 막고, 끝나면 본문칸에 바로 반영(제목 확정 상태 유지). (2) 포스팅DB
@@ -542,8 +542,9 @@ def parse_collected_kin_questions(raw_text):
 # 각색 결과는 이미 빈 줄로 문단이 나뉘어 있으므로(대부분 1~3문장, 중간값 약
 # 100자) 기존 문단 구분은 그대로 두고, 기준 글자 수(기본 150자, 8)탭에서 조정)를
 # 넘는 문단만 나눈다. 문단을 합치지는 않는다. 넘는 문단이 없으면 GPT를 부르지
-# 않는다. GPT는 본문을 다시 쓰지 않고 그 문단의 "문장 번호를 어떻게 나눌지"만
-# JSON으로 답하고, 코드가 원래 문장 그대로 다시 이어 붙이며 나눈 자리에만 빈 줄
+# 않는다. 나누는 자리는 한 문단에 한 곳, "첫 문장 뒤(앞)" 또는 "마지막 문장 앞(뒤)"
+# 둘 중 하나이고, GPT가 문단을 읽고 앞/뒤/없음(문맥이 어색하면 그대로) 중 하나만
+# JSON으로 답한다. 코드가 원래 문장 그대로 다시 이어 붙이며 나눈 자리에만 빈 줄
 # (포스팅 프로그램의 문단 구분)을 넣는다. 마지막에 공백·줄바꿈을 모두 뺀 전후
 # 본문을 대조해 한 글자라도 다르면 원본을 그대로 쓴다.
 # 제목·소제목·해시태그(#), 표(|), 리스트(- * + 1.), 인용(>), 이미지,
@@ -560,15 +561,16 @@ _PARA_SENT_END_PAT = re.compile(r'[.!?…][)"\'”’」』\]]*(?=\s)')
 
 PARA_REFLOW_RULES = (
     "당신은 네이버 블로그 글의 긴 문단을 모바일에서 읽기 좋게 나누는 편집자입니다.\n"
-    "아래 [문단]마다 문장에 번호가 붙어 있습니다. 문단 전체를 읽고, 문맥이 자연스럽게\n"
-    "이어지는 자리에서만 나눌지 판단하세요.\n\n"
-    "- 문장은 고치지 않고, 문장과 문장 사이에서만 나눕니다.\n"
-    "- 앞 문장과 이어져야 뜻이 통하는 문장은 떼지 않습니다. 그런 경우 더 앞에서 나누거나 나누지 않습니다.\n"
-    "- 자연스럽게 나눌 자리가 없으면 나누지 않습니다([[1, 2, 3]]처럼 하나로).\n"
-    "- 참고 길이: 한 문단 {limit}자 안팎(괄호 안은 그 문장의 글자 수).\n"
-    "- 문장 번호는 순서대로, 빠짐없이 한 번씩 씁니다.\n\n"
+    "아래 [문단]은 기준 길이({limit}자)를 넘어 둘로 나누려는 문단이며, 문장에 번호가 붙어 있습니다.\n"
+    "문단 전체를 읽고 문단마다 아래 셋 중 하나를 고르세요.\n"
+    "- 앞: 첫 문장 뒤에서 나눔 (1번 | 2번~끝)\n"
+    "- 뒤: 마지막 문장 앞에서 나눔 (1번~끝 앞 | 마지막 문장)\n"
+    "- 없음: 나누지 않음\n\n"
+    "떼어 낸 문장과 남은 문장이 각각 앞뒤 없이도 뜻이 자연스럽게 통하고 흐름이 끊기지 않는 쪽을\n"
+    "고릅니다. 앞뒤 문장과 이어져야 뜻이 통해서 어느 쪽으로 나눠도 어색하면 \"없음\"을 고릅니다.\n"
+    "문장은 고치지 않습니다. 문장이 2개인 문단은 앞과 뒤가 같습니다.\n\n"
     "[출력]\n"
-    '아래 JSON만 출력합니다: {{"paragraphs": {{"문단번호": [[1, 2], [3]], ...}}}}'
+    '아래 JSON만 출력합니다: {{"paragraphs": {{"3": "앞", "7": "뒤", "9": "없음"}}}} (키는 [문단] 번호)'
 )
 
 
@@ -655,7 +657,7 @@ def para_apply_splits(md_text, splits):
             continue
         s, e, sents, _ = paras[idx - 1]
         groups = splits[idx]
-        if not para_valid_groups(groups, len(sents)):
+        if groups is None or not para_valid_groups(groups, len(sents)):
             invalid += 1
             continue
         if len(groups) < 2:
@@ -691,7 +693,7 @@ def para_reflow_with_gpt(openai_client, md_text, limit=PARA_REFLOW_DEFAULT_LIMIT
         messages=[{"role": "user",
                    "content": PARA_REFLOW_RULES.format(limit=limit) + "\n\n" + "\n".join(parts)}],
         temperature=0,
-        max_tokens=800,
+        max_tokens=300,
         response_format={"type": "json_object"},
     )
     raw = (resp.choices[0].message.content or "").strip()
@@ -700,15 +702,26 @@ def para_reflow_with_gpt(openai_client, md_text, limit=PARA_REFLOW_DEFAULT_LIMIT
     except Exception:
         m = re.search(r'\{.*\}', raw, re.S)
         data = json.loads(m.group(0)) if m else {}
-    wanted = {pid for pid, _, _ in targets}
+    # "앞" = 첫 문장 뒤, "뒤" = 마지막 문장 앞, "없음" = 그대로. 그 밖의 답은 잘못된 응답.
+    counts = {pid: len(sents) for pid, sents, _ in targets}
     splits = {}
     for k, v in (data.get("paragraphs") or {}).items():
         try:
             k = int(k)
         except (TypeError, ValueError):
             continue
-        if k in wanted:
-            splits[k] = v
+        if k not in counts:
+            continue
+        n = counts[k]
+        v = str(v).strip()
+        if v == "앞":
+            splits[k] = [[1], list(range(2, n + 1))]
+        elif v == "뒤":
+            splits[k] = [list(range(1, n)), [n]]
+        elif v == "없음":
+            splits[k] = [list(range(1, n + 1))]
+        else:
+            splits[k] = None  # para_apply_splits에서 잘못된 응답으로 센다
     new_text, changed, invalid = para_apply_splits(md_text, splits)
     if not para_same_text(md_text, new_text):
         return None, "대조 실패 - 원본 유지"
