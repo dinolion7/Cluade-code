@@ -20,8 +20,8 @@
 | `prompts/src/{A_ClaudeSonnet,B_ClaudeSonnet,A_GPT,B_GPT}/` | 지식인 2차 최종각색 원본. `base.md`(공통) + `topics/{주제}.md`(@@ 필드) + `defaults.md` + `health.md` |
 | `prompts/src/health/` | 건강 ②검수(공통)·③편집 원본 |
 | `prompts/pipeline/` | 지식인 앞단계: 1 사전판단(10분야, 받은 그대로) · 2 Perplexity 조사(5주제) · 3 검증(Claude, 10분야) · 4 1차 각색(Claude·GPT 2개, 주제 공용) |
-| `prompts/policy/` | 정책뉴스 검색용 A(V19)·B(V20)와 홈판용 A(홈판 V1)·B(홈판 V3), 복지로 ③ 초안작성(V11)·⑤ 2차각색 Claude(V8) |
-| `prompts/dist/` | **최종본 전부.** 바로 아래 지식인 2차 48개, `지식인_앞단계/` 27개, `정책복지로/` 4개. `python3 tools/build.py`로 만든다 — dist는 직접 고치지 않는다 |
+| `prompts/policy/` | 정책뉴스 0 후보선별(V2)·A(V20)·B(V21)·C 인포그래픽(V13, 실사로 새로 쓸 예정) — 검색+홈판 통합본(홈판 전용 A·B는 합치고 지움), 복지로 ③ 초안작성(V11)·⑤ 2차각색 Claude(V8) |
+| `prompts/dist/` | **최종본 전부.** 바로 아래 지식인 2차 48개, `지식인_앞단계/` 27개, `정책복지로/` 6개. `python3 tools/build.py`로 만든다 — dist는 직접 고치지 않는다 |
 | `prompts/original/` | 처음 받은 지식인 원본 42개(기록용) |
 | `tools/rulecheck.py` | 결과물 형식 점검: `python3 tools/rulecheck.py <결과 파일> <A_Claude|B_Claude|A_GPT|B_GPT>` |
 | `eval/` | 예전 모델 비교 실험 결과(참고용). `eval/samples/`는 사용자가 준 실제 최종 결과물 — 프로그램 기능 설계·시험 때 먼저 본다 |
