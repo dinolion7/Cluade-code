@@ -218,7 +218,9 @@
   정리(GPT)" 체크(기본 꺼짐)와 기준 글자 수 칸(기본 150자, 80~400, ui_settings의
   web2nd_para_reflow/web2nd_para_limit)을 두고, 켜 두면 "✅ 최종 확정" 때 게시판 판정과
   함께 백그라운드로 돈다. 기존 문단 구분은 그대로 두고 기준을 넘는 문단만 나눈다(합치지
-  않음). 넘는 문단이 없으면 GPT를 부르지 않는다. GPT(gpt-4.1-mini)는 나눌 자리(문장 번호
+  않음). 나누는 자리는 문장 사이뿐이고 접속어로 시작하는 문장 앞을 먼저 고른다. 여러 줄
+  블록(시적 줄바꿈), [[가 섞인 문단, 해시태그 바로 앞 면책 문장은 나누지 않는다. 넘는 문단이
+  없으면 GPT를 부르지 않는다. GPT(gpt-4.1-mini)는 나눌 자리(문장 번호
   묶음)만 JSON으로 답하고 코드가 원래 문장 그대로 이어 붙이며 나눈 자리에만 빈 줄을 넣는다
   (para_* 함수). 제목·소제목·표·리스트·해시태그 줄은 잠그고, 공백 뺀 전후 본문이 다르거나
   응답이 잘못되면 원본 유지.
@@ -561,6 +563,9 @@ PARA_REFLOW_RULES = (
     "아래 [문단]마다 번호가 붙은 문장 목록이 있습니다. 문장은 고치지 않고, 그 문단을\n"
     "어디서 나눌지만 정합니다.\n\n"
     "[기준]\n"
+    "- 나누는 자리는 문장과 문장 사이뿐입니다(문장 안은 자르지 않음).\n"
+    "- 다음 문장이 접속어·화제 전환어(다만, 하지만, 그래서, 또한, 여기에, 참고로, 반면 등)로\n"
+    "  시작하는 자리를 먼저 고릅니다.\n"
     "- 나눈 뒤 각 문단이 되도록 {limit}자 이하(괄호 안은 그 문장의 글자 수)\n"
     "- 떼면 뜻이 끊기는 문장(조건·예외, 숫자·기준, 원인·결과)은 같은 문단에 둠\n"
     "- 나누는 곳은 최소한으로. 한 문장짜리 짧은 조각이 생기지 않게 함\n"
@@ -580,15 +585,7 @@ def para_split_sentences(line):
     rest = line[start:].strip()
     if rest:
         out.append(rest)
-    out = [s for s in out if s]
-    # 문단 중간의 [[강조]]가 나뉜 뒤 줄 맨 앞으로 오지 않도록 앞 문장에 붙여 둔다.
-    merged = []
-    for s in out:
-        if merged and s.startswith('[['):
-            merged[-1] = merged[-1] + " " + s
-        else:
-            merged.append(s)
-    return merged
+    return [s for s in out if s]
 
 
 def para_find_paragraphs(md_text):
@@ -614,9 +611,27 @@ def para_find_paragraphs(md_text):
 
 
 def para_long_targets(md_text, limit):
-    """기준 글자 수를 넘고 문장이 2개 이상인(나눌 수 있는) 문단만 [(문단순번, 문장들, 글자수)]."""
-    _, paras = para_find_paragraphs(md_text)
-    return [(k + 1, p[2], p[3]) for k, p in enumerate(paras) if p[3] > limit and len(p[2]) >= 2]
+    """나눌 문단만 [(문단순번, 문장들, 글자수)]로 돌려준다. 대상: 기준 글자 수를 넘고
+    문장이 2개 이상인 문단. 아래는 대상에서 뺀다(그대로 둔다).
+    - 여러 줄로 된 문단(한 줄 바꿈으로 이어진 블록 - B·Claude 도입부의 시적 줄바꿈 등):
+      줄바꿈 자체가 형식이라 건드리지 않는다.
+    - [[강조]]·[[주의]]가 문단 안에 섞인 문단: 프롬프트상 태그는 독립 문단이라 정상
+      글에는 없고, 섞여 있으면 어디서 나눠도 태그나 문장이 잘릴 수 있다.
+    - 해시태그 줄 바로 앞 문단: 면책 문장("해시태그 앞 별도 한 줄")."""
+    lines, paras = para_find_paragraphs(md_text)
+    last_prose = None
+    for k, (s, e, _, _) in enumerate(paras):
+        nxt = next((x for x in lines[e + 1:] if x.strip()), "")
+        if nxt.lstrip().startswith('#') and not re.match(r'\s*#{1,6}\s', nxt):
+            last_prose = k
+    out = []
+    for k, (s, e, sents, total) in enumerate(paras):
+        if total <= limit or len(sents) < 2 or e > s or k == last_prose:
+            continue
+        if '[[' in lines[s]:
+            continue
+        out.append((k + 1, sents, total))
+    return out
 
 
 def para_valid_groups(groups, n):
