@@ -24,7 +24,7 @@
 | `prompts/dist/` | **최종본 전부.** 바로 아래 지식인 2차 48개, `지식인_앞단계/` 27개, `정책복지로/` 4개. `python3 tools/build.py`로 만든다 — dist는 직접 고치지 않는다 |
 | `prompts/original/` | 처음 받은 지식인 원본 42개(기록용) |
 | `tools/rulecheck.py` | 결과물 형식 점검: `python3 tools/rulecheck.py <결과 파일> <A_Claude|B_Claude|A_GPT|B_GPT>` |
-| `eval/` | 예전 모델 비교 실험 결과(참고용) |
+| `eval/` | 예전 모델 비교 실험 결과(참고용). `eval/samples/`는 사용자가 준 실제 최종 결과물 — 프로그램 기능 설계·시험 때 먼저 본다 |
 | `program/` | 지식인 관리 프로그램 `kin_manager.py`(Ver10.05, CRLF). 탭 구성·저장 흐름·문단 정리·바뀐 점은 `program/README.md` |
 
 각 폴더의 README와 프롬프트 메모 블록(정책·복지로)·`_메모` 필드(지식인 topics)에 변경 근거가 있다.
