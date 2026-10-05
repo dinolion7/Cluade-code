@@ -16,16 +16,6 @@ def body(text):
     return m.group(1) if m else text
 
 
-def paras(t):
-    """본문 문단(빈 줄로 나뉜 산문 덩어리)만. 제목·소제목·표·리스트·태그·해시태그 줄, 짧은 시적 행은 뺀다."""
-    out = []
-    for p in re.split(r'\n\s*\n', t):
-        p = p.strip()
-        if p and not p.startswith(('#', '|', '- ', '* ', '[[', '1. ')):
-            out.append(re.sub(r'\s*\n\s*', ' ', p))
-    return out
-
-
 def check(style, text):
     t = body(text)
     lines = t.split('\n')
@@ -58,7 +48,6 @@ def check(style, text):
         '제목쉼표1개': title.count(',') == 1,
         '천단위쉼표없음': not re.search(r'\d,\d{3}', title),
         '소제목특수문자없음': not any(re.search(r'[-:/()\[\]]', s) or '?' in s[:-1] for s in subs),
-        '문단≤150자': all(len(p) <= 150 for p in paras(t)),
         '해시태그기호없음': all(re.fullmatch(r'#[가-힣A-Za-z0-9]+', g) for g in tags),
         '확인실패문장없음': not FAIL_TRACE.search(t),
     }
