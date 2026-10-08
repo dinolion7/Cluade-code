@@ -26,7 +26,7 @@
 | `tools/rulecheck.py` | 결과물 형식 점검: `python3 tools/rulecheck.py <결과 파일> <A_Claude|B_Claude|A_GPT|B_GPT>` |
 | `eval/` | 예전 모델 비교 실험 결과(참고용). `eval/samples/`는 사용자가 준 실제 최종 결과물 — 프로그램 기능 설계·시험 때 먼저 본다 |
 | `program/` | 지식인 관리 프로그램 `kin_manager.py`(Ver10.05, CRLF). 탭 구성·저장 흐름·문단 정리·바뀐 점은 `program/README.md` |
-| `program/policy_news_manager.py` | 정책뉴스 관리 프로그램(Ver10.05, LF, 받은 그대로). 검색용/홈판용 프롬프트 세트를 설정에서 고른다 |
+| `program/policy_news_manager.py` | 정책뉴스 관리 프로그램(Ver10.07, LF). Ver10.06은 받은 그대로 커밋(aa58833) — 프롬프트 한 세트(0·A V20·B V21·C V14), 프롬프트D 삭제, 제목 속마음 후킹 점검, 저장 전 문단 정리. Ver10.07: 8)키워드 등록에서 중복의심 글을 골라 포스팅("✅ 중복 허용") |
 
 각 폴더의 README와 프롬프트 메모 블록(정책·복지로)·`_메모` 필드(지식인 topics)에 변경 근거가 있다.
 
