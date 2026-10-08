@@ -1069,6 +1069,24 @@
         복사(기본·간소화 둘 다) [입력값] 끝에 "## 글쓴이 실제 경험" 블록으로 붙는다. 홈판용 B V1은 이
         블록이 있을 때만 그 내용을 1인칭으로 쓴다(부풀리기·사실 근거 사용 금지). 검색용 세트에서는
         붙이지 않는다(검색용 B는 1인칭 경험을 쓰지 않음).
+    63. [Ver10.06, 2026-10-05] "생활 돈" 블로그 + 홈판(경제판) 동시 공략으로 프롬프트를 하나로 합친 데
+        맞춤(프롬프트 0 V2·A V20·B V21·C V14, 저장소 docs/homefeed_economy.md).
+        (1) 프롬프트 세트(검색용/홈판용) 선택 삭제 — 프롬프트가 한 세트로 합쳐졌다. 설정 탭 라디오 버튼,
+        home_ 파일명 키, 창 제목의 세트 표시를 뺐다(예전 config.json의 home_ 키는 읽지 않을 뿐 그대로 둔다).
+        (2) 프롬프트D(재미나이 변환) 삭제 — 이미지는 GPT만 쓴다(C V14가 GPT용 프롬프트를 바로 낸다).
+        인포그래픽 탭 STEP 1.5와 설정 칸을 뺐다.
+        (3) 제목 점검을 A V20 제목 구조 "[메인 + 서브 + '속마음 후킹'], [롱테일 + 세부사항]"에 맞춤 —
+        최소 40자(35자에서 올림), 앞부분에 작은따옴표 후킹이 없거나 후킹이 앞 25자를 넘으면 알림.
+        제목정밀검색·관련 글 점수의 "앞 핵심구"는 따옴표 후킹을 뺀 메인·서브로 검색한다
+        (policy_strip_title_hook). 앞부분 30자 점검은 후킹을 포함한 길이 그대로.
+        (4) 글쓴이 실제 경험 블록을 항상 프롬프트B 복사에 붙인다(B V21이 받는다).
+        (5) 저장 전 모바일 문단 정리(GPT) — 지식인 프로그램 Ver10.05와 같은 방식. 4)최종각색 탭 저장 버튼
+        옆 "📱 문단 정리(GPT)" 체크(기본 꺼짐)와 기준 글자 수(기본 150자). 켜 두면 "💾 MD 파일 저장"을
+        누를 때 먼저 기준을 넘는 문단만 GPT가 고른 자리(첫 문장 뒤/마지막 문장 앞/없음)에서 나눠
+        본문칸에 반영한다. 바뀐 게 있으면 확인 후 다시 저장, 없으면 바로 저장. 넘는 문단이 없으면 GPT를
+        부르지 않는다. 공백을 뺀 전후 본문이 다르면 원본을 쓴다. 도입부·여러 줄 블록·[[ 섞인 문단·
+        해시태그 바로 앞 문단(출처 줄)·표·목록·소제목은 건드리지 않는다. 설정 탭에 OpenAI API 키 칸 추가
+        (키가 없으면 문단 정리는 건너뛰고 원본으로 저장).
 """
 
 import os
@@ -1640,7 +1658,7 @@ STATUS_LIST = ["🆕 신규", "🔎 검토중", "✍️ 작성중", "🟡 발행
 # 75자까지 허용되는데, 코드에서는 "소재 개수"를 알 방법이 없으므로 61~75자는
 # 참고용 경고(예외 대상인지 직접 확인)로, 75자 초과는 예외 없이 무조건
 # 줄이라는 경고로 나눈다.
-TITLE_MIN_LEN = 35  # [V15 반영] 50 → 35 (프롬프트A V15: 35~60자)
+TITLE_MIN_LEN = 40  # [Ver10.06] 35 → 40 (프롬프트A V20: 40~60자, 앞부분에 속마음 후킹)
 TITLE_MAX_LEN = 60
 TITLE_MAX_LEN_MULTI = 75  # 복합 소재형(제목 후보 소재 3개 이상) 전용 절대 상한
 
@@ -1648,41 +1666,45 @@ TITLE_MAX_LEN_MULTI = 75  # 복합 소재형(제목 후보 소재 3개 이상) �
 # (검색 가중치가 높은 자리를 차지하면서 실제로는 아무도 검색하지 않는 표현)
 HOOK_WORDS = ["주목", "눈길", "관심", "충격", "화제", "이슈", "꿀팁", "대박"]
 
-# [Ver10.05 신규] 홈판용 프롬프트 세트(프롬프트A 홈판전략분석 V1 [5단계])의 제목 길이 — 모바일 홈피드
-# 카드에서 2줄 안에 읽히는 길이(가설). 쉼표 1개 "앞부분, 뒷부분" 구조는 홈판용에서는 쓰지 않는다.
-HOME_TITLE_MIN_LEN = 20
-HOME_TITLE_MAX_LEN = 40
-
-# [Ver10.05 신규] 프롬프트 세트. 설정 키 prompt_set이 "home"이면 home_ 접두 키의 파일명을 쓴다.
-PROMPT_SET_LABELS = {"search": "검색용", "home": "홈판용"}
-PROMPT_FILE_KEYS = ["prompt_0_file", "prompt_a_file", "prompt_b_file", "prompt_c_file", "prompt_d_file"]
-
-
-def is_home_prompt_set(cfg: dict = None) -> bool:
-    cfg = cfg if cfg is not None else load_config()
-    return cfg.get("prompt_set", "search") == "home"
+# [Ver10.06] 프롬프트 세트(검색용/홈판용) 구분을 없앴다 — 프롬프트가 한 세트(0·A·B·C)로 합쳐졌다.
+PROMPT_FILE_KEYS = ["prompt_0_file", "prompt_a_file", "prompt_b_file", "prompt_c_file"]
 
 
 def prompt_file_name(cfg: dict, key: str) -> str:
-    """[Ver10.05 신규] 지금 프롬프트 세트의 파일명. 홈판용 칸이 비어 있으면 검색용 파일명을 쓴다."""
-    if is_home_prompt_set(cfg):
-        home = (cfg.get("home_" + key) or "").strip()
-        if home:
-            return home
+    """설정에 적힌 프롬프트 파일명."""
     return cfg.get(key, "")
 
 
 def _prompt_missing_hint(cfg: dict, key: str) -> str:
-    """[Ver10.05 신규] 프롬프트 파일이 없을 때 안내 — 찾은 파일명과 지금 세트."""
-    label = PROMPT_SET_LABELS.get(cfg.get("prompt_set", "search"), "검색용")
-    return f"{label} 세트: {prompt_file_name(cfg, key) or '(파일명 비어 있음)'}"
+    """프롬프트 파일이 없을 때 안내 — 찾은 파일명."""
+    return f"찾은 파일명: {prompt_file_name(cfg, key) or '(파일명 비어 있음)'}"
 
 
 def title_len_limits(cfg: dict = None) -> tuple:
-    """[Ver10.05 신규] (최소, 최대) 제목 글자수 — 세트에 따라 다르다."""
-    if is_home_prompt_set(cfg):
-        return HOME_TITLE_MIN_LEN, HOME_TITLE_MAX_LEN
+    """(최소, 최대) 제목 글자수."""
     return TITLE_MIN_LEN, TITLE_MAX_LEN
+
+# [Ver10.06] 프롬프트A V20 제목 앞부분의 작은따옴표 속마음 후킹. 피드 카드에 보이는 앞 약 25자 안에서
+# 끝나야 한다. 후킹 안에는 쉼표가 없다(A V20). 큰따옴표·꺾쇠 따옴표도 같은 후킹으로 본다.
+TITLE_HOOK_VISIBLE_LEN = 25
+_TITLE_HOOK_RE = re.compile(r"['‘’\"“”][^'‘’\"“”,，]{1,20}['‘’\"“”](?:\s*(?:\.{2,}|…))?")
+
+
+def policy_title_hook(title: str):
+    """제목 첫 쉼표 앞의 작은따옴표 후킹 (문구, 끝 위치)를 돌려준다. 없으면 ("", -1)."""
+    t = (title or "").strip()
+    m = _TITLE_COMMA_RE.search(t)
+    front = t[:m.start()] if m else t
+    h = _TITLE_HOOK_RE.search(front)
+    if not h:
+        return "", -1
+    return h.group(0), h.end()
+
+
+def policy_strip_title_hook(text: str) -> str:
+    """검색·점수용: 따옴표 후킹을 빼고 공백을 정리한다(후킹이 없으면 그대로)."""
+    out = _TITLE_HOOK_RE.sub(" ", text or "")
+    return re.sub(r"\s+", " ", out).strip()
 
 # [Ver9.19 신규] 제목 후보 제목정밀검색(2단계) 기준값 — 실사용하며 조정할 것.
 # 블로그탭 결과는 스크롤로 계속 로드되므로 "건수"는 로드된 범위 기준이다.
@@ -1844,18 +1866,10 @@ DEFAULT_CONFIG = {
     "prompt_a_file": "프롬프트A_키워드전략분석.md",
     "prompt_b_file": "프롬프트B_글작성.md",
     "prompt_c_file": "프롬프트C_인포그래픽메타.md",
-    # [Ver7.22 추가] 프롬프트D — 프롬프트C의 기획 결과(타이틀/텍스트/구조/
-    # 색상)를 재미나이(Gemini) 이미지 생성용 프롬프트로 변환. GPT 이미지
-    # 생성이 막혔을 때 텍스트 프롬프트만으로 대체 결과를 뽑기 위한 용도.
-    "prompt_d_file": "프롬프트D_인포그래픽_재미나이용.md",
-    # [Ver10.05 추가] 프롬프트 세트("search"=검색용, "home"=홈판용)와 홈판용 파일명. 홈판용 칸이
-    # 비어 있으면 검색용 파일을 쓴다(prompt_file_name) — 프롬프트0은 두 세트가 같이 쓰도록 비워 둔다.
-    "prompt_set": "search",
-    "home_prompt_0_file": "",
-    "home_prompt_a_file": "프롬프트A_홈판전략분석_V1.md",
-    "home_prompt_b_file": "프롬프트B_홈판글작성_V1.md",
-    "home_prompt_c_file": "프롬프트C_인포그래픽기획_블로그B용_홈판_V1.md",
-    "home_prompt_d_file": "프롬프트D_재미나이변환_블로그B용_홈판_V1.md",
+    # [Ver10.06] 저장 전 모바일 문단 정리(GPT) — 기본 꺼짐. 키가 없으면 건너뛴다.
+    "openai_api_key": "",
+    "para_reflow_on": False,
+    "para_reflow_limit": 150,
     "output_dir":    _DEFAULT_WORK_FOLDER_NAME,
     "prompt_dir":    _DEFAULT_WORK_FOLDER_NAME,
     # [Ver7.14 추가] 메인 오토포스팅 프로그램과 공유하는 키워드 엑셀
@@ -3063,9 +3077,11 @@ def policy_split_title_front(title: str) -> str:
     t = (title or "").strip().rstrip("?？!！. ").strip()
     m = _TITLE_COMMA_RE.search(t)
     if m:
-        front = t[:m.start()].strip()
+        # [Ver10.06] A V20 앞부분의 작은따옴표 속마음 후킹은 검색어가 아니므로 빼고 메인·서브만 쓴다.
+        front = policy_strip_title_hook(t[:m.start()])
         if len(front) >= 4:
             return front
+    t = policy_strip_title_hook(t)
     if len(t) <= 30:
         return t
     cut = t[:30]
@@ -3350,6 +3366,7 @@ def policy_title_keywords(title: str) -> tuple:
     t = (title or "").strip().rstrip("?？!！. ").strip()
     m = _TITLE_COMMA_RE.search(t)
     front, back = (t[:m.start()], t[m.end():]) if m else (t, "")
+    front = policy_strip_title_hook(front)   # [Ver10.06] 속마음 후킹 토큰은 핵심 키워드가 아니다
     core = policy_clean_tokens(front)
     # 서브 키워드 중 핵심 키워드와 같거나 포개지는 것(예: 핵심 "이물"과 서브 "이물질")은 이중 계산을
     # 막기 위해 뺀다.
@@ -4015,7 +4032,7 @@ def save_author_experience(link: str, text: str):
 
 
 def format_author_experience_block(text: str) -> str:
-    """[Ver10.05 신규] 프롬프트에 붙일 "## 글쓴이 실제 경험" 블록(홈판용 B V1이 읽는 이름)."""
+    """[Ver10.05 신규] 프롬프트에 붙일 "## 글쓴이 실제 경험" 블록(B V21 [입력값] 4가 읽는 이름)."""
     return (
         "## 글쓴이 실제 경험\n"
         "(사용자가 직접 적은 실제 경험입니다. 이 내용만 1인칭으로 쓰고, 적히지 않은 장면·수치·감정을 "
@@ -4463,8 +4480,7 @@ def validate_title(title: str) -> dict:
     # (50~60자, 75자 예외)에 맞춰 다시 켠다. "소재 개수"는 코드가 알 수
     # 없으므로 60~75자는 예외 대상인지 직접 확인하라는 경고로, 75자
     # 초과는 예외 없이 줄이라는 경고로 나눈다.
-    # [Ver10.05] 길이 기준은 프롬프트 세트를 따른다(검색용 35~60자, 홈판용 20~40자).
-    home = is_home_prompt_set()
+    # [Ver10.06] 프롬프트A V20: 40~60자(세트 구분 삭제).
     min_len, max_len = title_len_limits()
     ok_length = min_len <= length <= max_len
     # [Ver9.26] 75자 예외는 프롬프트A V15에서 폐지됐다 — 60자가 절대 상한이다.
@@ -4472,29 +4488,32 @@ def validate_title(title: str) -> dict:
         warnings.append(
             f"제목이 {length}자로 {max_len}자 절대 상한을 넘었습니다 — 줄여야 합니다.")
     elif length and length < min_len:
-        if home:
-            warnings.append(
-                f"제목이 {length}자로 {min_len}자 미만입니다 — 대상·수치·궁금증 중 빠진 것이 "
-                f"없는지 확인하세요.")
-        else:
-            warnings.append(
-                f"제목이 {length}자로 {min_len}자 미만입니다 — 핵심 키워드나 롱테일 "
-                f"표현을 더 녹일 수 있는지 확인하세요.")
+        warnings.append(
+            f"제목이 {length}자로 {min_len}자 미만입니다 — 핵심 키워드나 롱테일 "
+            f"표현을 더 녹일 수 있는지 확인하세요.")
 
     # [Ver9.26 신규] 프롬프트A V16 구조 점검: "앞부분, 뒷부분" 쉼표 1개, 앞부분 30자 이내.
     commas = len(_TITLE_COMMA_RE.findall(title))   # [Ver10.02] 숫자 속 천 단위 쉼표 제외
-    if home:
-        pass  # [Ver10.05] 홈판용 제목은 쉼표 구조를 쓰지 않는다.
-    elif title and commas == 0:
+    if title and commas == 0:
         warnings.append("쉼표가 없습니다 — 프롬프트A V16 제목은 '앞부분, 뒷부분' 쉼표 1개 구조입니다 "
                         "(제목정밀검색의 앞구는 앞 30자로 대체됩니다).")
     elif commas >= 2:
         warnings.append(f"쉼표가 {commas}개입니다 — 첫 쉼표 앞만 앞구로, 첫 쉼표 뒤 전체가 뒷구로 "
                         f"검색됩니다(쉼표 1개 권장).")
-    if commas >= 1 and not home:
-        _front_len = len(policy_split_title_front(title))
+    if commas >= 1:
+        # [Ver10.06] 앞부분 길이는 속마음 후킹을 포함한 그대로 센다(검색용 앞 핵심구와 다름).
+        _front_len = _TITLE_COMMA_RE.search(title).start()
         if _front_len > 30:
             warnings.append(f"앞부분(첫 쉼표 앞)이 {_front_len}자입니다 — 30자 이내를 권장합니다.")
+
+    # [Ver10.06] 프롬프트A V20 속마음 후킹: 앞부분 메인 바로 뒤 작은따옴표 한 쌍, 앞 25자 안에서 끝남.
+    hook, hook_end = policy_title_hook(title)
+    if title and not hook:
+        warnings.append("앞부분(첫 쉼표 앞)에 작은따옴표 속마음 후킹이 없습니다 — 프롬프트A V20 제목은 "
+                        "[메인 + '속마음 후킹'], [롱테일] 구조입니다(피드에서 멈추게 하는 자리).")
+    elif hook and hook_end > TITLE_HOOK_VISIBLE_LEN:
+        warnings.append(f"속마음 후킹이 {hook_end}자에서 끝납니다 — 피드 카드에는 앞 약 "
+                        f"{TITLE_HOOK_VISIBLE_LEN}자만 보이므로 메인과 후킹을 앞으로 당기세요.")
 
     # [Ver9.15 신규] 핵심 숫자 개수 점검. 프롬프트A V10 [제목 형식 규칙]이
     # "핵심 숫자는 원칙적으로 1개만"을 명문화한 데 맞춘 가벼운 점검이다.
@@ -4508,8 +4527,7 @@ def validate_title(title: str) -> dict:
     found_hooks = [w for w in HOOK_WORDS if w in title]
     if found_hooks:
         warnings.append(f"호객형 수식어 발견: {', '.join(found_hooks)} — "
-                         + ("낚시성 제목으로 보일 수 있습니다." if home else
-                            "검색 가중치가 높은 자리를 낭비할 수 있습니다."))
+                        "낚시성 제목으로 보일 수 있습니다.")
 
     # [Ver9.26] "동사형 종결/명사형 종결 의심" 점검 삭제 — 프롬프트A V16은 물음표 종결이 선택이고
     # 명사형·서술형 마무리도 허용하는데, 옛 점검은 "됩니다/합니다"류가 아니면 모두 명사형 의심으로
@@ -4523,6 +4541,204 @@ def validate_title(title: str) -> dict:
         "ends_verb":   ends_verb,
         "warnings":    warnings,
     }
+
+
+# [Ver10.06 신규] 저장 전 모바일 문단 정리 — 지식인 관리 프로그램 Ver10.05(kin_manager.py)와 같은 코드.
+# ══════════════════════════════════════════════════════════
+# 저장 전 모바일 문단 정리 (정책뉴스: 4)최종각색 탭 "💾 MD 파일 저장", 기본 꺼짐)
+# ──────────────────────────────────────────────────────────
+# 각색 결과는 이미 빈 줄로 문단이 나뉘어 있으므로(대부분 1~3문장, 중간값 약
+# 100자) 기존 문단 구분은 그대로 두고, 기준 글자 수(기본 150자, 4)탭에서 조정)를
+# 넘는 문단만 나눈다. 문단을 합치지는 않는다. 넘는 문단이 없으면 GPT를 부르지
+# 않는다. 나누는 자리는 한 문단에 한 곳, "첫 문장 뒤(앞)" 또는 "마지막 문장 앞(뒤)"
+# 둘 중 하나이고, GPT가 문단을 읽고 앞/뒤/없음(문맥이 어색하면 그대로) 중 하나만
+# JSON으로 답한다. 코드가 원래 문장 그대로 다시 이어 붙이며 나눈 자리에만 빈 줄
+# (포스팅 프로그램의 문단 구분)을 넣는다. 마지막에 공백·줄바꿈을 모두 뺀 전후
+# 본문을 대조해 한 글자라도 다르면 원본을 그대로 쓴다.
+# 제목·소제목·해시태그(#), 표(|), 리스트(- * + 1.), 인용(>), 이미지,
+# 코드펜스, 구분선, 굵은 글씨만 있는 줄, [[강조]] 줄은 건드리지 않는다.
+# ══════════════════════════════════════════════════════════
+PARA_REFLOW_MODEL = "gpt-4.1-mini-2025-04-14"
+PARA_REFLOW_DEFAULT_LIMIT = 150
+
+_PARA_LOCK_PAT = re.compile(
+    r'^\s*(?:#|\||>|!\[|[-*+]\s|\d+[.)]\s|`{3,}|-{3,}\s*$|\*\*[^*].*\*\*\s*$|\[\[)')
+# 문장 끝: . ! ? … 뒤에 닫는 따옴표·괄호가 붙을 수 있고, 그 뒤가 공백이어야 한다
+# ("1.5", "2026.10.5" 같은 숫자 안의 점은 뒤에 공백이 없어 나뉘지 않는다).
+_PARA_SENT_END_PAT = re.compile(r'[.!?…][)"\'”’」』\]]*(?=\s)')
+
+PARA_REFLOW_RULES = (
+    "당신은 네이버 블로그 글의 긴 문단을 모바일에서 읽기 좋게 나누는 편집자입니다.\n"
+    "아래 [문단]은 기준 길이({limit}자)를 넘어 둘로 나누려는 문단이며, 문장에 번호가 붙어 있습니다.\n"
+    "문단 전체를 읽고 문단마다 아래 셋 중 하나를 고르세요.\n"
+    "- 앞: 첫 문장 뒤에서 나눔 (1번 | 2번~끝)\n"
+    "- 뒤: 마지막 문장 앞에서 나눔 (1번~끝 앞 | 마지막 문장)\n"
+    "- 없음: 나누지 않음\n\n"
+    "떼어 낸 문장과 남은 문장이 각각 앞뒤 없이도 뜻이 자연스럽게 통하고 흐름이 끊기지 않는 쪽을\n"
+    "고릅니다. 앞뒤 문장과 이어져야 뜻이 통해서 어느 쪽으로 나눠도 어색하면 \"없음\"을 고릅니다.\n"
+    "문장은 고치지 않습니다. 문장이 2개인 문단은 앞과 뒤가 같습니다.\n\n"
+    "[출력]\n"
+    '아래 JSON만 출력합니다: {{"paragraphs": {{"3": "앞", "7": "뒤", "9": "없음"}}}} (키는 [문단] 번호)'
+)
+
+
+def para_split_sentences(line):
+    """한 줄을 문장 단위로 나눈다(앞뒤 공백만 떼므로 이어 붙이면 원문과 글자가 같다)."""
+    out, start = [], 0
+    for m in _PARA_SENT_END_PAT.finditer(line):
+        out.append(line[start:m.end()].strip())
+        start = m.end()
+    rest = line[start:].strip()
+    if rest:
+        out.append(rest)
+    return [s for s in out if s]
+
+
+def para_find_paragraphs(md_text):
+    """빈 줄·잠금 줄로 구분되는 일반 문단을 찾는다.
+    반환 (lines, paras) - paras는 [(시작줄, 끝줄, [문장, ...], 글자수), ...](끝줄 포함).
+    글자수는 문장을 공백 하나로 이어 붙인 길이(공백 포함)."""
+    lines = md_text.split('\n')
+    paras, i, n = [], 0, len(lines)
+    while i < n:
+        ln = lines[i]
+        if not ln.strip() or _PARA_LOCK_PAT.match(ln):
+            i += 1
+            continue
+        j = i
+        while j + 1 < n and lines[j + 1].strip() and not _PARA_LOCK_PAT.match(lines[j + 1]):
+            j += 1
+        sents = []
+        for x in lines[i:j + 1]:
+            sents.extend(para_split_sentences(x))
+        paras.append((i, j, sents, len(" ".join(sents))))
+        i = j + 1
+    return lines, paras
+
+
+def para_long_targets(md_text, limit):
+    """나눌 문단만 [(문단순번, 문장들, 글자수)]로 돌려준다. 대상: 기준 글자 수를 넘고
+    문장이 2개 이상인 문단. 아래는 대상에서 뺀다(그대로 둔다).
+    - 여러 줄로 된 문단(한 줄 바꿈으로 이어진 블록 - B·Claude 도입부의 시적 줄바꿈 등):
+      줄바꿈 자체가 형식이라 건드리지 않는다.
+    - [[강조]]·[[주의]]가 문단 안에 섞인 문단: 프롬프트상 태그는 독립 문단이라 정상
+      글에는 없고, 섞여 있으면 어디서 나눠도 태그나 문장이 잘릴 수 있다.
+    - 해시태그 줄 바로 앞 문단: 면책 문장("해시태그 앞 별도 한 줄").
+    - 도입부(첫 ## 소제목 앞 문단)."""
+    lines, paras = para_find_paragraphs(md_text)
+    # 도입부(첫 "## " 소제목 앞)는 나누지 않는다.
+    first_h2 = next((i for i, x in enumerate(lines) if re.match(r'\s*##\s', x)), len(lines))
+    last_prose = None
+    for k, (s, e, _, _) in enumerate(paras):
+        nxt = next((x for x in lines[e + 1:] if x.strip()), "")
+        if nxt.lstrip().startswith('#') and not re.match(r'\s*#{1,6}\s', nxt):
+            last_prose = k
+    out = []
+    for k, (s, e, sents, total) in enumerate(paras):
+        if s < first_h2 or total <= limit or len(sents) < 2 or e > s or k == last_prose:
+            continue
+        if '[[' in lines[s]:
+            continue
+        out.append((k + 1, sents, total))
+    return out
+
+
+def para_valid_groups(groups, n):
+    """GPT가 준 묶음이 1..n을 순서대로 한 번씩만 덮는지 확인."""
+    if not isinstance(groups, list) or not groups:
+        return False
+    flat = []
+    for g in groups:
+        if not isinstance(g, list) or not g:
+            return False
+        flat.extend(g)
+    return flat == list(range(1, n + 1))
+
+
+def para_apply_splits(md_text, splits):
+    """splits({문단순번: [[1,2],[3]]})대로 해당 문단만 나눈다. 나머지 문단·줄은 그대로.
+    묶음이 잘못됐거나 하나로 둔 문단은 손대지 않는다. 반환 (새 본문, 나눈 문단 수, 잘못된 응답 수)."""
+    lines, paras = para_find_paragraphs(md_text)
+    changed = invalid = 0
+    for idx in range(len(paras), 0, -1):
+        if idx not in splits:
+            continue
+        s, e, sents, _ = paras[idx - 1]
+        groups = splits[idx]
+        if groups is None or not para_valid_groups(groups, len(sents)):
+            invalid += 1
+            continue
+        if len(groups) < 2:
+            continue
+        new_lines = []
+        for g_i, g in enumerate(groups):
+            if g_i:
+                new_lines.append("")
+            new_lines.append(" ".join(sents[k - 1] for k in g))
+        lines[s:e + 1] = new_lines
+        changed += 1
+    return "\n".join(lines), changed, invalid
+
+
+def para_same_text(a, b):
+    """공백·줄바꿈을 모두 뺀 글자가 같은지(문단 정리 안전장치)."""
+    return re.sub(r'\s', '', a) == re.sub(r'\s', '', b)
+
+
+def para_reflow_with_gpt(openai_client, md_text, limit=PARA_REFLOW_DEFAULT_LIMIT, model=PARA_REFLOW_MODEL):
+    """기준 글자 수를 넘는 문단만 GPT에게 나눌 자리를 받아 나눈다.
+    반환 (새 본문 또는 None, 안내 문구). None이면 원본을 그대로 쓴다."""
+    targets = para_long_targets(md_text, limit)
+    if not targets:
+        return None, f"{limit}자 넘는 문단 없음 - GPT 호출 안 함(원본 유지)"
+    parts = []
+    for pid, sents, total in targets:
+        parts.append(f"[문단 {pid}] (전체 {total}자)")
+        parts.extend(f"{k}. ({len(x)}자) {x}" for k, x in enumerate(sents, 1))
+        parts.append("")
+    resp = openai_client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user",
+                   "content": PARA_REFLOW_RULES.format(limit=limit) + "\n\n" + "\n".join(parts)}],
+        temperature=0,
+        max_tokens=300,
+        response_format={"type": "json_object"},
+    )
+    raw = (resp.choices[0].message.content or "").strip()
+    try:
+        data = json.loads(raw)
+    except Exception:
+        m = re.search(r'\{.*\}', raw, re.S)
+        data = json.loads(m.group(0)) if m else {}
+    # "앞" = 첫 문장 뒤, "뒤" = 마지막 문장 앞, "없음" = 그대로. 그 밖의 답은 잘못된 응답.
+    counts = {pid: len(sents) for pid, sents, _ in targets}
+    splits = {}
+    for k, v in (data.get("paragraphs") or {}).items():
+        try:
+            k = int(k)
+        except (TypeError, ValueError):
+            continue
+        if k not in counts:
+            continue
+        n = counts[k]
+        v = str(v).strip()
+        if v == "앞":
+            splits[k] = [[1], list(range(2, n + 1))]
+        elif v == "뒤":
+            splits[k] = [list(range(1, n)), [n]]
+        elif v == "없음":
+            splits[k] = [list(range(1, n + 1))]
+        else:
+            splits[k] = None  # para_apply_splits에서 잘못된 응답으로 센다
+    new_text, changed, invalid = para_apply_splits(md_text, splits)
+    if not para_same_text(md_text, new_text):
+        return None, "대조 실패 - 원본 유지"
+    note = f"{limit}자 넘는 문단 {len(targets)}개 중 {changed}개 나눔"
+    if invalid:
+        note += f"(잘못된 응답 {invalid}개는 그대로)"
+    if new_text == md_text:
+        return None, note + " - 바뀐 것 없음(원본 유지)"
+    return new_text, note
 
 
 def save_md_file(title: str, content: str, domain: str, output_dir: str) -> str:
@@ -6910,17 +7126,19 @@ class App(tk.Tk):
         # [Ver9.15 신규] 60자 상한·숫자 개수 점검을 실시간
         # 표시에도 반영 — 저장 직전 팝업(_save_md_file)까지 안 가도
         # 바로 눈에 띄게 한다.
-        min_len, max_len = title_len_limits()   # [Ver10.05] 세트별 기준
+        min_len, max_len = title_len_limits()
         if length > max_len:
             parts.append(f"{max_len}자 초과 ⚠️")
         elif length < min_len:
             parts.append(f"{min_len}자 미만")
         commas_n = len(re.findall(r"[,，]", title))
-        if is_home_prompt_set():
-            if commas_n >= 2:
-                parts.append(f"쉼표 {commas_n}개 ⚠️")
-        elif commas_n != 1:
+        if commas_n != 1:
             parts.append(f"쉼표 {commas_n}개 ⚠️")
+        _hook, _hook_end = policy_title_hook(title)   # [Ver10.06] A V20 속마음 후킹
+        if not _hook:
+            parts.append("후킹 없음 ⚠️")
+        elif _hook_end > TITLE_HOOK_VISIBLE_LEN:
+            parts.append(f"후킹이 {_hook_end}자에서 끝남 ⚠️")
         num_count = len(title_number_groups(title))
         if num_count >= 2:
             parts.append(f"숫자 {num_count}개 ⚠️")
@@ -8133,7 +8351,7 @@ class App(tk.Tk):
         self.copy_b_simplified_status = ttk.Label(pb_f, text="", foreground="darkgreen")
         self.copy_b_simplified_status.pack(anchor="w", pady=(2,0))
 
-        # [Ver10.05 신규] 글쓴이 실제 경험(선택) — 기사별 저장, 홈판용 세트일 때만 B 복사에 붙는다.
+        # [Ver10.05 신규] 글쓴이 실제 경험(선택) — 기사별 저장, B 복사에 붙는다(Ver10.06부터 항상).
         pb_row3 = ttk.Frame(pb_f)
         pb_row3.pack(fill="x", pady=(6,0))
         ttk.Button(pb_row3, text="✍ 글쓴이 실제 경험 입력 (선택)",
@@ -8245,6 +8463,24 @@ class App(tk.Tk):
 
         btn_save_f = ttk.Frame(save_f)
         btn_save_f.grid(row=5, column=0, columnspan=3, sticky="e", pady=(6,0))
+        # [Ver10.06 신규] 저장 전 모바일 문단 정리(GPT) — 기본 꺼짐. 켜 두면 저장 버튼을 누를 때 먼저
+        # 기준 글자 수를 넘는 문단만 나눠 본문칸에 반영한다(para_reflow_with_gpt 참고).
+        _pcfg = load_config()
+        self.para_reflow_var = tk.BooleanVar(value=bool(_pcfg.get("para_reflow_on", False)))
+        ttk.Checkbutton(btn_save_f, text="📱 문단 정리(GPT)", variable=self.para_reflow_var,
+                        command=self._on_para_reflow_toggled).pack(side="left", padx=(0,2))
+        try:
+            _plimit = int(_pcfg.get("para_reflow_limit", PARA_REFLOW_DEFAULT_LIMIT))
+        except (TypeError, ValueError):
+            _plimit = PARA_REFLOW_DEFAULT_LIMIT
+        self.para_limit_var = tk.IntVar(value=_plimit)
+        ttk.Spinbox(btn_save_f, from_=80, to=400, increment=10, width=4,
+                    textvariable=self.para_limit_var).pack(side="left")
+        ttk.Label(btn_save_f, text="자 넘으면").pack(side="left", padx=(2,12))
+        self.para_limit_var.trace_add("write", self._save_para_limit)
+        self._para_token = 0
+        self._para_pending = False
+        self._para_done_text = None
         ttk.Button(btn_save_f, text="💾 MD 파일 저장", command=self._save_md_file,
                    style="Copy.TButton").pack(side="left", padx=(0,8))
         # 글마다 제목별 하위 폴더가 생기므로(인포그래픽 이미지를 같이
@@ -8263,8 +8499,83 @@ class App(tk.Tk):
         self.save_result_var = tk.StringVar()
         ttk.Label(save_f, textvariable=self.save_result_var,
                   foreground="darkgreen").grid(row=6, column=0, columnspan=3, sticky="w", pady=(4,0))
+        self.para_info_var = tk.StringVar(value="")   # [Ver10.06] 문단 정리 결과 안내
+        ttk.Label(save_f, textvariable=self.para_info_var,
+                  foreground="#1F3A5F").grid(row=7, column=0, columnspan=3, sticky="w", pady=(2,0))
 
         f.rowconfigure(1, weight=1)
+
+    # ── [Ver10.06 신규] 4)최종각색: 저장 전 모바일 문단 정리 ──
+    def _on_para_reflow_toggled(self):
+        cfg = load_config()
+        cfg["para_reflow_on"] = bool(self.para_reflow_var.get())
+        save_config(cfg)
+        if not self.para_reflow_var.get():
+            self._para_token += 1          # 진행 중 결과는 버린다
+            self._para_pending = False
+            self.para_info_var.set("")
+
+    def _save_para_limit(self, *_):
+        try:
+            v = int(self.para_limit_var.get())
+        except (tk.TclError, ValueError):
+            return   # 입력 중 빈 값/잘못된 값이면 저장을 건너뛴다
+        cfg = load_config()
+        cfg["para_reflow_limit"] = v
+        save_config(cfg)
+
+    def _para_reflow_gate(self, content: str) -> bool:
+        """저장해도 되면 True. 문단 정리가 켜져 있고 이 본문을 아직 정리하지 않았으면 정리를 시작하고 False."""
+        if not self.para_reflow_var.get():
+            return True
+        if self._para_pending:
+            messagebox.showinfo("문단 정리 중", "문단 정리가 끝나면 본문칸에 반영됩니다. 잠시 뒤 다시 저장하세요.")
+            return False
+        if self._para_done_text is not None and self._para_done_text == content:
+            return True
+        key = (load_config().get("openai_api_key") or "").strip()
+        if not key:
+            self.para_info_var.set("📱 문단 정리: OpenAI API 키가 없어 건너뜀(설정 탭에서 입력) — 원본 그대로 저장")
+            return True
+        try:
+            limit = min(400, max(80, int(self.para_limit_var.get())))
+        except (tk.TclError, ValueError):
+            limit = PARA_REFLOW_DEFAULT_LIMIT
+        self._para_token += 1
+        token = self._para_token
+        self._para_pending = True
+        self.para_info_var.set(f"⏳ 문단 정리 중({limit}자 넘는 문단)... 끝나면 본문칸에 반영")
+
+        def worker():
+            try:
+                import openai
+                client = openai.OpenAI(api_key=key)
+                res = para_reflow_with_gpt(client, content, limit)
+            except Exception as e:
+                res = (None, f"GPT 오류로 원본 유지({str(e)[:60]})")
+            self.after(0, lambda: self._apply_para_reflow(token, content, res))
+
+        threading.Thread(target=worker, daemon=True).start()
+        return False
+
+    def _apply_para_reflow(self, token, sent_text, res):
+        if token != self._para_token:
+            return   # 그 사이 체크 해제·재실행 — 오래된 결과 폐기
+        self._para_pending = False
+        new_text, msg = res
+        if self.md_text.get("1.0", "end").strip() != sent_text:
+            self.para_info_var.set("📱 문단 정리: 그 사이 본문이 바뀌어 결과를 버림 — 다시 저장을 누르세요")
+            return
+        if new_text is None:
+            # 바뀐 것이 없으면(또는 원본 유지) 바로 저장을 이어 간다.
+            self._para_done_text = sent_text
+            self.para_info_var.set(f"📱 문단 정리: {msg}")
+            self._save_md_file()
+            return
+        self.md_text.delete("1.0", "end")
+        self.md_text.insert("1.0", new_text)
+        self._para_done_text = new_text.strip()
+        self.para_info_var.set(f"📱 {msg} — 본문칸을 확인한 뒤 다시 \"💾 MD 파일 저장\"을 누르세요")
 
     def _refresh_author_exp_status(self):
         """[Ver10.05 신규] STEP 1의 글쓴이 경험 상태 표시를 지금 기사·세트에 맞춘다."""
@@ -8274,10 +8585,8 @@ class App(tk.Tk):
         text = load_author_experience(link) if link else ""
         if not text:
             msg = "경험: 없음 — 실제 경험이 있을 때만 넣으세요(비워 두면 1인칭 경험 없이 씁니다)"
-        elif is_home_prompt_set():
-            msg = f"경험: 입력됨 ({len(text)}자) — 프롬프트B 복사에 함께 들어갑니다"
         else:
-            msg = f"경험: 입력됨 ({len(text)}자) — 검색용 세트라 프롬프트B에는 넣지 않습니다"
+            msg = f"경험: 입력됨 ({len(text)}자) — 프롬프트B 복사에 함께 들어갑니다"
         self.author_exp_status_var.set(msg)
 
     def _open_author_experience_dialog(self):
@@ -8296,7 +8605,7 @@ class App(tk.Tk):
         ttk.Label(frm, justify="left", style="Info.TLabel", text=(
             "이 글의 주제와 관련해 직접 겪은 일을 메모처럼 적어 주세요. 사실만 적습니다.\n"
             "예) 작년 아버지 장기요양 신청 직접 함. 방문조사까지 3주. 의사소견서 따로 떼야 해서 병원 한 번 더 감.\n"
-            "· 홈판용 세트에서 프롬프트B를 복사할 때 함께 들어가고, B는 이 내용만 1인칭으로 다듬어 씁니다(부풀리지 않음).\n"
+            "· 프롬프트B를 복사할 때 함께 들어가고, B는 이 내용만 1인칭으로 다듬어 씁니다(부풀리지 않음).\n"
             "· 가족 실명·정확한 소득·주소 같은 개인정보는 넣지 마세요. 경험이 없으면 비워 두세요."
         )).pack(anchor="w", pady=(4,6))
         txt = scrolledtext.ScrolledText(frm, height=8, width=80, wrap="word", font=("맑은 고딕", 9))
@@ -8319,10 +8628,10 @@ class App(tk.Tk):
         txt.focus_set()
 
     def _author_experience_block_for_b(self) -> str:
-        """[Ver10.05 신규] 홈판용 세트이고 경험이 있으면 B [입력값] 끝에 붙일 블록, 아니면 빈 문자열."""
+        """[Ver10.05 신규, Ver10.06 항상] 경험이 있으면 B [입력값] 끝에 붙일 블록, 아니면 빈 문자열."""
         link = (getattr(self, "selected_article", None) or {}).get("link", "")
         text = load_author_experience(link) if link else ""
-        if not text or not is_home_prompt_set():
+        if not text:
             return ""
         return "4. " + format_author_experience_block(text)
 
@@ -8618,6 +8927,9 @@ class App(tk.Tk):
                 "이미 포스팅완료된 기사입니다.\n"
                 "재작성하려면 이력관리에서 먼저 '검토 전 상태로 되돌리기'를 사용하세요.")
             return
+        # [Ver10.06] 저장 전 모바일 문단 정리 — 켜져 있으면 먼저 정리하고 이번 저장은 멈춘다.
+        if not self._para_reflow_gate(content):
+            return
 
         # [버그 재발방지] TAB1에서 선택한 원본 기사와 지금 작성한 글의
         # 주제가 완전히 동떨어져 있으면 저장 전에 경고한다. 원인은 다른
@@ -8874,30 +9186,7 @@ class App(tk.Tk):
         self.copy_c_simplified_status = ttk.Label(pc_f, text="", foreground="darkgreen")
         self.copy_c_simplified_status.pack(anchor="w", pady=(1,0))
 
-        # [Ver7.22 추가] STEP 1.5 — 프롬프트D 복사 (재미나이용 변환)
-        # 프롬프트D는 프롬프트C처럼 "완성 본문을 통째로 재입력"하는
-        # 구조가 아니다 — 프롬프트D 원문 자체가 "프롬프트C가 방금 만든
-        # 기획 결과(타이틀 텍스트/카드별 텍스트·색상/구조/파일명)를
-        # 입력받는다"고 정의돼 있으므로, 같은 Claude 대화창에서 프롬프트C
-        # 바로 다음에 이어 쓰는 걸 전제로 설계돼 있다. 그래서 B·C처럼
-        # "기본 버튼(전체 재첨부) + 간소화 버튼(참조문구)" 두 개를 만들
-        # 필요가 없고, 버튼 하나로 "바로 위 C의 결과를 참고하라"는 참조
-        # 문구만 붙여 보내면 된다.
-        pd_f = ttk.LabelFrame(f,
-            text="STEP 1.5 — 프롬프트D 복사 (재미나이용 변환, GPT 대체용)", padding=6)
-        pd_f.grid(row=2, column=0, sticky="ew", pady=(0,6))
-
-        btn_d = ttk.Frame(pd_f)
-        btn_d.pack(fill="x")
-        ttk.Button(btn_d, text="📋 프롬프트D 클립보드 복사",
-                   command=self._copy_prompt_d,
-                   style="Copy.TButton").pack(side="left", padx=(0,8))
-        self.copy_d_status = ttk.Label(btn_d, text="", foreground="darkgreen",
-                                       font=("맑은 고딕", 9, "bold"))
-        self.copy_d_status.pack(side="left")
-        ttk.Label(pd_f,
-                  text="→ 프롬프트C를 작성한 그 대화창에 이어붙이기 (C의 기획 결과를 그대로 참고해 변환 — 새 대화창엔 사용 불가)",
-                  style="Info.TLabel").pack(anchor="w", pady=(1,0))
+        # [Ver10.06] STEP 1.5(프롬프트D 재미나이 변환) 삭제 — 이미지는 GPT만 쓴다.
 
         # STEP 2: 썸네일·소제목 제목 개별 복사
         title_f = ttk.LabelFrame(f,
@@ -9059,53 +9348,6 @@ class App(tk.Tk):
         self.copy_c_simplified_status.config(
             text="✅ 간소화 복사 완료! (프롬프트B를 작성한 그 대화창에) Ctrl+V 하세요.")
         self.after(5000, lambda: self.copy_c_simplified_status.config(text=""))
-
-    def _copy_prompt_d(self):
-        """[Ver7.22 추가] 프롬프트C의 기획 결과(타이틀 텍스트/카드별
-        텍스트·색상/구조/파일명)를 재미나이(Gemini) 이미지 생성용
-        프롬프트로 변환하는 프롬프트D. GPT 이미지 생성이 막혔을 때
-        텍스트 프롬프트 단독으로 대체 결과를 뽑기 위한 용도다.
-
-        프롬프트D는 프롬프트B·C와 달리 "기본(전체 재첨부) + 간소화
-        (참조문구)" 두 버전으로 나눌 필요가 없다. 프롬프트D 원문 자체가
-        "프롬프트C가 방금 기획한 정보를 입력받는다"고 정의돼 있어서,
-        애초에 같은 Claude 대화창에서 프롬프트C 바로 다음에 이어 쓰는
-        걸 전제로 설계돼 있기 때문이다 — 재입력해서 보낼 "C의 원문
-        전체"라는 개념 자체가 없다(C의 기획 결과는 이 대화의 바로 위
-        turn에만 존재하고, 별도 텍스트 파일 등으로 저장해두는 단계가
-        없다). 그래서 이 함수는 프롬프트D 원문 + "바로 위 C의 기획
-        결과를 참고해 변환해달라"는 참조 문구만 붙여 보낸다.
-
-        반드시 프롬프트C를 실행한 바로 그 Claude 대화창에서 써야 한다
-        — 새 대화창에서 쓰면 참조할 C의 결과가 없어 실패한다."""
-        cfg = load_config()
-        prompt_d = load_prompt_file(prompt_file_name(cfg, "prompt_d_file"), cfg.get("prompt_dir", PROMPT_DIR))
-        if not prompt_d:
-            messagebox.showwarning("프롬프트 없음",
-                "프롬프트D 파일이 없습니다.\n설정 탭에서 확인하세요.\n"
-                f"({_prompt_missing_hint(cfg, 'prompt_d_file')})")
-            return
-
-        content = (
-            f"{prompt_d}\n\n"
-            f"───────────────────\n"
-            f"[입력값]\n"
-            f"프롬프트C의 기획 결과(이미지 안 타이틀 텍스트 / 카드별 텍스트·색상 지정 /\n"
-            f"소제목 질문에 대한 답·결론 카드 / 구조(카드 개수·배치·비교/절차/숫자강조 양식) /\n"
-            f"색상([[강조]]·[[주의]] 여부) / 파일명 식별자·대상 소제목 / 생략 사유):\n"
-            f"   바로 위 프롬프트C의 출력을 그대로 사용해주세요.\n"
-            f"   (다시 붙여넣지 않습니다 — 같은 대화창의 바로 위 turn을 참고하세요)\n"
-            f"───────────────────\n"
-            f"위 기획 정보를 바탕으로 프롬프트D 형식에 따라 재미나이(Gemini) 이미지 생성용\n"
-            f"프롬프트로 변환해주세요. 이미지마다 프롬프트D [출력 형식]의 4단 구조\n"
-            f"(### 대상 소제목 → 라벨 문장 → 코드블럭 → 파일명 식별자·대상 소제목)를 지키고,\n"
-            f"C의 문구는 한 글자도 바꾸지 마세요."
-        )
-        self.clipboard_clear()
-        self.clipboard_append(content)
-        self.copy_d_status.config(
-            text="✅ 복사 완료! (프롬프트C를 작성한 그 대화창에) Ctrl+V 하세요.")
-        self.after(5000, lambda: self.copy_d_status.config(text=""))
 
     def _generate_title_list(self):
         """본문에서 썸네일(# 제목) + 소제목(## 제목) 추출하여 개별 복사 버튼으로 표시.
@@ -10552,45 +10794,32 @@ class App(tk.Tk):
             style="Info.TLabel", justify="left").grid(row=row, column=1, sticky="w", padx=5)
         row += 1
 
-        # [Ver10.05 신규] 프롬프트 세트 선택 — 고른 세트의 파일명 5칸이 아래에 보이고, 저장하면 두 세트의
-        # 파일명과 고른 세트가 함께 저장된다.
-        ttk.Label(f, text="프롬프트 세트:", style="Header.TLabel").grid(
-            row=row, column=0, sticky="w", pady=4)
-        set_fr = ttk.Frame(f)
-        set_fr.grid(row=row, column=1, columnspan=2, sticky="w", padx=5)
-        self._cfg_prompt_set_var = tk.StringVar(value=cfg.get("prompt_set", "search"))
-        for val, txt in [("search", "검색용 (키워드 검색 유입)"), ("home", "홈판용 (모바일 홈피드)")]:
-            ttk.Radiobutton(set_fr, text=txt, value=val, variable=self._cfg_prompt_set_var,
-                            command=self._on_prompt_set_change).pack(side="left", padx=(0, 12))
-        ttk.Label(set_fr, text="홈판용 칸이 비어 있으면 검색용 파일을 씁니다.",
-                  style="Info.TLabel").pack(side="left")
-        row += 1
-
-        # 프롬프트 파일명 (지금 고른 세트의 칸이 보인다)
-        self._cfg_prompt_vars = {"search": {}, "home": {}}
-        self._cfg_prompt_rows = {}
+        # 프롬프트 파일명 ([Ver10.06] 세트 구분·프롬프트D 삭제)
+        self._cfg_prompt_vars = {}
         for label, key, default in [
-            ("프롬프트0 파일명", "prompt_0_file", "정책뉴스_프롬프트_0_후보1차선별.md"),
-            ("프롬프트A 파일명", "prompt_a_file", "정책뉴스_프롬프트_A_키워드전략분석.md"),
-            ("프롬프트B 파일명", "prompt_b_file", "정책뉴스_프롬프트_B_글작성.md"),
-            ("프롬프트C 파일명", "prompt_c_file", "정책뉴스_프롬프트_C_인포그래픽_다크네이비_화이트-그린-옐로우-V3.md"),
-            # [Ver7.22 추가] 프롬프트D — 프롬프트C 기획 결과 → 재미나이용 변환
-            ("프롬프트D 파일명", "prompt_d_file", "정책뉴스_프롬프트_D_인포그래픽_재미나이용.md"),
+            ("프롬프트0 파일명", "prompt_0_file", "정책뉴스_0_후보1차선별.md"),
+            ("프롬프트A 파일명", "prompt_a_file", "정책뉴스_A_전략브리핑.md"),
+            ("프롬프트B 파일명", "prompt_b_file", "정책뉴스_B_글작성.md"),
+            ("프롬프트C 파일명", "prompt_c_file", "정책뉴스_C_이미지기획.md"),
         ]:
-            lbl = ttk.Label(f, text=label + ":")
-            lbl.grid(row=row, column=0, sticky="w", pady=3)
-            self._cfg_prompt_vars["search"][key] = tk.StringVar(value=cfg.get(key, default))
-            self._cfg_prompt_vars["home"][key] = tk.StringVar(
-                value=cfg.get("home_" + key, DEFAULT_CONFIG.get("home_" + key, "")))
-            ent = ttk.Entry(f, textvariable=self._cfg_prompt_vars["search"][key], width=100)
-            ent.grid(row=row, column=1, sticky="w", padx=5)
+            ttk.Label(f, text=label + ":").grid(row=row, column=0, sticky="w", pady=3)
+            self._cfg_prompt_vars[key] = tk.StringVar(value=cfg.get(key, default))
+            ttk.Entry(f, textvariable=self._cfg_prompt_vars[key], width=100).grid(
+                row=row, column=1, sticky="w", padx=5)
             ttk.Button(f, text="찾기",
-                       command=lambda k=key: self._browse_prompt_file(
-                           self._cfg_prompt_vars[self._cfg_prompt_set_var.get()][k])).grid(
+                       command=lambda k=key: self._browse_prompt_file(self._cfg_prompt_vars[k])).grid(
                 row=row, column=2, padx=5)
-            self._cfg_prompt_rows[key] = (lbl, label, ent)
             row += 1
-        self._on_prompt_set_change()
+
+        # [Ver10.06 신규] 저장 전 모바일 문단 정리(GPT)용 OpenAI API 키 — 4)최종각색 탭의 체크를 켤 때만 쓴다.
+        ttk.Label(f, text="OpenAI API 키:").grid(row=row, column=0, sticky="w", pady=3)
+        self.settings_openai_key_var = tk.StringVar(value=cfg.get("openai_api_key", ""))
+        ttk.Entry(f, textvariable=self.settings_openai_key_var, width=60, show="*").grid(
+            row=row, column=1, sticky="w", padx=5)
+        row += 1
+        ttk.Label(f, text="(4)최종각색 탭 \"📱 문단 정리(GPT)\"에만 사용 — 비워 두면 문단 정리는 건너뜁니다)",
+                  style="Info.TLabel").grid(row=row, column=1, sticky="w", padx=5, pady=(0, 4))
+        row += 1
 
         # 구분선
         ttk.Separator(f, orient="horizontal").grid(row=row, column=0, columnspan=3, sticky="ew", pady=8)
@@ -10874,21 +11103,8 @@ class App(tk.Tk):
         if path:
             var.set(path)
 
-    def _on_prompt_set_change(self):
-        """[Ver10.05 신규] 설정 탭 프롬프트 세트 라디오 — 파일명 칸을 고른 세트의 값으로 바꿔 보여준다."""
-        cur = self._cfg_prompt_set_var.get()
-        if cur not in self._cfg_prompt_vars:
-            cur = "search"
-        set_label = PROMPT_SET_LABELS[cur]
-        for key, (lbl, label, ent) in self._cfg_prompt_rows.items():
-            lbl.config(text=f"{label}({set_label}):")
-            ent.config(textvariable=self._cfg_prompt_vars[cur][key])
-
     def _update_window_title(self):
-        """[Ver10.05 신규] 창 제목 끝에 지금 프롬프트 세트를 표시한다."""
-        label = PROMPT_SET_LABELS.get(load_config().get("prompt_set", "search"), "검색용")
-        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-05_Ver 10.05"
-                   f"  [프롬프트: {label}]")
+        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-05_Ver 10.06")
 
     def _browse_prompt_file(self, var: tk.StringVar):
         cfg      = load_config()
@@ -10951,11 +11167,9 @@ class App(tk.Tk):
         cfg["keyword_excel_path"] = self.keyword_excel_var.get().strip()
         cfg["unified_keyword_excel_path"] = self.unified_keyword_excel_var.get().strip()
         cfg["board_config_path"] = self.board_config_var.get().strip()  # [2026-09-29]
-        # [Ver10.05] 두 세트의 파일명과 고른 세트를 함께 저장한다.
-        cfg["prompt_set"] = self._cfg_prompt_set_var.get() if self._cfg_prompt_set_var.get() in PROMPT_SET_LABELS else "search"
         for key in PROMPT_FILE_KEYS:
-            cfg[key] = self._cfg_prompt_vars["search"][key].get().strip()
-            cfg["home_" + key] = self._cfg_prompt_vars["home"][key].get().strip()
+            cfg[key] = self._cfg_prompt_vars[key].get().strip()
+        cfg["openai_api_key"] = self.settings_openai_key_var.get().strip()   # [Ver10.06]
 
         # [v7.24 추가] 2단계 키워드 리서치 API — 복지로 서브프로그램과 동일한 필드
         cfg["naver_openapi_client_id"] = self.settings_openapi_id_var.get().strip()
@@ -11013,8 +11227,6 @@ class App(tk.Tk):
         if hasattr(self, "main_reg_date_combo"):
             self._refresh_main_register_dates()
 
-        self._update_window_title()   # [Ver10.05] 프롬프트 세트 표시 갱신
-        # [Ver10.05] 제목 글자수 기준이 세트를 따르므로 다시 점검
         self._on_title_change()
         self._refresh_author_exp_status()
         if hasattr(self, "title_manual_len_var"):
