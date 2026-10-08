@@ -573,6 +573,22 @@
 #       위해 naver_id_entry/blog_name_entry의 입력창 폭을 width=30 → 20으로
 #       축소함(가로창이 화면 밖으로 넘어가는 것 방지).
 
+# - Ver9.16 (2026-10-08): 코드 점검에서 찾은 버그 4건 수정 (정책뉴스·복지로·지식인 공통)
+#     1) ffmpeg.exe가 없는 PC에서 프로그램이 아예 시작되지 않던 문제 - FFMPEG_EXE 확인
+#        경고가 logger 생성(setup_logging)보다 앞에 있어 NameError가 났음. 확인을
+#        logger 생성 뒤로 옮김(동작은 같음: 경고만 남기고 동영상 재인코딩은 건너뜀).
+#     2) "지정 시간 시작" 모드 - 랜덤조정(±15분)한 시작 시각이 이미 지났는데 조정값이
+#        0 이상이면 wait_seconds가 정해지지 않아 오류로 자동 포스팅이 멈췄음(오류는
+#        콘솔에만 찍힘). 이미 지났으면 조정값 부호와 무관하게 즉시 시작하도록 수정.
+#        대기 후 다시 들어올 때 조정값을 새로 뽑아 시작이 또 밀리던 것도, 시작 버튼을
+#        누를 때 한 번만 정하도록(self._start_time_target) 함께 수정.
+#     3) 해시태그가 1~2개뿐이면 random.randint(3, 2) 오류로 태그가 하나도 안 들어가던
+#        문제 - 3개 미만이면 있는 만큼 모두 넣음(3개 이상은 기존처럼 3~5개 랜덤).
+#     4) "## "가 아닌 #으로 시작하는 줄은 전부 건너뛰어 "### 제목", "#1 ..." 같은 줄이
+#        본문에서 경고 없이 빠지던 문제 - 건너뛰는 줄을 제목 줄("# ")과 해시태그 줄
+#        (단어 절반 이상이 #)로 좁힘. "###"~"######" 제목은 기호를 떼고 일반 문단으로
+#        입력함(소제목 인식은 기존대로 "## "만 - 인용구·소제목 이미지 대상 아님).
+
 # ✅ 1. 표준 라이브러리 - 시스템 및 파일
 import os  # 운영체제 기능 (파일, 경로 등)
 import time  # 시간 제어
@@ -648,8 +664,8 @@ os.chdir(BASE_DIR)
 
 # ffmpeg 실행파일 경로 - exe 컴파일 여부와 무관하게 항상 프로그램 폴더 기준으로 찾음
 FFMPEG_EXE = str(BASE_DIR / "ffmpeg.exe") if os.name == 'nt' else 'ffmpeg'
-if not os.path.exists(FFMPEG_EXE) and os.name == 'nt':
-    logger.warning(f"ffmpeg.exe를 찾을 수 없습니다: {FFMPEG_EXE} — 동영상 재인코딩이 건너뛰어집니다.")
+# ✅ [Ver9.16] ffmpeg.exe 존재 확인 경고는 logger 생성(setup_logging) 뒤로 옮김 - 여기서는
+#    logger가 아직 없어 ffmpeg.exe가 없는 PC에서 NameError로 프로그램이 시작되지 않았음.
 
 # Gemini (선택적)
 try:
@@ -954,6 +970,10 @@ def setup_logging():
 
 
 logger = setup_logging()
+
+# ✅ [Ver9.16] logger 생성 뒤에 확인 (위 FFMPEG_EXE 정의부 주석 참고)
+if not os.path.exists(FFMPEG_EXE) and os.name == 'nt':
+    logger.warning(f"ffmpeg.exe를 찾을 수 없습니다: {FFMPEG_EXE} — 동영상 재인코딩이 건너뛰어집니다.")
 
 
 class NaverBlogPoster:
@@ -10282,12 +10302,22 @@ Sub: ___
                     continue
 
                 # 해시태그 처리, 패스 , FAQ 및 내부링크, 동영상 추가  별도 처리
+                # ✅ [Ver9.16] 기존에는 "## "가 아닌 #으로 시작하는 줄을 전부 건너뛰어,
+                #    "### 소제목"이나 "#1 ..."처럼 해시태그가 아닌 줄도 본문에서 조용히 빠졌음.
+                #    이제 건너뛰는 줄은 제목 줄("# ")과 해시태그 줄뿐이다.
+                #    "###"~"######" 제목은 기호를 떼고 일반 본문 문단으로 입력한다.
                 if current_line.startswith('#') and not current_line.startswith('## '):
-                   
-                    i += 1
-                    processed_lines += 1
-                    continue
-                    #break
+                    _sub_heading = re.match(r'^#{3,6}\s+(.+)$', current_line)
+                    # 해시태그 줄: 단어 절반 이상이 #으로 시작 (태그 사이에 # 빠진 단어가 섞여도 본문에 새지 않게)
+                    _toks = current_line.split()
+                    _is_tag_line = sum(1 for tok in _toks if tok.startswith('#')) * 2 >= len(_toks)
+                    if _sub_heading:
+                        current_line = _sub_heading.group(1).strip()
+                        logger.info(f"###~###### 제목을 본문 문단으로 입력: {current_line}")
+                    elif current_line.startswith('# ') or _is_tag_line:
+                        i += 1
+                        processed_lines += 1
+                        continue
 
 
                 # 소제목 (## 사용) - 소제목에는 **강조문자 없음
@@ -11429,7 +11459,9 @@ Sub: ___
                         
                         # 태그 순서 shuffle + 3~5개 랜덤 선택
                         random.shuffle(hashtags)
-                        keep_count = random.randint(3, min(5, len(hashtags)))
+                        # ✅ [Ver9.16] 태그가 1~2개면 randint(3, 2)가 오류를 내 태그가 하나도 안
+                        #    들어갔음 → 태그 수가 3개 미만이면 있는 만큼 모두 넣음.
+                        keep_count = random.randint(min(3, len(hashtags)), min(5, len(hashtags)))
                         hashtags_text = ' '.join(hashtags[:keep_count])
 
                         self._human_type(actions, hashtags_text, min_delay=0.02, max_delay=0.09).perform()
@@ -17575,23 +17607,28 @@ class NaverBlogGUI:
                 start_hour = int(self.start_posting_hour.get())
                 start_minute = int(self.start_posting_minute.get())
                 current_time = datetime.now()
-                
-                # ±10분 랜덤 오프셋 적용 (AI 탐지 회피)
-                random_offset = random.randint(-15, 15)
-                start_time_today = current_time.replace(hour=start_hour, minute=start_minute, second=0, microsecond=0)
-                start_time_today = start_time_today + timedelta(minutes=random_offset)
 
-                # 아직 시작 시간이 안 되었으면 대기
-                if current_time < start_time_today:
-                    wait_seconds = (start_time_today - current_time).total_seconds()
-                
-                if random_offset < 0 and current_time >= start_time_today:
+                # ±15분 랜덤 오프셋 적용 (AI 탐지 회피)
+                # ✅ [Ver9.16] 오프셋을 적용한 시작 시각은 자동 포스팅 1회 실행에 한 번만 정한다.
+                #    대기 후 다시 들어올 때마다 새로 뽑으면 시작 시각이 또 밀릴 수 있었음.
+                if getattr(self, '_start_time_target', None) is None:
+                    random_offset = random.randint(-15, 15)
+                    start_time_today = current_time.replace(hour=start_hour, minute=start_minute, second=0, microsecond=0)
+                    start_time_today = start_time_today + timedelta(minutes=random_offset)
+                    self._start_time_target = (start_time_today, random_offset)
+                start_time_today, random_offset = self._start_time_target
+
+                # ✅ [Ver9.16] 시작 시각이 이미 지났으면 오프셋 부호와 무관하게 즉시 시작.
+                #    기존에는 오프셋이 0 이상이면서 이미 지난 경우 wait_seconds가 정해지지 않은
+                #    채 아래 대기 분기로 들어가 오류(UnboundLocalError)로 자동 포스팅이 멈췄음.
+                if current_time >= start_time_today:
                     self.log_message(f"지정된 시작 시간({start_hour:02d}:{start_minute:02d}, 랜덤조정: {random_offset:+d}분) → 이미 지난 시각, 즉시 시작")
                 else:
                     self.log_message(f"지정된 시작 시간({start_hour:02d}:{start_minute:02d}, 랜덤조정: {random_offset:+d}분) → {start_time_today.strftime('%H:%M')} 대기 중...")
                     self.next_post_label.configure(text=start_time_today.strftime("%Y-%m-%d %H:%M:%S"))
                     
                     # 시작 시간까지 대기
+                    wait_seconds = (start_time_today - current_time).total_seconds()
                     self.next_post_job = self.root.after(int(wait_seconds * 1000), self.auto_posting_task)
                     return
 
@@ -18488,6 +18525,7 @@ class NaverBlogGUI:
             self.auto_posting = True
             self.session_post_count = 0
             self.start_time_activated = False
+            self._start_time_target = None  # ✅ [Ver9.16] 시작할 때마다 시작 시각을 새로 정함
             if self.use_post_limit.get():
                 try:
                     limit = int(self.post_limit_var.get())
