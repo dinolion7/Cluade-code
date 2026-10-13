@@ -1093,6 +1093,16 @@
         "✅ 중복 허용"으로 바뀌어 신규와 같이 처리된다(키워드 엑셀 추가 + 포스팅 폴더 복사 + 핵심DB 등록 +
         포스팅완료). 다시 누르면 중복의심으로 돌아간다. 고르지 않은 중복의심이 남아 있으면 등록할 때
         "포스팅 폴더로 보낼까요?"(예=포스팅, 아니오=격리, 취소=중단)로 한 번 더 묻는다.
+    65. [Ver10.08, 2026-10-13] 5)인포그래픽 탭에 "🧩 코드 카드 (선택)" 추가 — 기존 STEP 1~3(프롬프트C 복사 →
+        GPT가 그림 전체를 그림)은 그대로 두고, 체크를 켤 때만 보이는 추가 경로다(설정 card_panel_on).
+        "그림은 AI, 글자는 코드": 카드용 프롬프트C(V18, 설정 prompt_c_card_file)를 복사해 AI 답변(썸네일
+        장면 프롬프트 + JSON 설계도)을 받고, 퍼플렉시티 등에서 글자 없는 배경 그림만 그린다. 답변은 칸에
+        붙여넣거나 글 폴더의 "_카드작업" 폴더에 파일로 넣고, 배경 그림도 고르거나 그 폴더에 넣는다.
+        "🧩 카드 만들기"를 누르면 blog-images/cards/make_cards.py(Playwright + 크롬)로 썸네일·인포그래픽
+        PNG를 만들고, 설계도의 heading으로 소제목을 찾아 제목·소제목 이름(분할은 _1·_2)으로 글 폴더에
+        넣는다 — 이름 규칙은 8)키워드 등록의 _copy_matched_assets와 같아 이후 흐름은 그대로다. 같은 이름의
+        기존 그림은 _카드작업/_이전이미지로 옮긴다. 설정 탭: 카드용 프롬프트C 파일명, blog-images 폴더,
+        크롬 경로(비우면 Windows 기본 설치 위치 → Playwright 크롬). 준비: pip install playwright.
 """
 
 import os
@@ -1673,7 +1683,8 @@ TITLE_MAX_LEN_MULTI = 75  # 복합 소재형(제목 후보 소재 3개 이상) �
 HOOK_WORDS = ["주목", "눈길", "관심", "충격", "화제", "이슈", "꿀팁", "대박"]
 
 # [Ver10.06] 프롬프트 세트(검색용/홈판용) 구분을 없앴다 — 프롬프트가 한 세트(0·A·B·C)로 합쳐졌다.
-PROMPT_FILE_KEYS = ["prompt_0_file", "prompt_a_file", "prompt_b_file", "prompt_c_file"]
+PROMPT_FILE_KEYS = ["prompt_0_file", "prompt_a_file", "prompt_b_file", "prompt_c_file",
+                    "prompt_c_card_file"]   # [Ver10.08] 코드 카드용 프롬프트C(선택)
 
 
 def prompt_file_name(cfg: dict, key: str) -> str:
@@ -1872,6 +1883,12 @@ DEFAULT_CONFIG = {
     "prompt_a_file": "프롬프트A_키워드전략분석.md",
     "prompt_b_file": "프롬프트B_글작성.md",
     "prompt_c_file": "프롬프트C_인포그래픽메타.md",
+    # [Ver10.08] 코드 카드(선택) — 5)인포그래픽 탭의 체크를 켤 때만 쓴다.
+    "prompt_c_card_file": "정책뉴스_C_카드설계.md",
+    "card_tool_dir": "blog-images",
+    "card_chrome_path": "",
+    "card_panel_on": False,
+    "card_last_shape": "",
     # [Ver10.06] 저장 전 모바일 문단 정리(GPT) — 기본 꺼짐. 키가 없으면 건너뛴다.
     "openai_api_key": "",
     "para_reflow_on": False,
@@ -4745,6 +4762,294 @@ def para_reflow_with_gpt(openai_client, md_text, limit=PARA_REFLOW_DEFAULT_LIMIT
     if new_text == md_text:
         return None, note + " - 바뀐 것 없음(원본 유지)"
     return new_text, note
+
+
+# ══════════════════════════════════════════════════════════
+# [Ver10.08 신규] 코드 카드(선택 기능) — "그림은 AI, 글자는 코드"
+# ──────────────────────────────────────────────────────────
+# 기존 인포그래픽 흐름(프롬프트C 복사 → GPT가 이미지 전체를 그림)은 그대로 두고,
+# 원할 때만 쓰는 추가 경로다. 정책뉴스·복지로 프로그램에 같은 코드가 들어 있다.
+#   1) 카드용 프롬프트(정책 C V18 / 복지로 ⑦ V7)를 본문과 함께 복사 → AI 답변
+#   2) AI 답변(썸네일 장면 프롬프트 + 마지막 JSON 설계도)을 붙여넣거나
+#      글 폴더의 "_카드작업" 폴더에 넣는다(답변 파일 .txt/.md/.json)
+#   3) 퍼플렉시티 등에서 그린 글자 없는 배경 그림을 고르거나 "_카드작업"에 넣는다
+#   4) "카드 만들기" → blog-images/cards/make_cards.py 실행 → 결과 PNG를
+#      제목·소제목 이름(분할은 _1·_2)으로 바꿔 MD 폴더에 넣는다. 그래서 이후
+#      키워드 등록·포스팅 프로그램은 지금처럼 이미지를 찾는다.
+# make_cards.py·icons.py·fonts는 blog-images 쪽에서 관리하며 여기서 고치지 않는다.
+# ══════════════════════════════════════════════════════════
+CARD_WORK_SUBFOLDER = "_카드작업"
+CARD_SCENE_BASENAME = "00_thumbnail_scene"
+CARD_BACKUP_SUBFOLDER = "_이전이미지"
+CARD_IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp")
+CARD_ANSWER_EXTS = (".txt", ".md", ".json")
+CARD_ANSWER_FILENAME = "AI답변.txt"
+CARD_SPEC_FILENAME = "spec.json"
+CARD_WIN_CHROME_PATHS = [
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    os.path.join(os.environ.get("LOCALAPPDATA", ""), r"Google\Chrome\Application\chrome.exe"),
+]
+_CARD_FENCE_RE = re.compile(r"^[ \t]*```([^\n`]*)\n(.*?)^[ \t]*```[ \t]*$", re.M | re.S)
+
+
+def card_parse_answer(text: str):
+    """AI 답변에서 (썸네일 장면 프롬프트, JSON 설계도 dict, 오류 문구)를 꺼낸다.
+    - 설계도: 맨 마지막 ```json 코드블럭. 없으면 "{"로 시작하는 마지막 코드블럭,
+      그것도 없으면 답변 전체가 JSON인지 본다(spec.json 파일을 그대로 넣은 경우).
+    - 장면 프롬프트: "파일명 식별자: 00_thumbnail_scene" 줄 바로 위 코드블럭 안 문장."""
+    text = (text or "").replace("\r\n", "\n")
+    blocks = [(m.group(1).strip().lower(), m.group(2), m.start(), m.end())
+              for m in _CARD_FENCE_RE.finditer(text)]
+    raw = None
+    for lang, body, _, _ in reversed(blocks):
+        if lang == "json":
+            raw = body
+            break
+    if raw is None:
+        for _, body, _, _ in reversed(blocks):
+            if body.lstrip().startswith("{"):
+                raw = body
+                break
+    if raw is None and text.strip().startswith("{"):
+        raw = text
+    scene = ""
+    m = re.search(r"파일명\s*식별자\s*[:：]\s*" + re.escape(CARD_SCENE_BASENAME), text)
+    if m:
+        before = [b for b in blocks if b[3] <= m.start()]
+        if before:
+            scene = before[-1][1].strip()
+    if raw is None:
+        return scene, None, "JSON 설계도 코드블럭이 없습니다"
+    try:
+        spec = json.loads(raw)
+    except Exception as e:
+        return scene, None, f"JSON 문법 오류: {e}"
+    if not isinstance(spec, dict) or not isinstance(spec.get("images"), list) or not spec["images"]:
+        return scene, None, "JSON에 images 목록이 없습니다"
+    for img in spec["images"]:
+        if not isinstance(img, dict) or not img.get("file") or not img.get("layout"):
+            return scene, None, "images 항목에 file·layout이 빠진 것이 있습니다"
+    return scene, spec, ""
+
+
+def card_md_headings(md_text: str):
+    """MD에서 (제목, [소제목...])을 뽑는다(# 제목 1개, ## 소제목 — ###는 제외)."""
+    title, subs = "", []
+    for line in (md_text or "").split("\n"):
+        s = line.strip()
+        if s.startswith("# ") and not title:
+            title = s[2:].strip()
+        elif s.startswith("## ") and not s.startswith("### "):
+            subs.append(s[3:].strip())
+    return title, subs
+
+
+def _card_norm(text: str) -> str:
+    return re.sub(r"[\s\W_]+", "", text or "")
+
+
+def card_match_images(spec: dict, md_text: str):
+    """설계도 이미지마다 MD 안의 대상(제목/소제목)을 찾는다.
+    반환: [{"file", "kind": "썸네일"|"소제목"|"", "target": 원문 또는 "", "part": n 또는 0, "note"}]
+    - 썸네일(layout thumbnail 또는 file 00_thumbnail) → # 제목
+    - 그 밖 → heading 값. 끝의 "(1/2)"는 분할 번호, 그 밖의 괄호 꼬리·"— …" 꼬리는 떼고
+      소제목과 글자(공백·기호 제외)가 같으면 연결, 아니면 비슷한 정도 0.75 이상인 가장 가까운 것.
+      못 찾으면 target ""(매칭 안 됨 — 결과는 _카드작업/out에만 남는다).
+    - 같은 소제목에 이미지가 2장 이상이면 순서대로 _1, _2 …를 붙인다."""
+    title, subs = card_md_headings(md_text)
+    norm_subs = [(_card_norm(s), s) for s in subs]
+    out = []
+    for img in spec.get("images", []):
+        f = str(img.get("file", ""))
+        if img.get("layout") == "thumbnail" or f.startswith("00_thumbnail"):
+            out.append({"file": f, "kind": "썸네일", "target": title, "part": 0,
+                        "note": "" if title else "MD에 # 제목 없음"})
+            continue
+        h = str(img.get("heading") or "").strip()
+        part = 0
+        pm = re.search(r"\(\s*(\d+)\s*/\s*\d+\s*\)\s*$", h)
+        if pm:
+            part = int(pm.group(1))
+            h = h[:pm.start()].strip()
+        h = re.sub(r"\s*[—–]\s.*$", "", h).strip()
+        h_core = re.sub(r"\s*\([^()]*\)\s*$", "", h).strip() or h
+        target, note = "", ""
+        for cand in (h, h_core):
+            nc = _card_norm(cand)
+            hit = next((s for n, s in norm_subs if nc and n == nc), "")
+            if hit:
+                target = hit
+                break
+        if not target and h_core:
+            best, best_r = "", 0.0
+            for n, s in norm_subs:
+                r = difflib.SequenceMatcher(None, _card_norm(h_core), n).ratio()
+                if r > best_r:
+                    best, best_r = s, r
+            if best_r >= 0.75:
+                target, note = best, f"비슷한 소제목으로 연결({best_r:.0%})"
+        if not target:
+            note = f"소제목을 찾지 못함: {h or '(heading 없음)'}"
+        out.append({"file": f, "kind": "소제목" if target else "", "target": target,
+                    "part": part, "note": note})
+    # 같은 대상에 여러 장 → 분할 번호(설계도에 번호가 없거나 겹치면 순서대로)
+    groups = {}
+    for m in out:
+        if m["kind"] == "소제목":
+            groups.setdefault(m["target"], []).append(m)
+    for ms in groups.values():
+        if len(ms) == 1:
+            ms[0]["part"] = 0
+        elif sorted(m["part"] for m in ms) != list(range(1, len(ms) + 1)):
+            for i, m in enumerate(ms, 1):
+                m["part"] = i
+    return out
+
+
+def card_find_background(work_dir: str, md_folder: str):
+    """썸네일 배경 그림을 찾는다: _카드작업/00_thumbnail_scene.* → MD 폴더/00_thumbnail_scene.*
+    → _카드작업 안의 가장 최근 그림(슬롯 slot_*·결과 out 제외)."""
+    for folder in (work_dir, md_folder):
+        for ext in CARD_IMAGE_EXTS:
+            p = os.path.join(folder, CARD_SCENE_BASENAME + ext)
+            if os.path.isfile(p):
+                return p
+    cands = []
+    if os.path.isdir(work_dir):
+        for fn in os.listdir(work_dir):
+            p = os.path.join(work_dir, fn)
+            if (os.path.isfile(p) and fn.lower().endswith(CARD_IMAGE_EXTS)
+                    and not fn.lower().startswith("slot_")):
+                cands.append(p)
+    return max(cands, key=os.path.getmtime) if cands else None
+
+
+def card_find_answer_file(work_dir: str):
+    """_카드작업 폴더에 넣어 둔 AI 답변 파일(가장 최근 .txt/.md/.json, spec.json 포함)."""
+    if not os.path.isdir(work_dir):
+        return None
+    cands = [os.path.join(work_dir, fn) for fn in os.listdir(work_dir)
+             if fn.lower().endswith(CARD_ANSWER_EXTS) and os.path.isfile(os.path.join(work_dir, fn))]
+    return max(cands, key=os.path.getmtime) if cands else None
+
+
+def card_chrome_path(cfg_value: str = "") -> str:
+    """설정의 크롬 경로 → 없으면 Windows 기본 설치 위치 → 그래도 없으면 ""(Playwright 기본 크롬)."""
+    v = (cfg_value or "").strip().strip('"')
+    if v and os.path.isfile(v):
+        return v
+    if sys.platform.startswith("win"):
+        for p in CARD_WIN_CHROME_PATHS:
+            if p and os.path.isfile(p):
+                return p
+    return ""
+
+
+def card_render(tool_dir: str, spec_path: str, chrome_path: str = "", only=None):
+    """make_cards.py를 별도 파이썬으로 실행한다. 반환 (성공 여부, 출력 문구)."""
+    script = os.path.join(tool_dir, "cards", "make_cards.py")
+    if not os.path.isfile(script):
+        return False, f"make_cards.py가 없습니다: {script}\n(설정 탭의 blog-images 폴더를 확인하세요)"
+    if getattr(sys, "frozen", False):
+        return False, "exe로 실행 중이라 카드 만들기를 쓸 수 없습니다(.py로 실행하세요)."
+    env = dict(os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    if chrome_path:
+        env["CHROME_PATH"] = chrome_path
+    else:
+        env.pop("CHROME_PATH", None)
+    py = sys.executable
+    if py.lower().endswith("pythonw.exe"):
+        alt = py[:-len("pythonw.exe")] + "python.exe"
+        if os.path.isfile(alt):
+            py = alt
+    kw = {}
+    if sys.platform.startswith("win"):
+        kw["creationflags"] = 0x08000000  # CREATE_NO_WINDOW — 검은 창이 뜨지 않게
+    try:
+        r = subprocess.run([py, script, spec_path] + list(only or []), capture_output=True,
+                           text=True, encoding="utf-8", errors="replace", env=env,
+                           cwd=os.path.dirname(script), timeout=600, **kw)
+    except Exception as e:
+        return False, f"실행 실패: {e}"
+    log = ((r.stdout or "") + ("\n" + r.stderr if r.stderr else "")).strip()
+    if r.returncode != 0 and "No module named 'playwright'" in log:
+        log = ("Playwright가 설치되어 있지 않습니다. 명령 프롬프트에서 한 번만 실행하세요:\n"
+               "  pip install playwright\n(크롬이 없으면 이어서: python -m playwright install chromium)\n\n" + log)
+    return r.returncode == 0, log
+
+
+def card_install(work_dir: str, matches, md_folder: str, name_fn):
+    """_카드작업/out/의 PNG를 MD 폴더에 제목·소제목 이름으로 넣는다.
+    같은 이름(또는 _숫자 분할본)의 기존 그림은 _카드작업/_이전이미지/로 옮긴 뒤 넣는다
+    (분할본이 남아 있으면 포스팅 프로그램이 그쪽을 먼저 집기 때문).
+    반환 (넣은 [(파일, 새 이름)], 매칭 안 된 [파일], 옮긴 기존 그림 수, 결과 없음 [파일])."""
+    out_dir = os.path.join(work_dir, "out")
+    placed, unmatched, missing, moved = [], [], [], 0
+    backup = os.path.join(work_dir, CARD_BACKUP_SUBFOLDER)
+    cleared = set()
+    for m in matches:
+        src = os.path.join(out_dir, m["file"] + ".png")
+        if not os.path.isfile(src):
+            missing.append(m["file"])
+            continue
+        if not m["target"]:
+            unmatched.append(m["file"])
+            continue
+        base = name_fn(m["target"])
+        if not base:
+            unmatched.append(m["file"])
+            continue
+        if base not in cleared:
+            cleared.add(base)
+            pat = re.compile(r"^" + re.escape(base) + r"(_\d+)?\.(png|jpe?g|webp)$", re.I)
+            for fn in os.listdir(md_folder):
+                if pat.match(fn) and os.path.isfile(os.path.join(md_folder, fn)):
+                    os.makedirs(backup, exist_ok=True)
+                    dst = os.path.join(backup, fn)
+                    if os.path.exists(dst):
+                        stem, ext = os.path.splitext(fn)
+                        dst = os.path.join(backup, f"{stem}_{time.strftime('%H%M%S')}{ext}")
+                    shutil.move(os.path.join(md_folder, fn), dst)
+                    moved += 1
+        name = f"{base}_{m['part']}.png" if m["part"] else f"{base}.png"
+        shutil.copy2(src, os.path.join(md_folder, name))
+        placed.append((m["file"], name))
+    return placed, unmatched, moved, missing
+
+
+def card_count_existing(matches, md_folder: str, name_fn) -> int:
+    """card_install이 _이전이미지로 옮길 기존 그림 수(확인창 안내용)."""
+    bases = {name_fn(m["target"]) for m in matches if m.get("target")}
+    bases.discard("")
+    n = 0
+    for fn in (os.listdir(md_folder) if os.path.isdir(md_folder) else []):
+        for base in bases:
+            if re.match(r"^" + re.escape(base) + r"(_\d+)?\.(png|jpe?g|webp)$", fn, re.I):
+                n += 1
+                break
+    return n
+
+
+def card_prepare_spec(spec: dict, work_dir: str, background_path):
+    """설계도를 _카드작업/spec.json으로 저장한다. 배경 그림이 있으면 _카드작업으로 가져와
+    썸네일 항목의 background 값을 그 파일 이름으로 맞춘다(webp·jpg도 그대로 쓴다)."""
+    os.makedirs(work_dir, exist_ok=True)
+    bg_name = ""
+    if background_path:
+        ext = os.path.splitext(background_path)[1].lower()
+        bg_name = CARD_SCENE_BASENAME + ext
+        dst = os.path.join(work_dir, bg_name)
+        if os.path.abspath(background_path) != os.path.abspath(dst):
+            shutil.copy2(background_path, dst)
+    for img in spec.get("images", []):
+        if img.get("layout") == "thumbnail" and bg_name:
+            img["background"] = bg_name
+    path = os.path.join(work_dir, CARD_SPEC_FILENAME)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(spec, f, ensure_ascii=False, indent=2)
+    return path, bg_name
 
 
 def save_md_file(title: str, content: str, domain: str, output_dir: str) -> str:
@@ -9236,6 +9541,282 @@ class App(tk.Tk):
         ttk.Button(btn_done, text="📁 MD파일 저장폴더 열기",
                    command=self._open_last_saved_folder).pack(side="left", padx=(0,8))
 
+        # [Ver10.08 신규] 코드 카드(선택) — 체크를 켤 때만 펼쳐진다(기존 STEP은 그대로).
+        self._build_card_panel(f, 5)
+
+    # ── [Ver10.08 신규] 5)인포그래픽: 코드 카드(선택) ──
+    def _build_card_panel(self, parent, row):
+        """기존 STEP 1~3은 그대로 두고, 체크를 켤 때만 보이는 코드 카드 칸을 붙인다."""
+        wrap = ttk.Frame(parent)
+        wrap.grid(row=row, column=0, sticky="ew", pady=(6, 0))
+        wrap.columnconfigure(0, weight=1)
+        self.card_panel_on = tk.BooleanVar(value=bool(load_config().get("card_panel_on", False)))
+        ttk.Checkbutton(wrap, text="🧩 코드 카드 (선택) — 썸네일 배경 그림만 AI로, 글자·소제목 인포그래픽은 코드로 만들기",
+                        variable=self.card_panel_on, command=self._toggle_card_panel).grid(row=0, column=0, sticky="w")
+        body = ttk.LabelFrame(wrap, text="코드 카드", padding=6)
+        self._card_body = body
+        body.columnconfigure(0, weight=1)
+
+        r1 = ttk.Frame(body)
+        r1.grid(row=0, column=0, sticky="ew")
+        ttk.Button(r1, text="📋 카드용 프롬프트C 복사", style="Copy.TButton",
+                   command=lambda: self._copy_card_prompt(False)).pack(side="left", padx=(0, 6))
+        ttk.Button(r1, text="🪶 간소화 복사 (같은 대화창 이어쓰기)",
+                   command=lambda: self._copy_card_prompt(True)).pack(side="left", padx=(0, 6))
+        self.card_copy_status = ttk.Label(r1, text="", foreground="darkgreen")
+        self.card_copy_status.pack(side="left")
+
+        r2 = ttk.Frame(body)
+        r2.grid(row=1, column=0, sticky="ew", pady=(6, 0))
+        ttk.Label(r2, text="AI 답변(장면 프롬프트 + 마지막 JSON) — 비워 두면 _카드작업 폴더에 넣은 답변 파일을 읽습니다",
+                  style="Info.TLabel").pack(side="left")
+        ttk.Button(r2, text="지우기", command=lambda: self.card_answer_text.delete("1.0", "end")).pack(side="right")
+        ttk.Button(r2, text="📋 클립보드에서 붙여넣기", command=self._card_paste_answer).pack(side="right", padx=(0, 6))
+        self.card_answer_text = scrolledtext.ScrolledText(body, height=4, wrap="word", font=("맑은 고딕", 9))
+        self.card_answer_text.grid(row=2, column=0, sticky="ew", pady=(2, 0))
+
+        r3 = ttk.Frame(body)
+        r3.grid(row=3, column=0, sticky="ew", pady=(6, 0))
+        ttk.Button(r3, text="🖼 배경 그림 선택…", command=self._card_pick_background).pack(side="left", padx=(0, 6))
+        self.card_bg_var = tk.StringVar(value="배경 그림: 자동(_카드작업 폴더의 그림)")
+        ttk.Label(r3, textvariable=self.card_bg_var, style="Info.TLabel").pack(side="left")
+        ttk.Button(r3, text="📁 _카드작업 폴더 열기", command=self._card_open_work).pack(side="right")
+        ttk.Button(r3, text="📂 글 폴더 바꾸기", command=self._card_choose_folder).pack(side="right", padx=(0, 6))
+
+        r4 = ttk.Frame(body)
+        r4.grid(row=4, column=0, sticky="ew", pady=(6, 0))
+        self.card_make_btn = ttk.Button(r4, text="🧩 카드 만들기 → MD 폴더에 넣기", style="Copy.TButton",
+                                        command=lambda: self._card_make(None))
+        self.card_make_btn.pack(side="left", padx=(0, 6))
+        ttk.Button(r4, text="썸네일만 다시", command=lambda: self._card_make(["00_thumbnail"])).pack(side="left", padx=(0, 6))
+        ttk.Button(r4, text="📋 썸네일 장면 프롬프트 복사", command=self._card_copy_scene).pack(side="left")
+        self.card_status_var = tk.StringVar(value="")
+        ttk.Label(body, textvariable=self.card_status_var, foreground="#1F3A5F",
+                  wraplength=1000, justify="left").grid(row=5, column=0, sticky="w", pady=(4, 0))
+
+        self._card_bg_path = ""
+        self._card_folder_override = ""
+        self._card_scene = ""
+        self._toggle_card_panel(save=False)
+
+    def _toggle_card_panel(self, save=True):
+        if self.card_panel_on.get():
+            self._card_body.grid(row=1, column=0, sticky="ew", pady=(2, 0))
+        else:
+            self._card_body.grid_remove()
+        if save:
+            cfg = load_config()
+            cfg["card_panel_on"] = bool(self.card_panel_on.get())
+            save_config(cfg)
+
+    def _card_md_folder(self, ask=True) -> str:
+        """카드를 넣을 글 폴더(MD가 있는 제목별 폴더). 직접 고른 폴더 > 방금 저장한 글 폴더."""
+        for folder in (self._card_folder_override, self.last_saved_folder):
+            if folder and os.path.isdir(folder):
+                return folder
+        if not ask:
+            return ""
+        messagebox.showinfo("글 폴더 선택", "4)최종각색에서 저장한 글 폴더(MD 파일이 있는 제목 폴더)를 골라 주세요.")
+        return self._card_choose_folder() or ""
+
+    def _card_choose_folder(self):
+        cfg = load_config()
+        folder = filedialog.askdirectory(title="MD 파일이 있는 글 폴더 선택",
+                                         initialdir=self.last_saved_folder or cfg.get("output_dir", OUTPUT_DIR))
+        if not folder:
+            return ""
+        if not any(fn.endswith(".md") for fn in os.listdir(folder)):
+            messagebox.showwarning("MD 없음", "이 폴더에 .md 파일이 없습니다. 글 폴더를 다시 골라 주세요.")
+            return ""
+        self._card_folder_override = folder
+        self.card_status_var.set(f"글 폴더: {folder}")
+        return folder
+
+    def _card_work_dir(self, md_folder: str) -> str:
+        return os.path.join(md_folder, CARD_WORK_SUBFOLDER)
+
+    def _card_open_work(self):
+        folder = self._card_md_folder()
+        if not folder:
+            return
+        work = self._card_work_dir(folder)
+        os.makedirs(work, exist_ok=True)
+        open_folder(work)
+
+    def _card_paste_answer(self):
+        try:
+            text = self.clipboard_get()
+        except tk.TclError:
+            text = ""
+        if not text.strip():
+            messagebox.showinfo("알림", "클립보드가 비어 있습니다.")
+            return
+        self.card_answer_text.delete("1.0", "end")
+        self.card_answer_text.insert("1.0", text)
+        scene, spec, err = card_parse_answer(text)
+        self._card_scene = scene or self._card_scene
+        n = len(spec["images"]) if spec else 0
+        self.card_status_var.set(f"붙여넣음 — 이미지 {n}장 설계도" + (f" / ⚠ {err}" if err else "")
+                                 + (" / 장면 프롬프트 있음" if scene else ""))
+
+    def _card_pick_background(self):
+        path = filedialog.askopenfilename(title="썸네일 배경 그림 선택 (글자 없는 그림)",
+                                          filetypes=[("이미지", "*.png *.jpg *.jpeg *.webp"), ("모든 파일", "*.*")])
+        if path:
+            self._card_bg_path = path
+            self.card_bg_var.set(f"배경 그림: {os.path.basename(path)}")
+
+    def _card_copy_scene(self):
+        scene = self._card_scene
+        if not scene:
+            scene, _, _ = card_parse_answer(self.card_answer_text.get("1.0", "end"))
+        if not scene:
+            messagebox.showinfo("알림", "AI 답변에서 '파일명 식별자: 00_thumbnail_scene' 위 장면 프롬프트를 찾지 못했습니다.")
+            return
+        self._card_scene = scene
+        self.clipboard_clear()
+        self.clipboard_append(scene)
+        self.card_status_var.set("📋 썸네일 장면 프롬프트 복사 완료 — 이미지 생성 도구(퍼플렉시티 등)에 붙여넣으세요")
+
+    def _copy_card_prompt(self, simplified: bool):
+        cfg = load_config()
+        prompt = load_prompt_file(prompt_file_name(cfg, "prompt_c_card_file"), cfg.get("prompt_dir", PROMPT_DIR))
+        if not prompt:
+            messagebox.showwarning("프롬프트 없음", "카드용 프롬프트C 파일이 없습니다.\n설정 탭에서 확인하세요.\n"
+                                   f"({_prompt_missing_hint(cfg, 'prompt_c_card_file')})")
+            return
+        md_content = self.md_text.get("1.0", "end").strip()
+        if not simplified and not md_content:
+            messagebox.showwarning("알림", "4)최종각색에서 완성 글을 먼저 붙여넣기 하세요.")
+            return
+        core_kw = self.core_keyword_var.get().strip() or self.confirmed_core_keyword.strip() or "(없음)"
+        last_shape = cfg.get("card_last_shape", "") or "없음"
+        body = ("   바로 위 프롬프트B의 완성 본문을 그대로 사용해주세요.\n"
+                "   (다시 붙여넣지 않습니다 — 같은 대화창의 바로 위 turn을 참고하세요)\n"
+                if simplified else f"\n{md_content}\n\n")
+        content = (
+            f"{prompt}\n\n"
+            f"───────────────────\n"
+            f"[입력값]\n"
+            f"1. 프롬프트B 완성 본문 전체:\n{body}"
+            f"2. 프롬프트A 핵심 키워드 (참고용): {core_kw}\n"
+            f"3. 모드: 웹\n"
+            f"4. 직전 글의 썸네일 shape: {last_shape}\n"
+            f"───────────────────\n"
+            f"위 입력값으로 프롬프트C 형식에 따라 썸네일 장면 프롬프트와 JSON 설계도를 작성해주세요."
+        )
+        self.clipboard_clear()
+        self.clipboard_append(content)
+        self.card_copy_status.config(text="✅ 복사 완료 — Claude(또는 퍼플렉시티) 글자 답변 창에 Ctrl+V")
+        self.after(5000, lambda: self.card_copy_status.config(text=""))
+
+    def _card_make(self, only):
+        folder = self._card_md_folder()
+        if not folder:
+            return
+        md_files = [fn for fn in os.listdir(folder) if fn.endswith(".md")]
+        if not md_files:
+            messagebox.showwarning("MD 없음", f"글 폴더에 .md 파일이 없습니다.\n{folder}")
+            return
+        md_name = os.path.basename(folder) + ".md"
+        md_path = os.path.join(folder, md_name if md_name in md_files else md_files[0])
+        with open(md_path, "r", encoding="utf-8") as f:
+            md_text = f.read()
+        work = self._card_work_dir(folder)
+        os.makedirs(work, exist_ok=True)
+
+        answer = self.card_answer_text.get("1.0", "end").strip()
+        source = "붙여넣은 답변"
+        if answer:
+            with open(os.path.join(work, CARD_ANSWER_FILENAME), "w", encoding="utf-8") as f:
+                f.write(answer)
+        else:
+            ans_path = card_find_answer_file(work)
+            if not ans_path:
+                messagebox.showwarning("답변 없음", "AI 답변을 붙여넣거나, _카드작업 폴더에 답변 파일(.txt/.md/.json)을 넣어 주세요.")
+                return
+            with open(ans_path, "r", encoding="utf-8") as f:
+                answer = f.read()
+            source = os.path.basename(ans_path)
+        scene, spec, err = card_parse_answer(answer)
+        if scene:
+            self._card_scene = scene
+        if err:
+            req = ("JSON 설계도를 코드블럭 하나로 다시 출력해줘" if "코드블럭이 없" in err
+                   else f"JSON 문법만 고쳐서 코드블럭 하나로 다시 출력해줘 (오류: {err})")
+            self.clipboard_clear()
+            self.clipboard_append(req)
+            messagebox.showwarning("설계도 오류", f"{source}: {err}\n\n다시 요청할 문구를 클립보드에 복사했습니다:\n{req}")
+            return
+        spec.setdefault("series", "policy")
+
+        bg = self._card_bg_path if self._card_bg_path and os.path.isfile(self._card_bg_path) else card_find_background(work, folder)
+        has_thumb = any(i.get("layout") == "thumbnail" for i in spec["images"])
+        if has_thumb and not bg and (not only or "00_thumbnail" in only):
+            if not messagebox.askyesno("배경 그림 없음",
+                    "썸네일 배경 그림이 없습니다(_카드작업 폴더에 넣거나 '배경 그림 선택').\n"
+                    "배경 없이 썸네일을 만들까요?"):
+                return
+        spec_path, bg_name = card_prepare_spec(spec, work, bg)
+        matches = card_match_images(spec, md_text)
+        if only:
+            matches = [m for m in matches if m["file"] in only]
+        chrome = card_chrome_path(load_config().get("card_chrome_path", ""))
+        tool = self._card_tool_dir()
+        self.card_make_btn.config(state="disabled")
+        self.card_status_var.set(f"⏳ 카드 만드는 중… ({len(matches)}장, 설계도: {source})")
+
+        def worker():
+            res = card_render(tool, spec_path, chrome, only)
+            self.after(0, lambda: self._card_after_render(res, work, folder, spec, matches))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _card_tool_dir(self) -> str:
+        v = (load_config().get("card_tool_dir") or "blog-images").strip()
+        return v if os.path.isabs(v) else os.path.join(BASE_DIR, v)
+
+    def _card_name(self, text: str) -> str:
+        """기존 이미지 파일명 규칙(8)키워드 등록의 _copy_matched_assets와 같음)."""
+        return safe_filename(_strip_trailing_punct_for_filename(text))
+
+    def _card_after_render(self, res, work, folder, spec, matches):
+        self.card_make_btn.config(state="normal")
+        ok, log = res
+        if not ok:
+            self.card_status_var.set("❌ 카드 만들기 실패 — 오류 창 참고")
+            messagebox.showerror("카드 만들기 실패", log[-1500:] or "알 수 없는 오류")
+            return
+        thumb = next((i for i in spec["images"] if i.get("layout") == "thumbnail"), None)
+        if thumb and thumb.get("shape"):
+            cfg = load_config()
+            cfg["card_last_shape"] = thumb["shape"]
+            save_config(cfg)
+        n_old = card_count_existing(matches, folder, self._card_name)
+        lines = []
+        for m in matches:
+            if m["target"]:
+                nm = self._card_name(m["target"]) + (f"_{m['part']}" if m["part"] else "") + ".png"
+                lines.append(f"  · {m['file']} → {nm}" + (f"  ({m['note']})" if m["note"] else ""))
+            else:
+                lines.append(f"  · {m['file']} → (매칭 안 됨: {m['note']})")
+        msg = (f"카드 {len(matches)}장을 만들었습니다. 글 폴더에 이렇게 넣습니다:\n\n" + "\n".join(lines[:20])
+               + (f"\n  … 외 {len(lines) - 20}장" if len(lines) > 20 else "")
+               + (f"\n\n같은 이름의 기존 그림 {n_old}개는 _카드작업/{CARD_BACKUP_SUBFOLDER}로 옮깁니다." if n_old else "")
+               + "\n\n진행할까요? ('아니오'면 결과는 _카드작업/out에만 남습니다)")
+        if not messagebox.askyesno("MD 폴더에 넣기", msg):
+            self.card_status_var.set(f"결과는 {os.path.join(work, 'out')}에만 있습니다(MD 폴더에 넣지 않음).")
+            return
+        placed, unmatched, moved, missing = card_install(work, matches, folder, self._card_name)
+        note = f"✅ {len(placed)}장을 글 폴더에 넣었습니다"
+        if moved:
+            note += f" · 기존 그림 {moved}개는 {CARD_BACKUP_SUBFOLDER}로 이동"
+        if unmatched:
+            note += f" · 매칭 안 됨 {len(unmatched)}장({', '.join(unmatched)})은 _카드작업/out에만 있음 — 직접 넣으세요"
+        if missing:
+            note += f" · 결과 없음 {len(missing)}장({', '.join(missing)})"
+        self.card_status_var.set(note)
+        open_folder(folder)
+
     def _copy_prompt_c(self):
         cfg = load_config()
         prompt_c = load_prompt_file(prompt_file_name(cfg, "prompt_c_file"), cfg.get("prompt_dir", PROMPT_DIR))
@@ -10855,6 +11436,7 @@ class App(tk.Tk):
             ("프롬프트A 파일명", "prompt_a_file", "정책뉴스_A_전략브리핑.md"),
             ("프롬프트B 파일명", "prompt_b_file", "정책뉴스_B_글작성.md"),
             ("프롬프트C 파일명", "prompt_c_file", "정책뉴스_C_이미지기획.md"),
+            ("카드용 프롬프트C 파일명 (코드 카드, 선택)", "prompt_c_card_file", "정책뉴스_C_카드설계.md"),
         ]:
             ttk.Label(f, text=label + ":").grid(row=row, column=0, sticky="w", pady=3)
             self._cfg_prompt_vars[key] = tk.StringVar(value=cfg.get(key, default))
@@ -10872,6 +11454,21 @@ class App(tk.Tk):
             row=row, column=1, sticky="w", padx=5)
         row += 1
         ttk.Label(f, text="(4)최종각색 탭 \"📱 문단 정리(GPT)\"에만 사용 — 비워 두면 문단 정리는 건너뜁니다)",
+                  style="Info.TLabel").grid(row=row, column=1, sticky="w", padx=5, pady=(0, 4))
+        row += 1
+
+        # [Ver10.08 신규] 코드 카드(선택) — blog-images 폴더와 크롬 경로
+        ttk.Label(f, text="blog-images 폴더 (코드 카드):").grid(row=row, column=0, sticky="w", pady=3)
+        self.settings_card_tool_var = tk.StringVar(value=cfg.get("card_tool_dir", "blog-images"))
+        ttk.Entry(f, textvariable=self.settings_card_tool_var, width=100).grid(row=row, column=1, sticky="w", padx=5)
+        ttk.Button(f, text="찾기", command=lambda: self._browse_dir(self.settings_card_tool_var)).grid(row=row, column=2, padx=5)
+        row += 1
+        ttk.Label(f, text="크롬 경로 (코드 카드, 선택):").grid(row=row, column=0, sticky="w", pady=3)
+        self.settings_card_chrome_var = tk.StringVar(value=cfg.get("card_chrome_path", ""))
+        ttk.Entry(f, textvariable=self.settings_card_chrome_var, width=100).grid(row=row, column=1, sticky="w", padx=5)
+        row += 1
+        ttk.Label(f, text="(blog-images는 상대 경로면 프로그램 폴더 기준. 크롬 경로를 비우면 Windows 기본 설치 위치의 크롬, "
+                          "그것도 없으면 Playwright 크롬을 씁니다. 준비: pip install playwright)",
                   style="Info.TLabel").grid(row=row, column=1, sticky="w", padx=5, pady=(0, 4))
         row += 1
 
@@ -11158,7 +11755,7 @@ class App(tk.Tk):
             var.set(path)
 
     def _update_window_title(self):
-        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-08_Ver 10.07")
+        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-13_Ver 10.08")
 
     def _browse_prompt_file(self, var: tk.StringVar):
         cfg      = load_config()
@@ -11224,6 +11821,8 @@ class App(tk.Tk):
         for key in PROMPT_FILE_KEYS:
             cfg[key] = self._cfg_prompt_vars[key].get().strip()
         cfg["openai_api_key"] = self.settings_openai_key_var.get().strip()   # [Ver10.06]
+        cfg["card_tool_dir"] = self.settings_card_tool_var.get().strip() or "blog-images"   # [Ver10.08]
+        cfg["card_chrome_path"] = self.settings_card_chrome_var.get().strip().strip('"')
 
         # [v7.24 추가] 2단계 키워드 리서치 API — 복지로 서브프로그램과 동일한 필드
         cfg["naver_openapi_client_id"] = self.settings_openapi_id_var.get().strip()
