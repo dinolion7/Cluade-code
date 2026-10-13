@@ -4908,13 +4908,8 @@ def card_match_images(spec: dict, md_text: str):
 
 
 def card_find_background(work_dir: str, md_folder: str):
-    """썸네일 배경 그림을 찾는다: _카드작업/00_thumbnail_scene.* → MD 폴더/00_thumbnail_scene.*
-    → _카드작업 안의 가장 최근 그림(슬롯 slot_*·결과 out 제외)."""
-    for folder in (work_dir, md_folder):
-        for ext in CARD_IMAGE_EXTS:
-            p = os.path.join(folder, CARD_SCENE_BASENAME + ext)
-            if os.path.isfile(p):
-                return p
+    """썸네일 배경 그림을 찾는다: _카드작업(원본 이미지 폴더) 안의 가장 최근 그림(이름 무관, 슬롯 slot_* 제외)
+    → 없으면 MD 폴더의 00_thumbnail_scene.*."""
     cands = []
     if os.path.isdir(work_dir):
         for fn in os.listdir(work_dir):
@@ -4922,8 +4917,13 @@ def card_find_background(work_dir: str, md_folder: str):
             if (os.path.isfile(p) and fn.lower().endswith(CARD_IMAGE_EXTS)
                     and not fn.lower().startswith("slot_")):
                 cands.append(p)
-    return max(cands, key=os.path.getmtime) if cands else None
-
+    if cands:
+        return max(cands, key=os.path.getmtime)
+    for ext in CARD_IMAGE_EXTS:
+        p = os.path.join(md_folder, CARD_SCENE_BASENAME + ext)
+        if os.path.isfile(p):
+            return p
+    return None
 
 def card_find_answer_file(work_dir: str):
     """_카드작업 폴더에 넣어 둔 AI 답변 파일(가장 최근 .txt/.md/.json, spec.json 포함)."""
@@ -5038,11 +5038,11 @@ def card_prepare_spec(spec: dict, work_dir: str, background_path):
     os.makedirs(work_dir, exist_ok=True)
     bg_name = ""
     if background_path:
-        ext = os.path.splitext(background_path)[1].lower()
-        bg_name = CARD_SCENE_BASENAME + ext
-        dst = os.path.join(work_dir, bg_name)
-        if os.path.abspath(background_path) != os.path.abspath(dst):
-            shutil.copy2(background_path, dst)
+        if os.path.abspath(os.path.dirname(background_path)) == os.path.abspath(work_dir):
+            bg_name = os.path.basename(background_path)   # 원본 이미지 폴더에 있는 그림은 이름 그대로
+        else:
+            bg_name = CARD_SCENE_BASENAME + os.path.splitext(background_path)[1].lower()
+            shutil.copy2(background_path, os.path.join(work_dir, bg_name))
     for img in spec.get("images", []):
         if img.get("layout") == "thumbnail" and bg_name:
             img["background"] = bg_name
@@ -9587,7 +9587,8 @@ class App(tk.Tk):
         r4 = ttk.Frame(body)
         r4.grid(row=4, column=0, sticky="ew", pady=(8, 0))
         ttk.Button(r4, text="④ 퍼플렉시티 그림 선택…", command=self._card_pick_background).pack(side="left", padx=(0, 6))
-        self.card_bg_var = tk.StringVar(value="선택한 그림: 없음")
+        ttk.Button(r4, text="📁 원본 이미지 폴더 열기", command=self._card_open_work).pack(side="left", padx=(0, 8))
+        self.card_bg_var = tk.StringVar(value="원본 이미지: 없음")
         ttk.Label(r4, textvariable=self.card_bg_var).pack(side="left")
 
         # ⑤ 카드 만들기
@@ -9606,13 +9607,12 @@ class App(tk.Tk):
         r7.grid(row=7, column=0, sticky="ew", pady=(6, 0))
         self.card_folder_var = tk.StringVar(value="")
         ttk.Label(r7, textvariable=self.card_folder_var, style="Info.TLabel").pack(side="left")
-        ttk.Button(r7, text="_카드작업 폴더 열기", command=self._card_open_work).pack(side="right")
         ttk.Label(body, style="Info.TLabel", justify="left", text=(
             "· 글 폴더 = 4)최종각색에서 방금 저장한 글 폴더(MD와 완성 이미지가 들어가는 곳) — 맨 아래 '📁 MD파일 저장폴더 열기'로 확인.\n"
-            "· ②를 비워 두면 그 글 폴더의 _카드작업 폴더에 넣어 둔 답변 파일(.txt/.md/.json)을 읽고, "
-            "④를 고르지 않으면 _카드작업 폴더의 가장 최근 그림을 씁니다.")).grid(row=8, column=0, sticky="w", pady=(2, 0))
+            "· ④는 고른 그림을 원본 이미지 폴더(글 폴더 안 _카드작업)에 복사합니다. 내려받은 그림을 그 폴더에 직접 넣어도 되고, "
+            "⑤는 그 폴더의 가장 최근 그림을 씁니다.\n"
+            "· ②를 비워 두면 원본 이미지 폴더에 넣어 둔 답변 파일(.txt/.md/.json)을 읽습니다.")).grid(row=8, column=0, sticky="w", pady=(2, 0))
 
-        self._card_bg_path = ""
         self._card_scene = ""
         self._toggle_card_panel(save=False)
 
@@ -9679,15 +9679,26 @@ class App(tk.Tk):
                                         " (장면 프롬프트는 칸에 없음 — Claude 화면에서 직접 복사해 퍼플렉시티로)"))
 
     def _card_pick_background(self):
+        """④ 내려받은 퍼플렉시티 그림을 골라 원본 이미지 폴더(_카드작업)에 바로 복사한다."""
+        folder = self._card_md_folder()
+        if not folder:
+            return
         # 퍼플렉시티 그림은 보통 다운로드 폴더에 저장되므로 거기서 연다.
         downloads = os.path.join(os.path.expanduser("~"), "Downloads")
         path = filedialog.askopenfilename(title="④ 퍼플렉시티 그림 선택 (글자 없는 그림)",
                                           initialdir=downloads if os.path.isdir(downloads) else os.path.expanduser("~"),
                                           filetypes=[("이미지", "*.png *.jpg *.jpeg *.webp"), ("모든 파일", "*.*")])
-        if path:
-            self._card_bg_path = path
-            self.card_bg_var.set(f"선택한 그림: {os.path.basename(path)}")
-            self.card_status_var.set("✅ ④ 완료. 다음: ⑤ 카드 만들기")
+        if not path:
+            return
+        work = self._card_work_dir(folder)
+        os.makedirs(work, exist_ok=True)
+        dst = os.path.join(work, os.path.basename(path))
+        if os.path.abspath(path) != os.path.abspath(dst):
+            shutil.copy(path, dst)   # copy2가 아니라 copy — 지금 시각으로 저장돼 "가장 최근 그림"이 된다
+        else:
+            os.utime(dst, None)
+        self.card_bg_var.set(f"원본 이미지: {os.path.basename(path)}")
+        self.card_status_var.set("✅ ④ 완료 — 원본 이미지 폴더에 복사했습니다. 다음: ⑤ 카드 만들기")
 
     def _card_copy_scene(self):
         scene = self._card_scene
@@ -9776,7 +9787,7 @@ class App(tk.Tk):
             return
         spec.setdefault("series", "policy")
 
-        bg = self._card_bg_path if self._card_bg_path and os.path.isfile(self._card_bg_path) else card_find_background(work, folder)
+        bg = card_find_background(work, folder)
         has_thumb = any(i.get("layout") == "thumbnail" for i in spec["images"])
         if has_thumb and not bg and (not only or "00_thumbnail" in only):
             if not messagebox.askyesno("배경 그림 없음",
