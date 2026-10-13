@@ -1875,10 +1875,10 @@ v7.21 (2026-09-22): 🐛 parse_value_judgment_title_candidates() 헤더
                      (썸네일 장면 프롬프트 + JSON 설계도)을 받고, 퍼플렉시티 등에서 글자 없는
                      배경 그림만 그린다. 답변은 칸에 붙여넣거나 final_posts/{제목}/_카드작업
                      폴더에 파일로 넣고, 배경 그림도 고르거나 그 폴더에 넣는다. "🧩 카드
-                     만들기"를 누르면 blog-images/cards/make_cards.py(Playwright + 크롬)로
+                     만들기"를 누르면 Naver_blog_SVG Card_images/cards/make_cards.py(Playwright + 크롬)로
                      PNG를 만들고 제목·소제목 이름(분할은 _1·_2, [복사] 버튼과 같은 이름)으로
                      글 폴더에 넣는다. 같은 이름의 기존 그림은 _카드작업/_이전이미지로 옮긴다.
-                     설정 탭: 카드용 ⑦ 프롬프트 파일명, blog-images 폴더, 크롬 경로.
+                     설정 탭: 카드용 ⑦ 프롬프트 파일명, Naver_blog_SVG Card_images 폴더, 크롬 경로.
                      준비: pip install playwright.
 """
 
@@ -2700,7 +2700,7 @@ _DEFAULT_CONFIG = {
     "para_reflow_limit": 150,
     # [Ver10.07] 코드 카드(선택) — ⑥ 인포그래픽 작업 탭의 체크를 켤 때만 쓴다.
     "prompt_infographic_card_file": "복지로_7_카드설계.md",
-    "card_tool_dir": "blog-images",
+    "card_tool_dir": "Naver_blog_SVG Card_images",
     "card_chrome_path": "",
     "card_panel_on": False,
     "card_last_shape": "",
@@ -6263,10 +6263,10 @@ def strip_trailing_punct_for_filename(text: str) -> str:
 #   2) AI 답변(썸네일 장면 프롬프트 + 마지막 JSON 설계도)을 붙여넣거나
 #      글 폴더의 "_카드작업" 폴더에 넣는다(답변 파일 .txt/.md/.json)
 #   3) 퍼플렉시티 등에서 그린 글자 없는 배경 그림을 고르거나 "_카드작업"에 넣는다
-#   4) "카드 만들기" → blog-images/cards/make_cards.py 실행 → 결과 PNG를
+#   4) "카드 만들기" → Naver_blog_SVG Card_images/cards/make_cards.py 실행 → 결과 PNG를
 #      제목·소제목 이름(분할은 _1·_2)으로 바꿔 MD 폴더에 넣는다. 그래서 이후
 #      키워드 등록·포스팅 프로그램은 지금처럼 이미지를 찾는다.
-# make_cards.py·icons.py·fonts는 blog-images 쪽에서 관리하며 여기서 고치지 않는다.
+# make_cards.py·icons.py·fonts는 Naver_blog_SVG Card_images 쪽에서 관리하며 여기서 고치지 않는다.
 # ══════════════════════════════════════════════════════════
 CARD_WORK_SUBFOLDER = "_카드작업"
 CARD_SCENE_BASENAME = "00_thumbnail_scene"
@@ -6440,7 +6440,7 @@ def card_render(tool_dir: str, spec_path: str, chrome_path: str = "", only=None)
     """make_cards.py를 별도 파이썬으로 실행한다. 반환 (성공 여부, 출력 문구)."""
     script = os.path.join(tool_dir, "cards", "make_cards.py")
     if not os.path.isfile(script):
-        return False, f"make_cards.py가 없습니다: {script}\n(설정 탭의 blog-images 폴더를 확인하세요)"
+        return False, f"make_cards.py가 없습니다: {script}\n(설정 탭의 Naver_blog_SVG Card_images 폴더를 확인하세요)"
     if getattr(sys, "frozen", False):
         return False, "exe로 실행 중이라 카드 만들기를 쓸 수 없습니다(.py로 실행하세요)."
     env = dict(os.environ)
@@ -8221,7 +8221,7 @@ class WelfareCollectorGUI(tk.Tk):
             row=srow, column=2, padx=6, pady=2)
         srow += 1
 
-        # [Ver10.07 신규] 코드 카드(선택) — 카드용 ⑦ 프롬프트, blog-images 폴더, 크롬 경로
+        # [Ver10.07 신규] 코드 카드(선택) — 카드용 ⑦ 프롬프트, Naver_blog_SVG Card_images 폴더, 크롬 경로
         ttk.Label(settings_inner, text="카드용 ⑦ 프롬프트 파일명 (코드 카드, 선택):").grid(
             row=srow, column=0, sticky="w", padx=6, pady=2)
         self.settings_prompt_card_var = tk.StringVar(
@@ -8232,9 +8232,9 @@ class WelfareCollectorGUI(tk.Tk):
                    command=lambda: self._browse_prompt_file(self.settings_prompt_card_var)).grid(
             row=srow, column=2, padx=6, pady=2)
         srow += 1
-        ttk.Label(settings_inner, text="blog-images 폴더 (코드 카드):").grid(
+        ttk.Label(settings_inner, text="Naver_blog_SVG Card_images 폴더 (코드 카드):").grid(
             row=srow, column=0, sticky="w", padx=6, pady=2)
-        self.settings_card_tool_var = tk.StringVar(value=cfg_now.get("card_tool_dir", "blog-images"))
+        self.settings_card_tool_var = tk.StringVar(value=cfg_now.get("card_tool_dir", "Naver_blog_SVG Card_images"))
         ttk.Entry(settings_inner, textvariable=self.settings_card_tool_var).grid(
             row=srow, column=1, sticky="ew", padx=6, pady=2)
         ttk.Button(settings_inner, text="찾기",
@@ -11077,8 +11077,12 @@ class WelfareCollectorGUI(tk.Tk):
         threading.Thread(target=worker, daemon=True).start()
 
     def _card_tool_dir(self) -> str:
-        v = (load_config().get("card_tool_dir") or "blog-images").strip()
-        return v if os.path.isabs(v) else os.path.join(str(BASE_DIR), v)
+        v = (load_config().get("card_tool_dir") or "Naver_blog_SVG Card_images").strip()
+        path = v if os.path.isabs(v) else os.path.join(str(BASE_DIR), v)
+        old_path = os.path.join(str(BASE_DIR), "blog-images")   # 받은 원래 폴더 이름 — 이름을 안 바꿨으면 그쪽을 쓴다
+        if not os.path.isdir(path) and os.path.isdir(old_path):
+            return old_path
+        return path
 
     def _card_name(self, text: str) -> str:
         """기존 이미지 파일명 규칙(⑥ 인포그래픽 작업의 [복사] 버튼 문구 + Windows 금지 문자 제거)."""
@@ -11894,7 +11898,7 @@ class WelfareCollectorGUI(tk.Tk):
         cfg["prompt_infographic_file"] = self.settings_prompt_info_var.get().strip() or _DEFAULT_CONFIG["prompt_infographic_file"]
         # [Ver10.07] 코드 카드(선택)
         cfg["prompt_infographic_card_file"] = self.settings_prompt_card_var.get().strip() or _DEFAULT_CONFIG["prompt_infographic_card_file"]
-        cfg["card_tool_dir"] = self.settings_card_tool_var.get().strip() or "blog-images"
+        cfg["card_tool_dir"] = self.settings_card_tool_var.get().strip() or "Naver_blog_SVG Card_images"
         cfg["card_chrome_path"] = self.settings_card_chrome_var.get().strip().strip('"')
         save_config(cfg)
 
