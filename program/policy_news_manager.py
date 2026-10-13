@@ -1087,6 +1087,12 @@
         부르지 않는다. 공백을 뺀 전후 본문이 다르면 원본을 쓴다. 도입부·여러 줄 블록·[[ 섞인 문단·
         해시태그 바로 앞 문단(출처 줄)·표·목록·소제목은 건드리지 않는다. 설정 탭에 OpenAI API 키 칸 추가
         (키가 없으면 문단 정리는 건너뛰고 원본으로 저장).
+    64. [Ver10.07, 2026-10-08] 8)키워드 등록 — 중복의심 글도 골라서 포스팅할 수 있게 함. 예전에는 등록
+        버튼을 누를 때 중복의심 전체를 "격리할까요?" 한 번으로만 물어('예'가 격리) 사실상 격리만 되고,
+        글마다 고를 수 없었다. 이제 표에서 중복의심 글을 골라 "✅ 선택 글 중복 허용(포스팅)"을 누르면
+        "✅ 중복 허용"으로 바뀌어 신규와 같이 처리된다(키워드 엑셀 추가 + 포스팅 폴더 복사 + 핵심DB 등록 +
+        포스팅완료). 다시 누르면 중복의심으로 돌아간다. 고르지 않은 중복의심이 남아 있으면 등록할 때
+        "포스팅 폴더로 보낼까요?"(예=포스팅, 아니오=격리, 취소=중단)로 한 번 더 묻는다.
 """
 
 import os
@@ -10144,8 +10150,8 @@ class App(tk.Tk):
         self.main_reg_info_label = info = ttk.Label(f, justify="left", foreground="gray", font=("맑은 고딕", 9),
             text=(f"작업 폴더: {_get_work_folder()}\\{{날짜}}\n"
                   f"키워드 엑셀: {_get_keyword_excel_path()}  →  포스팅 폴더: {POSTING_MD_FOLDER}\n"
-                  f"중복 의심 문서는 포스팅 폴더로 절대 넘어가지 않고 "
-                  f"작업 폴더 안 '{DUP_SUBFOLDER_NAME}' 하위폴더로 이동됩니다.\n"
+                  f"중복의심 문서는 기본적으로 작업 폴더 안 '{DUP_SUBFOLDER_NAME}' 하위폴더로 격리됩니다.\n"
+                  f"그래도 포스팅할 글은 표에서 골라 '✅ 선택 글 중복 허용(포스팅)'을 누르면 신규와 같이 처리됩니다.\n"
                   f"단, TAB3에서 '업데이트(추가정보) 작성으로 진행'을 선택해 쓴 의도된 "
                   f"후속글은 '🔄 업데이트'로 표시되며 신규와 동일하게 처리됩니다.\n"
                   f"※ 메인 프로그램도 자체 중복체크를 하므로 필수 기능은 아닙니다 — "
@@ -10175,7 +10181,7 @@ class App(tk.Tk):
         ttk.Label(date_f, text="상태 필터:").pack(side="left", padx=(8,4))
         self.main_reg_filter_var = tk.StringVar(value="전체")
         main_reg_filter_combo = ttk.Combobox(date_f, textvariable=self.main_reg_filter_var,
-                                              values=["전체", "신규", "업데이트", "중복의심", "이미 등록됨"],
+                                              values=["전체", "신규", "업데이트", "중복의심", "중복 허용", "이미 등록됨"],
                                               width=12, state="readonly")
         main_reg_filter_combo.pack(side="left")
         main_reg_filter_combo.bind("<<ComboboxSelected>>",
@@ -10244,10 +10250,13 @@ class App(tk.Tk):
 
         btn_f = ttk.Frame(f)
         btn_f.grid(row=3, column=0, sticky="ew", pady=(8,0))
-        ttk.Button(btn_f, text="✅ 신규+업데이트 항목 키워드 엑셀 추가 + 포스팅 폴더 복사 "
-                              "(중복의심만 격리 폴더로 이동)",
+        ttk.Button(btn_f, text="✅ 신규+업데이트+중복 허용 항목 키워드 엑셀 추가 + 포스팅 폴더 복사 "
+                              "(남은 중복의심은 등록 때 확인)",
                    command=self._process_main_register,
                    style="Copy.TButton").pack(side="left")
+        # [Ver10.07 신규] 중복의심 글을 하나씩 골라 포스팅 진행으로 바꾼다(다시 누르면 되돌림).
+        ttk.Button(btn_f, text="✅ 선택 글 중복 허용(포스팅)",
+                   command=self._toggle_main_reg_dup_ok).pack(side="left", padx=(8,0))
         # [Ver7.10 추가] 지식인 프로그램의 "원본 파일 삭제" 버튼과 같은 역할.
         # 지식인은 작업 폴더 전체를 지우지만, 여기서는 지금 선택된 날짜
         # 폴더만 지운다(다른 날짜 작업물이 실수로 같이 삭제되지 않도록).
@@ -10328,6 +10337,8 @@ class App(tk.Tk):
                 it["reg_status"] = "new"
             elif dup_action == "업데이트(추가정보) 작성":
                 it["reg_status"] = "update"
+            elif it["title"] in getattr(self, "main_reg_dup_ok", set()):
+                it["reg_status"] = "dup_ok"   # [Ver10.07] 사람이 포스팅하기로 고른 중복의심 글
             else:
                 it["reg_status"] = "dup"
             # [Ver7.13 추가] 여기서 계산한 core를 그대로 저장해둔다.
@@ -10347,9 +10358,13 @@ class App(tk.Tk):
 
     # [Ver7.12 추가] 상태 필터 표시명 <-> 내부 reg_status 매핑
     # [Ver7.26 추가] "update"(업데이트 의도된 후속글) 상태 추가
-    _MAIN_REG_FILTER_MAP = {"신규": "new", "업데이트": "update", "중복의심": "dup", "이미 등록됨": "registered"}
-    _MAIN_REG_STATUS_LABEL = {"registered": "이미 등록됨", "dup": "중복의심", "update": "🔄 업데이트", "new": "신규"}
-    _MAIN_REG_STATUS_TAG   = {"registered": "dup", "dup": "danger", "update": "update", "new": "new"}
+    # [Ver10.07 추가] "dup_ok"(중복의심이지만 사람이 포스팅하기로 고른 글) 상태 추가
+    _MAIN_REG_FILTER_MAP = {"신규": "new", "업데이트": "update", "중복의심": "dup", "중복 허용": "dup_ok",
+                            "이미 등록됨": "registered"}
+    _MAIN_REG_STATUS_LABEL = {"registered": "이미 등록됨", "dup": "중복의심", "update": "🔄 업데이트", "new": "신규",
+                              "dup_ok": "✅ 중복 허용"}
+    _MAIN_REG_STATUS_TAG   = {"registered": "dup", "dup": "danger", "update": "update", "new": "new",
+                              "dup_ok": "update"}
 
     _BOARD_SRC_LABEL = {"manual": "직접", "map": "매핑", "prompt": "A판정", "rule": "규칙", "etc": ""}
 
@@ -10405,7 +10420,7 @@ class App(tk.Tk):
         for it in visible:
             shape = "폴더형" if it["is_folder"] else "MD단독"
             reason = ""
-            if it["reg_status"] in ("dup", "update") and it["dup_results"]:
+            if it["reg_status"] in ("dup", "dup_ok", "update") and it["dup_results"]:
                 top = max(it["dup_results"], key=lambda r: r["rate"])
                 reason = f"{top['rate']}% ↔ {top['title'][:30]}"
             bd = it.get("board")
@@ -10428,12 +10443,41 @@ class App(tk.Tk):
         new_count        = sum(1 for it in items if it["reg_status"] == "new")
         update_count     = sum(1 for it in items if it["reg_status"] == "update")
         dup_count        = sum(1 for it in items if it["reg_status"] == "dup")
+        dup_ok_count     = sum(1 for it in items if it["reg_status"] == "dup_ok")
         registered_count = sum(1 for it in items if it["reg_status"] == "registered")
         filter_note = "" if target_status is None else f"  [필터: {filter_label}만 표시 중, {len(visible)}건]"
         self.main_reg_summary_var.set(
             f"{date_str} — 총 {len(items)}건 "
-            f"(신규 {new_count} / 업데이트 {update_count} / 중복의심 {dup_count} / 이미 등록됨 {registered_count})"
+            f"(신규 {new_count} / 업데이트 {update_count} / 중복의심 {dup_count} / 중복 허용 {dup_ok_count} / "
+            f"이미 등록됨 {registered_count})"
             f"{filter_note}")
+
+    def _toggle_main_reg_dup_ok(self):
+        """[Ver10.07 신규] 표에서 고른 중복의심 글을 "✅ 중복 허용"(포스팅 진행)으로 바꾼다.
+        이미 중복 허용인 글을 고르면 다시 중복의심으로 되돌린다. 신규·업데이트·이미 등록됨은 그대로."""
+        sel = self.main_reg_tree.selection()
+        if not sel:
+            messagebox.showinfo("알림", "표에서 포스팅할 중복의심 글을 먼저 선택하세요.")
+            return
+        if not hasattr(self, "main_reg_dup_ok"):
+            self.main_reg_dup_ok = set()
+        sel_titles = {self.main_reg_tree.set(iid, "제목") for iid in sel}
+        changed = 0
+        for it in getattr(self, "main_reg_items", []):
+            if it["title"] not in sel_titles:
+                continue
+            if it["reg_status"] == "dup":
+                it["reg_status"] = "dup_ok"
+                self.main_reg_dup_ok.add(it["title"])
+                changed += 1
+            elif it["reg_status"] == "dup_ok":
+                it["reg_status"] = "dup"
+                self.main_reg_dup_ok.discard(it["title"])
+                changed += 1
+        if not changed:
+            messagebox.showinfo("알림", "고른 글 중에 중복의심(또는 중복 허용) 글이 없습니다.")
+            return
+        self._render_main_register_tree()
 
     def _copy_matched_assets(self, it, dest_folder, mover):
         """제목·소제목과 정확히 같은 파일명의 이미지를 찾아 dest_folder로
@@ -10510,9 +10554,11 @@ class App(tk.Tk):
 
         pure_new_items = [it for it in self.main_reg_items if it["reg_status"] == "new"]
         update_items   = [it for it in self.main_reg_items if it["reg_status"] == "update"]
+        # [Ver10.07] 표에서 "중복 허용"으로 고른 중복의심 글도 신규와 같이 처리한다.
+        dup_ok_items   = [it for it in self.main_reg_items if it["reg_status"] == "dup_ok"]
         # "업데이트"는 신규와 동일한 파이프라인(엑셀 추가 + 포스팅 폴더 복사 +
         # 핵심DB 등록 + 포스팅완료 확정)을 그대로 탄다.
-        new_items = pure_new_items + update_items
+        new_items = pure_new_items + update_items + dup_ok_items
         dup_items = [it for it in self.main_reg_items if it["reg_status"] == "dup"]
 
         if not new_items and not dup_items:
@@ -10525,25 +10571,31 @@ class App(tk.Tk):
         # hard_match 오탐 등으로 정상 콘텐츠까지 막히는 사례가 있었다.
         # 격리 여부를 별도로 한 번 더 확인해서, 사용자가 "그래도
         # 포스팅하겠다"를 선택하면 신규와 동일한 파이프라인으로 넘긴다.
+        # [Ver10.07] 질문을 "포스팅할까요?"로 바꿔 '예'가 포스팅이 되게 했다(예전엔 '예'가 격리라 헷갈림).
+        # 글마다 고르려면 취소하고 표에서 "✅ 선택 글 중복 허용(포스팅)"을 쓴다.
         if dup_items:
-            preview = "\n".join(f"  · {it['title'][:40]}" for it in dup_items[:10])
+            preview = "\n".join(
+                f"  · {it['title'][:40]}"
+                + (f"  ({max(r['rate'] for r in it['dup_results'])}%)" if it.get("dup_results") else "")
+                for it in dup_items[:10])
             if len(dup_items) > 10:
                 preview += f"\n  … 외 {len(dup_items) - 10}건"
-            isolate = messagebox.askyesno(
+            post_dup = messagebox.askyesnocancel(
                 "중복의심 항목 처리 확인",
                 f"중복의심으로 분류된 항목이 {len(dup_items)}건 있습니다:\n\n"
                 f"{preview}\n\n"
-                f"'예' → 지금처럼 격리 폴더로 이동합니다(포스팅 안 함).\n"
-                f"'아니오' → 중복이어도 신규와 동일하게 포스팅 폴더로 진행합니다.\n\n"
-                f"격리하시겠습니까?")
-            if not isolate:
+                f"이 글들도 포스팅 폴더로 보낼까요?\n\n"
+                f"'예' → 신규와 같이 포스팅 폴더로 진행합니다.\n"
+                f"'아니오' → 격리 폴더로 이동합니다(포스팅 안 함).\n"
+                f"'취소' → 아무것도 하지 않습니다(표에서 글마다 '✅ 선택 글 중복 허용'으로 고를 수 있음).")
+            if post_dup is None:
+                return
+            if post_dup:
                 new_items = new_items + dup_items
                 dup_items = []
 
-        dup_extra_note = (
-            f" + 중복의심(포스팅 진행 선택) {len(new_items) - len(pure_new_items) - len(update_items)}건"
-            if len(new_items) > len(pure_new_items) + len(update_items) else ""
-        )
+        dup_post_count = len(new_items) - len(pure_new_items) - len(update_items)
+        dup_extra_note = f" + 중복의심(포스팅 진행) {dup_post_count}건" if dup_post_count > 0 else ""
         # ✅ [2026-09-05] 확인창에도 이번에 쓰일 카테고리 값을 미리 보여준다
         # (복지로 서브프로그램의 category_display와 동일한 안내 방식).
         # ✅ [2026-09-29] 게시판 모드: 제목마다 정해진 게시판 값을 B열에 기록한다.
@@ -10658,6 +10710,8 @@ class App(tk.Tk):
             # 이력 상태가 방금 바뀌었으므로(update_history_status는 파일에는
             # 바로 반영되지만 self.history 메모리 캐시는 그대로다) 다른 탭에
             # 새로고침했을 때 최신 상태가 보이도록 다시 불러온다.
+            if hasattr(self, "main_reg_dup_ok"):
+                self.main_reg_dup_ok.clear()   # [Ver10.07] 처리 끝난 선택은 비운다
             self.history = load_history()
             self._refresh_history_tree()
             self._refresh_collect_tree()
@@ -11104,7 +11158,7 @@ class App(tk.Tk):
             var.set(path)
 
     def _update_window_title(self):
-        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-05_Ver 10.06")
+        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-08_Ver 10.07")
 
     def _browse_prompt_file(self, var: tk.StringVar):
         cfg      = load_config()
