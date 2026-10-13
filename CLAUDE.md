@@ -28,7 +28,7 @@
 | `program/` | 지식인 관리 프로그램 `kin_manager.py`(Ver10.05, CRLF). 탭 구성·저장 흐름·문단 정리·바뀐 점은 `program/README.md` |
 | `program/welfare_manager.py` | 복지로 관리 프로그램(Ver10.07 — 코드 카드 추가, Ver10.06: 원래 파일명 welfare_collector_gui). Gemini 경로 삭제, 속마음 후킹 제목 점검, ⑥ 저장 전 문단 정리(GPT, 기본 꺼짐). 바뀐 점은 `program/README.md` |
 | `program/policy_news_manager.py` | 정책뉴스 관리 프로그램(Ver10.07, LF). Ver10.06은 받은 그대로 커밋(aa58833) — 프롬프트 한 세트(0·A V20·B V21·C V15), 프롬프트D 삭제, 제목 속마음 후킹 점검, 저장 전 문단 정리. Ver10.07: 8)키워드 등록에서 중복의심 글을 골라 포스팅("✅ 중복 허용"). Ver10.08: 5탭 코드 카드(선택) |
-| `program/Naver_blog_SVG Card_images/` | 코드 카드 도구(받은 그대로 — 고치지 않음): `cards/make_cards.py`(설계도 JSON → 썸네일 글자·인포그래픽 PNG, Playwright), `icons.py`, `fonts/`, 예시 8개. 카드용 프롬프트는 `prompts/policy/정책뉴스_C_카드설계.md`(C V18)·`복지로_7_카드설계.md`(⑦ V7) |
+| `program/Naver_blog_SVG Card_images/` | 코드 카드 도구 — 실행에 필요한 것만(받은 그대로, 고치지 않음): `cards/make_cards.py`(설계도 JSON → 썸네일 글자·인포그래픽 PNG, Playwright), `cards/icons.py`, `fonts/`(OFL.txt 포함). 받은 README·연결가이드는 `docs/code_cards/`, 예시 설계도 8개는 `eval/samples/code_cards/examples/`. 카드용 프롬프트는 `prompts/policy/정책뉴스_C_카드설계.md`(C V18)·`복지로_7_카드설계.md`(⑦ V7) — 파일명은 각 프로그램 설정 탭에서 바꿀 수 있다 |
 | `program/blog_poster.py` | **포스팅 전용 프로그램**(Ver9.16, CRLF, 원본 Ver9.15 커밋 c740cd9). 지식인·정책뉴스·복지로 MD를 네이버 에디터에 타이핑해 발행. MD 읽는 규칙은 `program/README.md` |
 
 각 폴더의 README와 프롬프트 메모 블록(정책·복지로)·`_메모` 필드(지식인 topics)에 변경 근거가 있다.

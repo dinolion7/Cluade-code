@@ -74,8 +74,8 @@
 - 글 폴더: 정책 = 4탭에서 방금 저장한 글 폴더(없으면 고르기), 복지로 = ⑥에서 고른 서비스의 `final_posts/{제목}`. "📂 글 폴더 바꾸기"로 직접 고를 수 있다.
 - 설정 탭: 카드용 프롬프트 파일명, `Naver_blog_SVG Card_images` 폴더(기본: 프로그램 폴더의 `Naver_blog_SVG Card_images`), 크롬 경로(비우면 Windows 기본 설치 위치의 크롬 → 그것도 없으면 Playwright 크롬).
 - 준비(처음 한 번): `pip install playwright`. 크롬이 깔려 있지 않으면 `python -m playwright install chromium`. exe로 묶어 실행하면 이 기능은 쓸 수 없다(.py로 실행).
-- 도구 폴더 이름은 `Naver_blog_SVG Card_images`(사용자 요청, 받을 때 이름 `blog-images`). 설정 칸을 비우면 프로그램 폴더의 이 폴더를 쓰고, 없으면 예전 이름 `blog-images` 폴더를 쓴다. 폴더 안 문서(README·연결가이드)는 받은 그대로라 옛 이름이 적혀 있다.
-- `Naver_blog_SVG Card_images/`(make_cards.py·icons.py·fonts·예시)는 받은 그대로이며 이 저장소에서 고치지 않는다(`Naver_blog_SVG Card_images/연결가이드_프로그램용.md`).
+- 도구 폴더 이름은 `Naver_blog_SVG Card_images`(사용자 요청, 받을 때 이름 `blog-images`). 설정 칸을 비우면 프로그램 폴더의 이 폴더를 쓰고, 없으면 예전 이름 `blog-images` 폴더를 쓴다. 폴더에는 실행에 필요한 것만 둔다: `cards/make_cards.py`, `cards/icons.py`, `fonts/`(글꼴 + `local.css` + 글꼴 사용 허가문 `OFL.txt` — 글꼴을 함께 배포할 때 같이 두어야 함).
+- make_cards.py·icons.py·fonts는 받은 그대로이며 이 저장소에서 고치지 않는다. 개발 참고 자료는 폴더 밖으로 옮겼다: 받은 README·연결가이드 → `docs/code_cards/`, 예시 설계도 8개·배경 그림 → `eval/samples/code_cards/examples/`(시험용).
 - 시험: 이 환경에는 tkinter가 없어 화면은 가짜 부품으로 바꿔 시험했다. 예시 설계도 8개로 답변 읽기·소제목 연결(분할 포함)을 확인했고, 실제 make_cards 실행(리눅스 크로미움)으로 썸네일(webp 배경)·인포그래픽 PNG 생성과 글 폴더 복사·기존 그림 이동까지 두 프로그램에서 확인했다. **Windows 실제 화면·실제 AI 답변으로는 안 돌려 봤다.**
 
 # 포스팅 프로그램
