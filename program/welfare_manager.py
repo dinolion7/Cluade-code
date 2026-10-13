@@ -10907,9 +10907,8 @@ class WelfareCollectorGUI(tk.Tk):
         self.card_folder_var = tk.StringVar(value="")
         ttk.Label(r7, textvariable=self.card_folder_var, foreground="gray").pack(side="left")
         ttk.Button(r7, text="_카드작업 폴더 열기", command=self._card_open_work).pack(side="right")
-        ttk.Button(r7, text="📁 MD파일 저장폴더 열기", command=self._card_open_md_folder).pack(side="right", padx=(0, 6))
         ttk.Label(body, foreground="gray", justify="left", text=(
-            "· 글 폴더 = 위에서 고른 서비스의 final_posts 폴더(MD와 완성 이미지가 들어가는 곳).\n"
+            "· 글 폴더 = 위에서 고른 서비스의 final_posts 폴더(MD와 완성 이미지가 들어가는 곳) — 맨 위 '📁 최종각색된 MD파일이 저장된 폴더 열기'로 확인.\n"
             "· ②를 비워 두면 그 글 폴더의 _카드작업 폴더에 넣어 둔 답변 파일(.txt/.md/.json)을 읽고, "
             "④를 고르지 않으면 _카드작업 폴더의 가장 최근 그림을 씁니다.")).grid(row=8, column=0, sticky="w", pady=(2, 0))
 
@@ -10952,11 +10951,6 @@ class WelfareCollectorGUI(tk.Tk):
                                    "최종각색 MD가 아직 없으면 ⑥ 최종각색 결과를 먼저 저장하세요.")
         return ""
 
-    def _card_open_md_folder(self):
-        folder = self._card_md_folder()
-        if folder:
-            self._open_folder(folder)
-
     def _card_work_dir(self, md_folder: str) -> str:
         return os.path.join(md_folder, CARD_WORK_SUBFOLDER)
 
@@ -10989,7 +10983,10 @@ class WelfareCollectorGUI(tk.Tk):
                                         " (장면 프롬프트는 칸에 없음 — Claude 화면에서 직접 복사해 퍼플렉시티로)"))
 
     def _card_pick_background(self):
-        path = filedialog.askopenfilename(title="썸네일 배경 그림 선택 (글자 없는 그림)",
+        # 퍼플렉시티 그림은 보통 다운로드 폴더에 저장되므로 거기서 연다.
+        downloads = os.path.join(os.path.expanduser("~"), "Downloads")
+        path = filedialog.askopenfilename(title="④ 퍼플렉시티 그림 선택 (글자 없는 그림)",
+                                          initialdir=downloads if os.path.isdir(downloads) else os.path.expanduser("~"),
                                           filetypes=[("이미지", "*.png *.jpg *.jpeg *.webp"), ("모든 파일", "*.*")])
         if path:
             self._card_bg_path = path

@@ -9523,7 +9523,7 @@ class App(tk.Tk):
 
         # STEP 3: 포스팅 완료
         done_f = ttk.LabelFrame(f, text="STEP 3 — 포스팅 완료 처리", padding=6)
-        done_f.grid(row=4, column=0, sticky="ew")
+        done_f.grid(row=5, column=0, sticky="ew", pady=(6, 0))   # [Ver10.08] 코드 카드 아래(맨 아래)로
 
         ttk.Label(done_f, text="네이버 블로그에 포스팅 완료 후 아래 버튼을 클릭하세요.").pack(anchor="w")
         btn_done = ttk.Frame(done_f)
@@ -9542,7 +9542,7 @@ class App(tk.Tk):
                    command=self._open_last_saved_folder).pack(side="left", padx=(0,8))
 
         # [Ver10.08 신규] 코드 카드(선택) — 체크를 켤 때만 펼쳐진다(기존 STEP은 그대로).
-        self._build_card_panel(f, 5)
+        self._build_card_panel(f, 4)
 
     # ── [Ver10.08 신규] 5)인포그래픽: 코드 카드(선택) ──
     def _build_card_panel(self, parent, row):
@@ -9607,9 +9607,8 @@ class App(tk.Tk):
         self.card_folder_var = tk.StringVar(value="")
         ttk.Label(r7, textvariable=self.card_folder_var, style="Info.TLabel").pack(side="left")
         ttk.Button(r7, text="_카드작업 폴더 열기", command=self._card_open_work).pack(side="right")
-        ttk.Button(r7, text="📁 MD파일 저장폴더 열기", command=self._card_open_md_folder).pack(side="right", padx=(0, 6))
         ttk.Label(body, style="Info.TLabel", justify="left", text=(
-            "· 글 폴더 = 4)최종각색에서 방금 저장한 글 폴더(MD와 완성 이미지가 들어가는 곳).\n"
+            "· 글 폴더 = 4)최종각색에서 방금 저장한 글 폴더(MD와 완성 이미지가 들어가는 곳) — 맨 아래 '📁 MD파일 저장폴더 열기'로 확인.\n"
             "· ②를 비워 두면 그 글 폴더의 _카드작업 폴더에 넣어 둔 답변 파일(.txt/.md/.json)을 읽고, "
             "④를 고르지 않으면 _카드작업 폴더의 가장 최근 그림을 씁니다.")).grid(row=8, column=0, sticky="w", pady=(2, 0))
 
@@ -9648,11 +9647,6 @@ class App(tk.Tk):
                                    "(이력관리에서 글을 다시 불러온 경우에도 그 글의 저장 폴더를 씁니다)")
         return ""
 
-    def _card_open_md_folder(self):
-        folder = self._card_md_folder()
-        if folder:
-            open_folder(folder)
-
     def _card_work_dir(self, md_folder: str) -> str:
         return os.path.join(md_folder, CARD_WORK_SUBFOLDER)
 
@@ -9685,7 +9679,10 @@ class App(tk.Tk):
                                         " (장면 프롬프트는 칸에 없음 — Claude 화면에서 직접 복사해 퍼플렉시티로)"))
 
     def _card_pick_background(self):
-        path = filedialog.askopenfilename(title="썸네일 배경 그림 선택 (글자 없는 그림)",
+        # 퍼플렉시티 그림은 보통 다운로드 폴더에 저장되므로 거기서 연다.
+        downloads = os.path.join(os.path.expanduser("~"), "Downloads")
+        path = filedialog.askopenfilename(title="④ 퍼플렉시티 그림 선택 (글자 없는 그림)",
+                                          initialdir=downloads if os.path.isdir(downloads) else os.path.expanduser("~"),
                                           filetypes=[("이미지", "*.png *.jpg *.jpeg *.webp"), ("모든 파일", "*.*")])
         if path:
             self._card_bg_path = path
