@@ -10907,14 +10907,13 @@ class WelfareCollectorGUI(tk.Tk):
         self.card_folder_var = tk.StringVar(value="")
         ttk.Label(r7, textvariable=self.card_folder_var, foreground="gray").pack(side="left")
         ttk.Button(r7, text="_카드작업 폴더 열기", command=self._card_open_work).pack(side="right")
-        ttk.Button(r7, text="글 폴더 바꾸기", command=self._card_choose_folder).pack(side="right", padx=(0, 6))
+        ttk.Button(r7, text="📁 MD파일 저장폴더 열기", command=self._card_open_md_folder).pack(side="right", padx=(0, 6))
         ttk.Label(body, foreground="gray", justify="left", text=(
             "· 글 폴더 = 위에서 고른 서비스의 final_posts 폴더(MD와 완성 이미지가 들어가는 곳).\n"
             "· ②를 비워 두면 그 글 폴더의 _카드작업 폴더에 넣어 둔 답변 파일(.txt/.md/.json)을 읽고, "
             "④를 고르지 않으면 _카드작업 폴더의 가장 최근 그림을 씁니다.")).grid(row=8, column=0, sticky="w", pady=(2, 0))
 
         self._card_bg_path = ""
-        self._card_folder_override = ""
         self._card_scene = ""
         self._toggle_card_panel(save=False)
 
@@ -10926,7 +10925,7 @@ class WelfareCollectorGUI(tk.Tk):
     def _card_show_folder(self):
         """작은 안내 줄의 글 폴더 표시를 지금 기준으로 갱신한다."""
         folder = self._card_md_folder(ask=False)
-        self.card_folder_var.set(f"글 폴더: {folder}" if folder else "글 폴더: (아직 없음 — ⑤를 누르면 고르게 합니다)")
+        self.card_folder_var.set(f"글 폴더: {folder}" if folder else "글 폴더: (아직 없음 — 위에서 서비스를 고르고 ⑥ 최종각색 결과를 먼저 저장하세요)")
 
     def _toggle_card_panel(self, save=True):
         if self.card_panel_on.get():
@@ -10940,31 +10939,23 @@ class WelfareCollectorGUI(tk.Tk):
             save_config(cfg)
 
     def _card_md_folder(self, ask=True) -> str:
-        """카드를 넣을 글 폴더 = 선택한 서비스의 final_posts/{제목}/ (직접 고른 폴더가 있으면 그쪽)."""
-        if self._card_folder_override and os.path.isdir(self._card_folder_override):
-            return self._card_folder_override
+        """카드를 넣을 글 폴더 = 위에서 고른 서비스의 final_posts/{제목}/ (키워드 등록이 읽는 곳 그대로)."""
         row = self._get_selected_ig_row()
         if row is not None:
             text = get_final_adaptation_text_for_use(row["servId"], row["servNm"])
             title = extract_title_from_final_text(text) or row["servNm"]
             folder = get_final_post_folder(title)
-            if os.path.isdir(folder):
+            if os.path.isdir(folder) and any(fn.endswith(".md") for fn in os.listdir(folder)):
                 return folder
-        if not ask:
-            return ""
-        messagebox.showinfo("글 폴더 선택", "위에서 대상 서비스를 고르거나, 최종각색 MD가 있는 글 폴더를 골라 주세요.")
-        return self._card_choose_folder() or ""
+        if ask:
+            messagebox.showwarning("글 폴더 없음", "위에서 대상 서비스를 고르세요.\n"
+                                   "최종각색 MD가 아직 없으면 ⑥ 최종각색 결과를 먼저 저장하세요.")
+        return ""
 
-    def _card_choose_folder(self):
-        folder = filedialog.askdirectory(title="MD 파일이 있는 글 폴더 선택", initialdir=FINAL_POSTS_DIR)
-        if not folder:
-            return ""
-        if not any(fn.endswith(".md") for fn in os.listdir(folder)):
-            messagebox.showwarning("MD 없음", "이 폴더에 .md 파일이 없습니다. 글 폴더를 다시 골라 주세요.")
-            return ""
-        self._card_folder_override = folder
-        self._card_show_folder()
-        return folder
+    def _card_open_md_folder(self):
+        folder = self._card_md_folder()
+        if folder:
+            self._open_folder(folder)
 
     def _card_work_dir(self, md_folder: str) -> str:
         return os.path.join(md_folder, CARD_WORK_SUBFOLDER)

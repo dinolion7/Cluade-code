@@ -9607,14 +9607,13 @@ class App(tk.Tk):
         self.card_folder_var = tk.StringVar(value="")
         ttk.Label(r7, textvariable=self.card_folder_var, style="Info.TLabel").pack(side="left")
         ttk.Button(r7, text="_카드작업 폴더 열기", command=self._card_open_work).pack(side="right")
-        ttk.Button(r7, text="글 폴더 바꾸기", command=self._card_choose_folder).pack(side="right", padx=(0, 6))
+        ttk.Button(r7, text="📁 MD파일 저장폴더 열기", command=self._card_open_md_folder).pack(side="right", padx=(0, 6))
         ttk.Label(body, style="Info.TLabel", justify="left", text=(
             "· 글 폴더 = 4)최종각색에서 방금 저장한 글 폴더(MD와 완성 이미지가 들어가는 곳).\n"
             "· ②를 비워 두면 그 글 폴더의 _카드작업 폴더에 넣어 둔 답변 파일(.txt/.md/.json)을 읽고, "
             "④를 고르지 않으면 _카드작업 폴더의 가장 최근 그림을 씁니다.")).grid(row=8, column=0, sticky="w", pady=(2, 0))
 
         self._card_bg_path = ""
-        self._card_folder_override = ""
         self._card_scene = ""
         self._toggle_card_panel(save=False)
 
@@ -9626,7 +9625,7 @@ class App(tk.Tk):
     def _card_show_folder(self):
         """작은 안내 줄의 글 폴더 표시를 지금 기준으로 갱신한다."""
         folder = self._card_md_folder(ask=False)
-        self.card_folder_var.set(f"글 폴더: {folder}" if folder else "글 폴더: (아직 없음 — ⑤를 누르면 고르게 합니다)")
+        self.card_folder_var.set(f"글 폴더: {folder}" if folder else "글 폴더: (아직 없음 — 4)최종각색에서 MD 파일을 먼저 저장하세요)")
 
     def _toggle_card_panel(self, save=True):
         if self.card_panel_on.get():
@@ -9640,27 +9639,19 @@ class App(tk.Tk):
             save_config(cfg)
 
     def _card_md_folder(self, ask=True) -> str:
-        """카드를 넣을 글 폴더(MD가 있는 제목별 폴더). 직접 고른 폴더 > 방금 저장한 글 폴더."""
-        for folder in (self._card_folder_override, self.last_saved_folder):
-            if folder and os.path.isdir(folder):
-                return folder
-        if not ask:
-            return ""
-        messagebox.showinfo("글 폴더 선택", "4)최종각색에서 저장한 글 폴더(MD 파일이 있는 제목 폴더)를 골라 주세요.")
-        return self._card_choose_folder() or ""
+        """카드를 넣을 글 폴더 = 4)최종각색에서 저장한 글 폴더(키워드 등록이 읽는 곳 그대로)."""
+        folder = self.last_saved_folder
+        if folder and os.path.isdir(folder):
+            return folder
+        if ask:
+            messagebox.showwarning("글 폴더 없음", "4)최종각색에서 MD 파일을 먼저 저장하세요.\n"
+                                   "(이력관리에서 글을 다시 불러온 경우에도 그 글의 저장 폴더를 씁니다)")
+        return ""
 
-    def _card_choose_folder(self):
-        cfg = load_config()
-        folder = filedialog.askdirectory(title="MD 파일이 있는 글 폴더 선택",
-                                         initialdir=self.last_saved_folder or cfg.get("output_dir", OUTPUT_DIR))
-        if not folder:
-            return ""
-        if not any(fn.endswith(".md") for fn in os.listdir(folder)):
-            messagebox.showwarning("MD 없음", "이 폴더에 .md 파일이 없습니다. 글 폴더를 다시 골라 주세요.")
-            return ""
-        self._card_folder_override = folder
-        self._card_show_folder()
-        return folder
+    def _card_open_md_folder(self):
+        folder = self._card_md_folder()
+        if folder:
+            open_folder(folder)
 
     def _card_work_dir(self, md_folder: str) -> str:
         return os.path.join(md_folder, CARD_WORK_SUBFOLDER)

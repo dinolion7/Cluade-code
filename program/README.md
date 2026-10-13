@@ -71,7 +71,7 @@
 3. **배경 그림** — 퍼플렉시티 등에서 그린 글자 없는 그림을 "🖼 배경 그림 선택"으로 고르거나 `_카드작업`에 넣는다(이름 무관, png·jpg·webp — 가장 최근 그림을 쓴다).
 4. **🧩 카드 만들기 → MD 폴더에 넣기** — `Naver_blog_SVG Card_images/cards/make_cards.py`를 실행(Playwright + 크롬)해 `_카드작업/out`에 PNG를 만들고, 설계도의 `heading`으로 MD 소제목을 찾아 **제목·소제목 이름(분할은 `_1`·`_2`)으로 글 폴더에 복사**한다. 이름 규칙은 기존과 같아(정책: 8)키워드 등록 `_copy_matched_assets`, 복지로: ⑥ [복사] 버튼) 키워드 등록·포스팅 프로그램이 그대로 찾는다. 넣기 전에 목록을 보여 주고 묻는다. 같은 이름의 기존 그림은 `_카드작업/_이전이미지`로 옮긴다. 소제목을 못 찾은 그림은 `out`에만 남기고 알린다. "썸네일만 다시"도 있다.
 
-- 글 폴더: 정책 = 4탭에서 방금 저장한 글 폴더(없으면 고르기), 복지로 = ⑥에서 고른 서비스의 `final_posts/{제목}`. "📂 글 폴더 바꾸기"로 직접 고를 수 있다.
+- 글 폴더(결과 이미지가 들어가는 곳): 정책 = 4탭에서 저장한 글 폴더, 복지로 = ⑥에서 고른 서비스의 `final_posts/{제목}` — 키워드 등록이 읽는 폴더 그대로이고 다른 폴더로 바꿀 수 없다. "📁 MD파일 저장폴더 열기"로 결과를 확인한다.
 - 설정 탭: 카드용 프롬프트 파일명, `Naver_blog_SVG Card_images` 폴더(기본: 프로그램 폴더의 `Naver_blog_SVG Card_images`), 크롬 경로(비우면 Windows 기본 설치 위치의 크롬 → 그것도 없으면 Playwright 크롬).
 - 준비(처음 한 번): `pip install playwright`. 크롬이 깔려 있지 않으면 `python -m playwright install chromium`. exe로 묶어 실행하면 이 기능은 쓸 수 없다(.py로 실행).
 - 도구 폴더 이름은 `Naver_blog_SVG Card_images`(사용자 요청, 받을 때 이름 `blog-images`). 설정 칸을 비우면 프로그램 폴더의 이 폴더를 쓰고, 없으면 예전 이름 `blog-images` 폴더를 쓴다. 폴더에는 실행에 필요한 것만 둔다: `cards/make_cards.py`, `cards/icons.py`, `fonts/`(글꼴 + `local.css` + 글꼴 사용 허가문 `OFL.txt` — 글꼴을 함께 배포할 때 같이 두어야 함).
