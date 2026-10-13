@@ -10846,14 +10846,14 @@ class WelfareCollectorGUI(tk.Tk):
 
     # ── [Ver10.07 신규] ⑥ 인포그래픽 작업: 코드 카드(선택) ──
     def _build_card_panel(self, parent, row):
-        """기존 STEP은 그대로 두고, 체크를 켤 때만 보이는 코드 카드 칸. 위에서 아래로 ①→⑤ 순서."""
+        """기존 STEP은 그대로 두고, 체크를 켤 때만 보이는 코드 카드 칸. 위에서 아래로 ①→④ 순서."""
         wrap = ttk.Frame(parent)
         wrap.grid(row=row, column=0, sticky="ew", pady=(6, 0))
         wrap.columnconfigure(0, weight=1)
         self.card_panel_on = tk.BooleanVar(value=bool(load_config().get("card_panel_on", False)))
         ttk.Checkbutton(wrap, text="🧩 코드 카드 (선택) — 썸네일 배경 그림만 AI로, 글자·소제목 인포그래픽은 코드로 만들기",
                         variable=self.card_panel_on, command=self._toggle_card_panel).grid(row=0, column=0, sticky="w")
-        body = ttk.LabelFrame(wrap, text="코드 카드 — ①부터 ⑤까지 순서대로", padding=6)
+        body = ttk.LabelFrame(wrap, text="코드 카드 — ①부터 ④까지 순서대로", padding=6)
         self._card_body = body
         body.columnconfigure(0, weight=1)
 
@@ -10864,37 +10864,31 @@ class WelfareCollectorGUI(tk.Tk):
                    command=lambda: self._copy_card_prompt(False)).pack(side="left", padx=(0, 6))
         ttk.Button(r1, text="① 프롬프트만 복사 (최종각색을 쓴 그 대화창에 이어서)",
                    command=lambda: self._copy_card_prompt(True)).pack(side="left", padx=(0, 6))
-        ttk.Label(r1, text="→ Claude에 붙여넣기", foreground="gray").pack(side="left")
+        ttk.Label(r1, text="→ Claude에 붙여넣기. 답변의 장면 프롬프트 블럭은 퍼플렉시티로, 맨 끝 JSON 블럭은 ②로", foreground="gray").pack(side="left")
         self.card_copy_status = ttk.Label(r1, text="", foreground="darkgreen")
         self.card_copy_status.pack(side="left", padx=(8, 0))
 
         # ② Claude 답변 전체 붙여넣기
         r2 = ttk.Frame(body)
         r2.grid(row=1, column=0, sticky="ew", pady=(8, 0))
-        ttk.Label(r2, text="② Claude 답변 전체를 아래 칸에 붙여넣으세요 (JSON 블럭만 넣어도 됩니다)").pack(side="left")
+        ttk.Label(r2, text="② Claude 답변의 JSON 블럭을 아래 칸에 붙여넣으세요 (답변 전체를 넣어도 됩니다)").pack(side="left")
         ttk.Button(r2, text="지우기", command=self._card_clear_answer).pack(side="right")
         ttk.Button(r2, text="② 클립보드 내용 붙여넣기", command=self._card_paste_answer).pack(side="right", padx=(0, 6))
         self.card_answer_text = scrolledtext.ScrolledText(body, height=4, wrap="word", font=("맑은 고딕", 9))
         self.card_answer_text.grid(row=2, column=0, sticky="ew", pady=(2, 0))
 
-        # ③ 썸네일 장면 프롬프트 → 퍼플렉시티
-        r3 = ttk.Frame(body)
-        r3.grid(row=3, column=0, sticky="ew", pady=(8, 0))
-        ttk.Button(r3, text="③ 썸네일 장면 프롬프트 복사", command=self._card_copy_scene).pack(side="left", padx=(0, 6))
-        ttk.Label(r3, text="→ 퍼플렉시티에 붙여넣어 글자 없는 그림을 만들고 내려받기", foreground="gray").pack(side="left")
-
-        # ④ 퍼플렉시티 그림 선택
+        # ③ 퍼플렉시티 그림 선택
         r4 = ttk.Frame(body)
-        r4.grid(row=4, column=0, sticky="ew", pady=(8, 0))
-        ttk.Button(r4, text="④ 퍼플렉시티 그림 선택…", command=self._card_pick_background).pack(side="left", padx=(0, 6))
-        ttk.Button(r4, text="📁 원본 이미지 폴더 열기", command=self._card_open_work).pack(side="left", padx=(0, 8))
-        self.card_bg_var = tk.StringVar(value="원본 이미지: 없음")
+        r4.grid(row=3, column=0, sticky="ew", pady=(8, 0))
+        ttk.Button(r4, text="③ 퍼플렉시티 그림 선택…", command=self._card_pick_background).pack(side="left", padx=(0, 6))
+        ttk.Button(r4, text="📁 카드 작업폴더 열기", command=self._card_open_work).pack(side="left", padx=(0, 8))
+        self.card_bg_var = tk.StringVar(value="퍼플렉시티 그림: 없음")
         ttk.Label(r4, textvariable=self.card_bg_var).pack(side="left")
 
-        # ⑤ 카드 만들기
+        # ④ 카드 만들기
         r5 = ttk.Frame(body)
-        r5.grid(row=5, column=0, sticky="ew", pady=(8, 0))
-        self.card_make_btn = ttk.Button(r5, text="⑤ 카드 만들기 → MD 폴더에 넣기",
+        r5.grid(row=4, column=0, sticky="ew", pady=(8, 0))
+        self.card_make_btn = ttk.Button(r5, text="④ 카드 만들기 → MD 폴더에 넣기",
                                         command=lambda: self._card_make(None))
         self.card_make_btn.pack(side="left", padx=(0, 6))
         ttk.Button(r5, text="썸네일만 다시 만들기", command=lambda: self._card_make(["00_thumbnail"])).pack(side="left")
@@ -10909,16 +10903,14 @@ class WelfareCollectorGUI(tk.Tk):
         ttk.Label(r7, textvariable=self.card_folder_var, foreground="gray").pack(side="left")
         ttk.Label(body, foreground="gray", justify="left", text=(
             "· 글 폴더 = 위에서 고른 서비스의 final_posts 폴더(MD와 완성 이미지가 들어가는 곳) — 맨 위 '📁 최종각색된 MD파일이 저장된 폴더 열기'로 확인.\n"
-            "· ④는 고른 그림을 원본 이미지 폴더(글 폴더 안 _카드작업)에 복사합니다. 내려받은 그림을 그 폴더에 직접 넣어도 되고, "
-            "⑤는 그 폴더의 가장 최근 그림을 씁니다.\n"
-            "· ②를 비워 두면 원본 이미지 폴더에 넣어 둔 답변 파일(.txt/.md/.json)을 읽습니다.")).grid(row=8, column=0, sticky="w", pady=(2, 0))
+            "· ③은 고른 그림을 카드 작업폴더(글 폴더 안 _카드작업)에 복사합니다. 내려받은 그림을 그 폴더에 직접 넣어도 되고, "
+            "④는 그 폴더의 가장 최근 그림을 씁니다.\n"
+            "· ②를 비워 두면 카드 작업폴더에 넣어 둔 JSON·답변 파일(.json/.txt/.md)을 읽습니다.")).grid(row=8, column=0, sticky="w", pady=(2, 0))
 
-        self._card_scene = ""
         self._toggle_card_panel(save=False)
 
     def _card_clear_answer(self):
         self.card_answer_text.delete("1.0", "end")
-        self._card_scene = ""
         self.card_status_var.set("")
 
     def _card_show_folder(self):
@@ -10973,23 +10965,23 @@ class WelfareCollectorGUI(tk.Tk):
         self.card_answer_text.delete("1.0", "end")
         self.card_answer_text.insert("1.0", text)
         scene, spec, err = card_parse_answer(text)
-        self._card_scene = scene or self._card_scene
         n = len(spec["images"]) if spec else 0
         if err:
             self.card_status_var.set(f"⚠ 붙여넣은 내용에서 설계도를 읽지 못했습니다: {err}")
         else:
-            self.card_status_var.set(f"✅ ② 완료 — 이미지 {n}장 설계도"
-                                     + (". 다음: ③ 썸네일 장면 프롬프트 복사" if scene else
-                                        " (장면 프롬프트는 칸에 없음 — Claude 화면에서 직접 복사해 퍼플렉시티로)"))
+            notes = spec.get("notes") if isinstance(spec.get("notes"), dict) else {}
+            extra = "".join(f" / {lab}: {notes[k]}" for k, lab in (("omitted", "생략"), ("icons_needed", "아이콘 추가 필요"))
+                            if notes.get(k))
+            self.card_status_var.set(f"✅ ② 완료 — 이미지 {n}장 설계도{extra}. 다음: ③ 퍼플렉시티 그림 선택")
 
     def _card_pick_background(self):
-        """④ 내려받은 퍼플렉시티 그림을 골라 원본 이미지 폴더(_카드작업)에 바로 복사한다."""
+        """③ 내려받은 퍼플렉시티 그림을 골라 카드 작업폴더(_카드작업)에 바로 복사한다."""
         folder = self._card_md_folder()
         if not folder:
             return
         # 퍼플렉시티 그림은 보통 다운로드 폴더에 저장되므로 거기서 연다.
         downloads = os.path.join(os.path.expanduser("~"), "Downloads")
-        path = filedialog.askopenfilename(title="④ 퍼플렉시티 그림 선택 (글자 없는 그림)",
+        path = filedialog.askopenfilename(title="③ 퍼플렉시티 그림 선택 (글자 없는 그림)",
                                           initialdir=downloads if os.path.isdir(downloads) else os.path.expanduser("~"),
                                           filetypes=[("이미지", "*.png *.jpg *.jpeg *.webp"), ("모든 파일", "*.*")])
         if not path:
@@ -11001,21 +10993,8 @@ class WelfareCollectorGUI(tk.Tk):
             shutil.copy(path, dst)   # copy2가 아니라 copy — 지금 시각으로 저장돼 "가장 최근 그림"이 된다
         else:
             os.utime(dst, None)
-        self.card_bg_var.set(f"원본 이미지: {os.path.basename(path)}")
-        self.card_status_var.set("✅ ④ 완료 — 원본 이미지 폴더에 복사했습니다. 다음: ⑤ 카드 만들기")
-
-    def _card_copy_scene(self):
-        scene = self._card_scene
-        if not scene:
-            scene, _, _ = card_parse_answer(self.card_answer_text.get("1.0", "end"))
-        if not scene:
-            messagebox.showinfo("알림", "② 칸의 Claude 답변에서 썸네일 장면 프롬프트를 찾지 못했습니다.\n"
-                                "('파일명 식별자: 00_thumbnail_scene' 바로 위 블럭) — Claude 화면에서 그 블럭을 직접 복사하세요.")
-            return
-        self._card_scene = scene
-        self.clipboard_clear()
-        self.clipboard_append(scene)
-        self.card_status_var.set("✅ ③ 복사 완료 — 퍼플렉시티에 붙여넣어 그림을 만들고 내려받으세요. 다음: ④ 퍼플렉시티 그림 선택")
+        self.card_bg_var.set(f"퍼플렉시티 그림: {os.path.basename(path)}")
+        self.card_status_var.set("✅ ③ 완료 — 카드 작업폴더에 복사했습니다. 다음: ④ 카드 만들기")
 
     def _copy_card_prompt(self, simplified: bool):
         cfg = load_config()
@@ -11076,15 +11055,13 @@ class WelfareCollectorGUI(tk.Tk):
         else:
             ans_path = card_find_answer_file(work)
             if not ans_path:
-                messagebox.showwarning("답변 없음", "② 칸에 Claude 답변을 붙여넣어 주세요.\n"
+                messagebox.showwarning("답변 없음", "② 칸에 Claude 답변의 JSON 블럭을 붙여넣어 주세요.\n"
                                        "(또는 글 폴더의 _카드작업 폴더에 답변 파일 .txt/.md/.json을 넣어 두세요)")
                 return
             with open(ans_path, "r", encoding="utf-8") as f:
                 answer = f.read()
             source = os.path.basename(ans_path)
         scene, spec, err = card_parse_answer(answer)
-        if scene:
-            self._card_scene = scene
         if err:
             req = ("JSON 설계도를 코드블럭 하나로 다시 출력해줘" if "코드블럭이 없" in err
                    else f"JSON 문법만 고쳐서 코드블럭 하나로 다시 출력해줘 (오류: {err})")
@@ -11098,7 +11075,7 @@ class WelfareCollectorGUI(tk.Tk):
         has_thumb = any(i.get("layout") == "thumbnail" for i in spec["images"])
         if has_thumb and not bg and (not only or "00_thumbnail" in only):
             if not messagebox.askyesno("배경 그림 없음",
-                    "썸네일에 쓸 퍼플렉시티 그림이 없습니다('④ 퍼플렉시티 그림 선택'으로 고르세요).\n"
+                    "썸네일에 쓸 퍼플렉시티 그림이 없습니다('③ 퍼플렉시티 그림 선택'으로 고르세요).\n"
                     "배경 없이 썸네일을 만들까요?"):
                 return
         spec_path, bg_name = card_prepare_spec(spec, work, bg)
