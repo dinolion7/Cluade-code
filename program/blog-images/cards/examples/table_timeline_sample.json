@@ -1,0 +1,29 @@
+{
+  "post": "레이아웃 테스트",
+  "images": [
+    {
+      "file": "t1_table",
+      "layout": "table",
+      "title": [["한도 ", "white"], ["넘는 돈", "green"], [" 어디로 갈까", "white"]],
+      "columns": ["구분", "생계비계좌", "관리계좌"],
+      "rows": [
+        ["예치 범위", [["한도", "amber"], ["까지", "charcoal"]], [["넘는 ", "charcoal"], ["나머지", "amber"]]],
+        ["한도", [["250만 원", "amber"]], "-"],
+        ["명의", "본인", "본인"]
+      ],
+      "highlight_row": 0,
+      "caption": "본문 기준 정리",
+      "conclusion": [["관리계좌", "green"], ["를 지정해야 나눠 받아요", "charcoal"]]
+    },
+    {
+      "file": "t2_timeline",
+      "layout": "timeline",
+      "title": [["생계비계좌 ", "white"], ["일정", "green"], [" 한눈에", "white"]],
+      "events": [
+        {"date": "2026년 2월", "text": [["생계비계좌 도입", "charcoal"]], "icon": "passbook"},
+        {"date": "2026년 10월 6일", "text": [["개정안 국무회의 의결", "charcoal"]], "icon": "document"},
+        {"date": "2027년 1월 1일", "text": [["시행", "green"], [" · 약관 갱신·지정", "charcoal"]], "icon": "desk_calendar_red", "highlight": true}
+      ]
+    }
+  ]
+}

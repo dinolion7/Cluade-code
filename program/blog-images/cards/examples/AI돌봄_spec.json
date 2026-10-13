@@ -1,0 +1,546 @@
+{
+  "post": "AI 돌봄 서비스 '바로 쓰는 줄 알았는데', 시범사업 거치면 노인 다음 장애인도 대상이 될까?",
+  "images": [
+    {
+      "file": "00_thumbnail",
+      "layout": "thumbnail",
+      "shape": "wall",
+      "background": "AI돌봄_thumb_bg.webp",
+      "lines": [
+        [
+          [
+            "AI 돌봄 서비스",
+            "white"
+          ]
+        ],
+        [
+          [
+            "2027년",
+            "amber"
+          ],
+          [
+            " 연구개발",
+            "white"
+          ]
+        ],
+        [
+          [
+            "아직은 ",
+            "white"
+          ],
+          [
+            "개발 단계",
+            "green"
+          ]
+        ]
+      ],
+      "badge": "새 정책 · 10월 6일 발표"
+    },
+    {
+      "file": "01_smart_home",
+      "layout": "before_after",
+      "heading": "스마트 홈은 기존 재가 돌봄과 무엇이 다를까?",
+      "title": [
+        [
+          "AI가 평소와 다른 점을 ",
+          "white"
+        ],
+        [
+          "먼저 감지",
+          "green"
+        ]
+      ],
+      "left": {
+        "label": "기존",
+        "text": [
+          [
+            "움직임 미감지·응급호출\n개별 정보로 위기 확인",
+            "charcoal"
+          ]
+        ],
+        "icon": "warning",
+        "image": "slot_기존돌봄.png"
+      },
+      "right": {
+        "label": "앞으로",
+        "text": [
+          [
+            "생활패턴·건강상태·대화\n종합 분석 → ",
+            "charcoal"
+          ],
+          [
+            "조기 감지",
+            "green"
+          ]
+        ],
+        "icon": "heart_pulse",
+        "image": "slot_스마트홈.png"
+      },
+      "footers": [
+        {
+          "tone": "info",
+          "icon": "house",
+          "text": "정부 용어: 스마트 홈"
+        }
+      ]
+    },
+    {
+      "file": "02_stage",
+      "layout": "steps",
+      "align": "left",
+      "card_tone": "pastel",
+      "heading": "AI 돌봄 서비스는 지금 바로 이용할 수 있을까?",
+      "title": [
+        [
+          "AI 돌봄, 지금은 ",
+          "white"
+        ],
+        [
+          "개발·검증",
+          "green"
+        ],
+        [
+          " 단계",
+          "white"
+        ]
+      ],
+      "steps": [
+        {
+          "icon": "ai",
+          "text": [
+            [
+              "모델 개발",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "magnifier",
+          "text": [
+            [
+              "시범사업 성과 검증",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "chart",
+          "text": [
+            [
+              "단계적 확산",
+              "green"
+            ]
+          ]
+        }
+      ],
+      "footers": [
+        {
+          "tone": "unknown",
+          "text": "시범사업 시기·지역·이용 비용은 발표에 없음"
+        }
+      ]
+    },
+    {
+      "file": "03_expand",
+      "layout": "compare",
+      "card_tone": "pastel",
+      "heading": "재가 돌봄 대상이 노인에서 장애인으로 넓어질까?",
+      "title": [
+        [
+          "재가 돌봄, ",
+          "white"
+        ],
+        [
+          "장애인",
+          "green"
+        ],
+        [
+          "까지 넓힐 계획",
+          "white"
+        ]
+      ],
+      "left": {
+        "label": "대상",
+        "tone": "blue",
+        "head": [
+          [
+            "노인 → ",
+            "charcoal"
+          ],
+          [
+            "장애인",
+            "green"
+          ]
+        ],
+        "icon": "people"
+      },
+      "right": {
+        "label": "장소",
+        "tone": "green",
+        "head": [
+          [
+            "가정 →\n",
+            "charcoal"
+          ],
+          [
+            "복지관·주간보호센터",
+            "green"
+          ],
+          [
+            " 등",
+            "charcoal"
+          ]
+        ],
+        "icon": "facility"
+      },
+      "footers": [
+        {
+          "tone": "unknown",
+          "text": "장애인 적용 시기는 발표에 없음"
+        }
+      ]
+    },
+    {
+      "file": "04_night",
+      "layout": "before_after",
+      "heading": "시설 야간 순회는 어떻게 달라질까?",
+      "title": [
+        [
+          "야간 순회, ",
+          "white"
+        ],
+        [
+          "센서",
+          "green"
+        ],
+        [
+          "로 줄이는 모델",
+          "white"
+        ]
+      ],
+      "left": {
+        "label": "기존",
+        "text": [
+          [
+            "2시간",
+            "amber"
+          ],
+          [
+            "마다\n직접 순회",
+            "charcoal"
+          ]
+        ],
+        "icon": "clock",
+        "image": "slot_야간순회.png"
+      },
+      "right": {
+        "label": "스마트 시설",
+        "text": [
+          [
+            "감지센서로\n",
+            "charcoal"
+          ],
+          [
+            "한곳에서 상태 확인",
+            "green"
+          ]
+        ],
+        "icon": "monitor",
+        "image": "slot_스마트시설.png"
+      },
+      "footers": [
+        {
+          "tone": "point",
+          "icon": "facility",
+          "text": [
+            [
+              "인구감소지역 국공립 장기요양시설부터\n→ ",
+              "charcoal"
+            ],
+            [
+              "민간시설 확산",
+              "green"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "file": "05_rnd",
+      "layout": "badges",
+      "card_tone": "pastel",
+      "heading": "돌봄기술 연구개발과 돌봄로봇은 언제부터 추진될까?",
+      "title": [
+        [
+          "돌봄기술 연구개발, ",
+          "white"
+        ],
+        [
+          "2027년",
+          "amber"
+        ],
+        [
+          " 시작",
+          "white"
+        ]
+      ],
+      "items": [
+        {
+          "badge": "2027년",
+          "badge_color": "amber",
+          "text": [
+            [
+              "AI·IoT 돌봄기술 ",
+              "charcoal"
+            ],
+            [
+              "연구개발",
+              "green"
+            ]
+          ],
+          "icon": "gear"
+        },
+        {
+          "badge": "2028년",
+          "badge_color": "amber",
+          "text": [
+            [
+              "피지컬 AI·로봇 분야로 ",
+              "charcoal"
+            ],
+            [
+              "확대",
+              "green"
+            ]
+          ],
+          "icon": "robot"
+        },
+        {
+          "badge": "장기",
+          "badge_color": "green",
+          "text": [
+            [
+              "가정용 자율추종 로봇·돌봄로봇",
+              "charcoal"
+            ]
+          ],
+          "icon": "house"
+        }
+      ],
+      "footers": [
+        {
+          "tone": "unknown",
+          "text": "로봇 도입 시점은 발표에 없음"
+        }
+      ]
+    },
+    {
+      "file": "06_welfare",
+      "layout": "badges",
+      "connector": "arrows",
+      "card_tone": "pastel",
+      "heading": "복지서비스 추천과 신청도 AI가 맡게 될까? (1/2)",
+      "title": [
+        [
+          "복지서비스, AI가 찾고 ",
+          "white"
+        ],
+        [
+          "신청",
+          "green"
+        ],
+        [
+          "까지",
+          "white"
+        ]
+      ],
+      "items": [
+        {
+          "badge": "2027년",
+          "badge_color": "amber",
+          "text": [
+            [
+              "일상적인 말로 상황 설명\n→ 생성형 AI 추천",
+              "charcoal"
+            ]
+          ],
+          "icon": "smartphone"
+        },
+        {
+          "badge": "이후",
+          "badge_color": "blue",
+          "text": [
+            [
+              "원클릭 신청",
+              "green"
+            ]
+          ],
+          "icon": "doc_check"
+        },
+        {
+          "badge": "우선 추진",
+          "badge_color": "green",
+          "text": [
+            [
+              "아동수당 등 보편급여 ",
+              "charcoal"
+            ],
+            [
+              "자동지급",
+              "green"
+            ]
+          ],
+          "icon": "calendar_green:1"
+        }
+      ],
+      "footers": [
+        {
+          "tone": "unknown",
+          "text": "원클릭·자동지급 일정은 발표에 없음"
+        }
+      ]
+    },
+    {
+      "file": "07_admin",
+      "layout": "bento",
+      "heading": "복지서비스 추천과 신청도 AI가 맡게 될까? (2/2)",
+      "title": [
+        [
+          "복지행정 ",
+          "white"
+        ],
+        [
+          "50% 이상",
+          "amber"
+        ],
+        [
+          " AI 자동화",
+          "white"
+        ]
+      ],
+      "hero": {
+        "tone": "yellow",
+        "text": [
+          [
+            "50%\n이상",
+            "amber"
+          ]
+        ],
+        "sub": [
+          [
+            "정형화된 복지행정 업무\n",
+            "charcoal"
+          ],
+          [
+            "AI 자동화",
+            "green"
+          ]
+        ],
+        "note": "2028년까지"
+      },
+      "side": [
+        {
+          "icon": "magnifier",
+          "tone": "blue",
+          "text": [
+            [
+              "서류 접수·검증,\n시스템 입력",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "ai",
+          "tone": "green",
+          "text": [
+            [
+              "단순·반복 업무를\nAI가 분담",
+              "charcoal"
+            ]
+          ]
+        }
+      ],
+      "footers": [
+        {
+          "tone": "danger",
+          "icon": "shield",
+          "text": [
+            [
+              "복지·돌봄 마이데이터: ",
+              "charcoal"
+            ],
+            [
+              "본인 동의 기반 조회·관리",
+              "green"
+            ]
+          ],
+          "note": "도입 시점은 발표에 없음"
+        }
+      ]
+    },
+    {
+      "file": "08_check",
+      "layout": "checks",
+      "numbered": true,
+      "heading": "AI 돌봄 서비스가 우리 집에 오기 전 확인할 것",
+      "title": [
+        [
+          "AI 돌봄 오기 전 확인할 ",
+          "white"
+        ],
+        [
+          "4가지",
+          "amber"
+        ]
+      ],
+      "items": [
+        {
+          "icon": "house",
+          "head": [
+            [
+              "재가 돌봄인지 시설인지 구분",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "facility",
+          "head": [
+            [
+              "인구감소지역 국공립\n장기요양시설 해당 확인",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "calendar_green:1",
+          "head": [
+            [
+              "2027년",
+              "amber"
+            ],
+            [
+              " AI 복지서비스\n추천 소식 확인",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "phone",
+          "head": [
+            [
+              "세부 내용 문의",
+              "charcoal"
+            ]
+          ],
+          "text": [
+            [
+              "044-202-3241",
+              "amber"
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

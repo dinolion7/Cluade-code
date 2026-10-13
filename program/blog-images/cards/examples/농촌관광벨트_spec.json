@@ -1,0 +1,357 @@
+{
+  "post": "농촌관광벨트 '숙박 식사까지 들어갔네', 1박 2일 농촌 여행 예약은 어디서 할 수 있을까?",
+  "images": [
+    {
+      "file": "00_thumbnail",
+      "layout": "thumbnail",
+      "shape": "slant",
+      "align": "left",
+      "background": "농촌관광벨트_thumb_bg.webp",
+      "lines": [
+        [
+          [
+            "농촌관광벨트",
+            "white"
+          ]
+        ],
+        [
+          [
+            "10만",
+            "amber"
+          ],
+          [
+            " 원대 초반",
+            "white"
+          ]
+        ],
+        [
+          [
+            "가이드까지 ",
+            "white"
+          ],
+          [
+            "포함",
+            "green"
+          ]
+        ]
+      ],
+      "badge": "새 정책 · 10월 8일 시범 운영"
+    },
+    {
+      "file": "01_what",
+      "layout": "bento",
+      "heading": "농촌관광벨트 특화 여행상품은 정확히 무엇일까?",
+      "title": [
+        [
+          "농촌관광벨트 1박 2일 상품의 ",
+          "white"
+        ],
+        [
+          "정체",
+          "green"
+        ]
+      ],
+      "hero": {
+        "text": [
+          [
+            "11개\n",
+            "amber"
+          ],
+          [
+            "코스",
+            "charcoal"
+          ]
+        ]
+      },
+      "side": [
+        {
+          "icon": "calendar_red:2",
+          "text": [
+            [
+              "1박 2일\n단체여행",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "house",
+          "text": [
+            [
+              "2026년 10월 8일\n시범 운영 시작",
+              "charcoal"
+            ]
+          ]
+        }
+      ],
+      "band": {
+        "image": "slot_농촌풍경.png",
+        "icon": "bus"
+      },
+      "footers": [
+        {
+          "tone": "good",
+          "icon": null,
+          "text": [
+            [
+              "시·군 경계를 넘은 ",
+              "charcoal"
+            ],
+            [
+              "광역",
+              "green"
+            ],
+            [
+              " 단위 여행",
+              "charcoal"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "file": "02_where",
+      "layout": "grid",
+      "heading": "1박 2일 농촌 여행은 어디서 예약할 수 있을까?",
+      "title": [
+        [
+          "농촌 1박 2일 ",
+          "white"
+        ],
+        [
+          "예약",
+          "green"
+        ],
+        [
+          " 창구",
+          "white"
+        ]
+      ],
+      "items": [
+        {
+          "icon": "smartphone",
+          "text": "네이버스토어"
+        },
+        {
+          "icon": "monitor",
+          "text": "웹투어"
+        },
+        {
+          "icon": "suitcase",
+          "text": "참좋은여행"
+        },
+        {
+          "icon": "map_pin",
+          "text": "노랑풍선"
+        },
+        {
+          "icon": "ticket",
+          "text": "교원투어"
+        }
+      ],
+      "footers": [
+        {
+          "tone": "good",
+          "icon": "monitor",
+          "text": [
+            [
+              "등 판매채널에서 예약 · 정보는 ",
+              "charcoal"
+            ],
+            [
+              "웰촌",
+              "green"
+            ]
+          ],
+          "note": "www.welchon.com"
+        }
+      ]
+    },
+    {
+      "file": "03_included",
+      "layout": "list",
+      "heading": "농촌체험휴양마을 숙박과 식사는 가격에 포함일까?",
+      "title": [
+        [
+          "상품 가격에 ",
+          "white"
+        ],
+        [
+          "포함",
+          "green"
+        ],
+        [
+          "된 것",
+          "white"
+        ]
+      ],
+      "items": [
+        {
+          "icon": "bus",
+          "text": "리무진 버스 왕복"
+        },
+        {
+          "icon": "house",
+          "text": [
+            [
+              "숙박 ",
+              "charcoal"
+            ],
+            [
+              "2인 1실",
+              "amber"
+            ],
+            [
+              " 기준",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "meal",
+          "text": "일정표에 적힌 식사"
+        },
+        {
+          "icon": "ticket",
+          "text": "체험비·입장료·인솔 가이드"
+        }
+      ],
+      "footers": [
+        {
+          "tone": "good",
+          "text": "일정표에 명기된 식사까지가 포함"
+        }
+      ]
+    },
+    {
+      "file": "04_excluded",
+      "layout": "list",
+      "heading": "10만 원대 초반 가격에 들어가지 않는 비용은 뭘까?",
+      "title": [
+        [
+          "10만 원대",
+          "amber"
+        ],
+        [
+          " 초반 가격의 ",
+          "white"
+        ],
+        [
+          "불포함",
+          "green"
+        ],
+        [
+          " 항목",
+          "white"
+        ]
+      ],
+      "items": [
+        {
+          "icon": "shield",
+          "text": "국내 여행자보험"
+        },
+        {
+          "icon": "wallet",
+          "text": "개인 경비·일정 외 자유식사"
+        },
+        {
+          "icon": "bed",
+          "text": "1인 1실 추가요금"
+        },
+        {
+          "icon": "airplane",
+          "text": "제주 코스 왕복 항공권"
+        }
+      ],
+      "footers": [
+        {
+          "tone": "point",
+          "icon": "info",
+          "text": [
+            [
+              "포스터 표기 1인 ",
+              "charcoal"
+            ],
+            [
+              "10~13만원대",
+              "amber"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "file": "05_depart",
+      "layout": "compare",
+      "heading": "어느 지역 코스가 있고 언제 출발할까?",
+      "title": [
+        [
+          "어디서, 언제 ",
+          "white"
+        ],
+        [
+          "출발",
+          "green"
+        ],
+        [
+          "할까",
+          "white"
+        ]
+      ],
+      "left": {
+        "head": [
+          [
+            "서울 출발\n",
+            "charcoal"
+          ],
+          [
+            "10개",
+            "amber"
+          ],
+          [
+            "\n상품",
+            "charcoal"
+          ]
+        ],
+        "icon": "bus"
+      },
+      "right": {
+        "tone": "danger",
+        "head": [
+          [
+            "제주 상품\n",
+            "charcoal"
+          ],
+          [
+            "제주공항",
+            "coral"
+          ],
+          [
+            "에서\n집결",
+            "charcoal"
+          ]
+        ],
+        "icon": "airplane"
+      },
+      "footers": [
+        {
+          "tone": "good",
+          "icon": "calendar_red:2",
+          "text": [
+            [
+              "매주 수요일·토요일 ",
+              "charcoal"
+            ],
+            [
+              "주 2회",
+              "amber"
+            ],
+            [
+              " 출발",
+              "charcoal"
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

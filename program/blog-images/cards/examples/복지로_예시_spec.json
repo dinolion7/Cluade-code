@@ -1,0 +1,24 @@
+{
+  "post": "복지로 시리즈 레이아웃 예시 (자리 표시 글자)",
+  "series": "welfare",
+  "images": [
+    {"file": "00_thumbnail", "layout": "thumbnail", "shape": "wave", "background": "복지로_thumb_bg_예시.webp",
+     "badge": "2026 ○○수당 안내",
+     "lines": [[["○○수당", "white"]], [["월 최대 ", "white"], ["○○만 원", "amber"]], [["나도 ", "white"], ["받을까", "gold"]]]},
+    {"file": "01_amount", "layout": "rows", "heading": "얼마를 받을까?", "title": [["○○수당 ", "white"], ["지원 금액", "gold"]],
+     "rows": [{"icon": "passbook", "small": "월 최대", "big": [["○○만 원", "amber"]], "sub": "대상자 1인 기준"},
+              {"icon": "calendar:1", "big": [["매월 ○일\n계좌로 지급", "charcoal"]], "sub": "안내에 적힌 지급일"}],
+     "footers": [{"tone": "info", "text": "금액은 안내 기준이에요"}]},
+    {"file": "02_who", "layout": "compare", "card_tone": "pastel", "heading": "누가 받을까?", "title": [["받을 수 있는 ", "white"], ["대상", "gold"]],
+     "left":  {"label": "대상 A", "icon": "people", "head": [["○○세 이상\n", "charcoal"], ["어르신", "gold"]]},
+     "right": {"label": "대상 B", "icon": "house", "head": [["소득 기준\n", "charcoal"], ["○○% 이하", "amber"]]},
+     "footers": [{"tone": "unknown", "text": "○○ 기준은 안내에 없어요"}]},
+    {"file": "03_apply", "layout": "steps", "numbered": true, "heading": "어떻게 신청할까?", "title": [["신청은 ", "white"], ["3단계", "gold"]],
+     "steps": [{"icon": "facility", "text": [["방문:", "point"], [" 주민센터 상담 창구", "charcoal"]]},
+               {"icon": "folder", "text": [["서류 제출:", "navy"], [" 신청서·통장 사본", "charcoal"]]},
+               {"icon": "stamp", "text": [["결정 통지:", "navy"], [" 신청 후 ", "charcoal"], ["○○일", "amber"]]}]},
+    {"file": "04_check", "layout": "checks", "align": "left", "card_tone": "pastel", "heading": "신청 전 확인", "title": [["신청 전 ", "white"], ["확인할 것", "gold"]],
+     "items": [{"icon": "doc_check", "head": "신청서·신분증 준비"}, {"icon": "passbook", "head": "본인 명의 통장 확인"},
+               {"icon": "phone", "head": "문의", "text": [["○○○○", "amber"]]}]}
+  ]
+}

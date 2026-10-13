@@ -1,0 +1,326 @@
+{
+  "post": "전세사기 최소보장제 '다 받는 줄 알았는데', 경매차익 등을 뺀 지원 금액은 어떻게 계산될까?",
+  "images": [
+    {
+      "file": "00_thumbnail",
+      "layout": "thumbnail",
+      "shape": "wave",
+      "background": "전세사기_thumb_bg.webp",
+      "lines": [
+        [
+          [
+            "전세사기 최소보장제",
+            "white"
+          ]
+        ],
+        [
+          [
+            "보증금 ",
+            "white"
+          ],
+          [
+            "3분의 1",
+            "amber"
+          ]
+        ],
+        [
+          [
+            "차액",
+            "green"
+          ],
+          [
+            "은 얼마?",
+            "white"
+          ]
+        ]
+      ],
+      "badge": "새 정책 · 11월 13일 시행"
+    },
+    {
+      "file": "01_calc",
+      "layout": "table",
+      "heading": "경매차익 등을 빼고 나면 지원 금액은 얼마일까?",
+      "title": [
+        [
+          "경매차익 뺀 ",
+          "white"
+        ],
+        [
+          "차액",
+          "green"
+        ],
+        [
+          " 계산 예시",
+          "white"
+        ]
+      ],
+      "rows": [
+        {
+          "label": [
+            [
+              "임차보증금",
+              "charcoal"
+            ]
+          ],
+          "value": "1억 5000만 원"
+        },
+        {
+          "label": [
+            [
+              "최소보장금",
+              "charcoal"
+            ]
+          ],
+          "sub": "보증금의 3분의 1",
+          "value": "5000만 원"
+        },
+        {
+          "label": [
+            [
+              "이미 회복",
+              "charcoal"
+            ]
+          ],
+          "sub": "배당금 2000만 원 + 경매차익 1000만 원",
+          "value": "3000만 원"
+        },
+        {
+          "label": [
+            [
+              "추가 지원",
+              "charcoal"
+            ]
+          ],
+          "value": "2000만 원",
+          "highlight": true
+        }
+      ],
+      "corner_icon": "calculator",
+      "conclusion": {
+        "icon": "passbook",
+        "text": [
+          [
+            "총 ",
+            "charcoal"
+          ],
+          [
+            "5000만 원",
+            "amber"
+          ],
+          [
+            "까지 회복",
+            "charcoal"
+          ]
+        ],
+        "note": "정부 용어: 최소지원금"
+      }
+    },
+    {
+      "file": "02_prepay",
+      "layout": "compare",
+      "heading": "신탁사기 피해 임차인은 경·공매 종료 전에 먼저 받을 수 있을까?",
+      "title": [
+        [
+          "신탁사기 피해, 경·공매 전에 ",
+          "white"
+        ],
+        [
+          "먼저 지급",
+          "green"
+        ]
+      ],
+      "left": {
+        "label": "경·공매 끝난 뒤",
+        "head": [
+          [
+            "보증금\n",
+            "charcoal"
+          ],
+          [
+            "3분의 1",
+            "amber"
+          ],
+          [
+            "에\n못 미친\n차액 지원",
+            "charcoal"
+          ]
+        ],
+        "icon": "passbook"
+      },
+      "right": {
+        "label": "경·공매 끝나기 전",
+        "head": [
+          [
+            "신탁사기 등\n피해 임차인\n",
+            "charcoal"
+          ],
+          [
+            "먼저 지급",
+            "green"
+          ],
+          [
+            ",\n나중에 정산",
+            "charcoal"
+          ]
+        ],
+        "icon": "desk_calendar"
+      },
+      "footer": {
+        "text": [
+          [
+            "추가 회수액 따라 정산",
+            "charcoal"
+          ]
+        ],
+        "note": "정부 용어: 무권계약자"
+      }
+    },
+    {
+      "file": "03_apply",
+      "layout": "steps",
+      "numbered": true,
+      "heading": "최소지원금 신청 시기와 제출서류는 어떻게 될까?",
+      "title": [
+        [
+          "신청부터 ",
+          "white"
+        ],
+        [
+          "이의신청",
+          "green"
+        ],
+        [
+          "까지 순서",
+          "white"
+        ]
+      ],
+      "steps": [
+        {
+          "icon": "document",
+          "text": [
+            [
+              "신청:",
+              "green"
+            ],
+            [
+              " 처분 절차 끝난 뒤\n(선지급은 처분 전)",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "folder",
+          "text": [
+            [
+              "서류 제출:",
+              "navy"
+            ],
+            [
+              " 피해자 결정문·\n계약서 사본·초본 등",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "desk_calendar",
+          "text": [
+            [
+              "LH 결정 통지: ",
+              "navy"
+            ],
+            [
+              "90일",
+              "amber"
+            ],
+            [
+              " 이내\n(",
+              "charcoal"
+            ],
+            [
+              "30일",
+              "amber"
+            ],
+            [
+              " 이내 1회 연장)",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "stamp",
+          "text": [
+            [
+              "이의신청:",
+              "navy"
+            ],
+            [
+              " 통지 받은 날부터\n",
+              "charcoal"
+            ],
+            [
+              "30일",
+              "amber"
+            ],
+            [
+              " 이내",
+              "charcoal"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "file": "04_return",
+      "layout": "steps",
+      "align": "left",
+      "heading": "지급받은 뒤에도 신고하거나 반납해야 할 일이 있을까?",
+      "title": [
+        [
+          "받은 뒤 보증금 회수되면 ",
+          "white"
+        ],
+        [
+          "반납",
+          "coral"
+        ]
+      ],
+      "steps": [
+        {
+          "icon": "passbook",
+          "text": [
+            [
+              "지급 뒤 보증금\n회수 등 반납 사유 발생",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "folder",
+          "text": [
+            [
+              "신고하고 반납",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "tone": "danger",
+          "text": [
+            [
+              "기한 내 미반납 시\n최대 ",
+              "charcoal"
+            ],
+            [
+              "3000만 원",
+              "amber"
+            ],
+            [
+              " 과태료",
+              "coral"
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

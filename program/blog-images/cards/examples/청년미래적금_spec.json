@@ -1,0 +1,366 @@
+{
+  "post": "청년미래적금 2차 '아직 늦지 않았을까', 신청기간 홀짝제 끝나면 출생연도 상관없이 신청 가능할까?",
+  "images": [
+    {
+      "file": "00_thumbnail",
+      "layout": "thumbnail",
+      "shape": "slant",
+      "background": "청년미래적금_thumb_bg.webp",
+      "lines": [
+        [
+          [
+            "청년미래적금 2차",
+            "white"
+          ]
+        ],
+        [
+          [
+            "월 최대 ",
+            "white"
+          ],
+          [
+            "50만 원",
+            "amber"
+          ]
+        ],
+        [
+          [
+            "내 ",
+            "white"
+          ],
+          [
+            "신청일",
+            "green"
+          ],
+          [
+            "은 언제?",
+            "white"
+          ]
+        ]
+      ],
+      "badge": "새 정책 · 10월 7일 신청 시작"
+    },
+    {
+      "file": "01_maturity",
+      "layout": "table",
+      "heading": "월 50만 원씩 넣으면 만기 수령액은 얼마일까?",
+      "title": [
+        [
+          "월 50만 원 납입 만기 수령 ",
+          "white"
+        ],
+        [
+          "예시",
+          "green"
+        ]
+      ],
+      "header_color": "charcoal",
+      "columns": [
+        "구분",
+        "금리 7% 가정",
+        "금리 8% 가정"
+      ],
+      "rows": [
+        [
+          [
+            [
+              "일반형",
+              "charcoal"
+            ]
+          ],
+          [
+            [
+              "2110만 원",
+              "amber"
+            ]
+          ],
+          [
+            [
+              "2138만 원",
+              "amber"
+            ]
+          ]
+        ],
+        [
+          [
+            [
+              "우대형",
+              "green"
+            ]
+          ],
+          [
+            [
+              "2227만 원",
+              "amber"
+            ]
+          ],
+          [
+            [
+              "2255만 원",
+              "amber"
+            ]
+          ]
+        ]
+      ],
+      "corner_icon": "calculator",
+      "footers": [
+        {
+          "tone": "info",
+          "icon": "passbook",
+          "text": "금리는 가정값이고 금액은 예시예요"
+        }
+      ]
+    },
+    {
+      "file": "02_contribution",
+      "layout": "compare",
+      "icon_position": "top",
+      "heading": "일반형과 우대형은 소득 기준이 어떻게 다를까?",
+      "title": [
+        [
+          "일반형 6%, 우대형 12% ",
+          "white"
+        ],
+        [
+          "기여금",
+          "green"
+        ]
+      ],
+      "left": {
+        "icon": "passbook",
+        "head": [
+          [
+            "일반형\n기여금 ",
+            "charcoal"
+          ],
+          [
+            "6%",
+            "amber"
+          ]
+        ],
+        "body": [
+          [
+            "총급여 ",
+            "charcoal"
+          ],
+          [
+            "6천만 원",
+            "amber"
+          ],
+          [
+            " 이하",
+            "charcoal"
+          ]
+        ]
+      },
+      "right": {
+        "icon": "piggy_bank",
+        "head": [
+          [
+            "우대형",
+            "green"
+          ],
+          [
+            "\n기여금 ",
+            "charcoal"
+          ],
+          [
+            "12%",
+            "amber"
+          ]
+        ],
+        "body": [
+          [
+            "중소기업 총급여\n",
+            "charcoal"
+          ],
+          [
+            "3,600만 원",
+            "amber"
+          ],
+          [
+            " 이하",
+            "charcoal"
+          ]
+        ]
+      },
+      "footers": [
+        {
+          "tone": "point",
+          "icon": "shop",
+          "text": [
+            [
+              "소상공인 우대형 연매출 ",
+              "charcoal"
+            ],
+            [
+              "1억 원",
+              "amber"
+            ],
+            [
+              " 이하",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "tone": "info",
+          "icon": "doc_check",
+          "text": "가입 전 소상공인확인서 발급 (1357)"
+        }
+      ]
+    },
+    {
+      "file": "03_oddeven",
+      "layout": "compare",
+      "icon_position": "top",
+      "card_tone": "pastel",
+      "heading": "출생연도 홀짝제 이후에는 누구나 신청할 수 있을까?",
+      "title": [
+        [
+          "끝자리 신청일이 지나면 ",
+          "white"
+        ],
+        [
+          "누구나",
+          "green"
+        ],
+        [
+          " 신청",
+          "white"
+        ]
+      ],
+      "left": {
+        "icon": "calendar_red:2",
+        "head": [
+          [
+            "10월 7일·8일\n",
+            "amber"
+          ],
+          [
+            "출생연도 끝자리로\n나눈 신청",
+            "charcoal"
+          ]
+        ],
+        "note": "정부 용어: 출생연도 홀짝제"
+      },
+      "right": {
+        "icon": "calendar_red:5",
+        "head": [
+          [
+            "10월 12일~16일\n",
+            "amber"
+          ],
+          [
+            "출생연도 관계없이\n",
+            "charcoal"
+          ],
+          [
+            "누구나",
+            "green"
+          ],
+          [
+            " 신청",
+            "charcoal"
+          ]
+        ]
+      },
+      "footers": [
+        {
+          "tone": "unknown",
+          "text": "어느 끝자리가 어느 날인지는 발표에 없어요",
+          "note": "웹페이지·콜센터 1397에서 확인"
+        }
+      ]
+    },
+    {
+      "file": "04_after",
+      "layout": "checks",
+      "align": "left",
+      "heading": "가입한 뒤에도 챙길 게 있을까?",
+      "title": [
+        [
+          "가입 뒤에도 이어지는 ",
+          "white"
+        ],
+        [
+          "3년",
+          "amber"
+        ],
+        [
+          " 납입",
+          "white"
+        ]
+      ],
+      "items": [
+        {
+          "icon": "calendar_green:1",
+          "head": [
+            [
+              "3년",
+              "amber"
+            ],
+            [
+              " 만기",
+              "charcoal"
+            ]
+          ],
+          "text": [
+            [
+              "월 최대 ",
+              "charcoal"
+            ],
+            [
+              "50만 원",
+              "amber"
+            ],
+            [
+              " 자유 납입",
+              "charcoal"
+            ]
+          ]
+        },
+        {
+          "icon": "doc_check",
+          "head": [
+            [
+              "2027년",
+              "amber"
+            ],
+            [
+              " 예산안 확정 시",
+              "charcoal"
+            ]
+          ],
+          "text": [
+            [
+              "기존 가입자도 ",
+              "charcoal"
+            ],
+            [
+              "소급 적용",
+              "green"
+            ]
+          ],
+          "sub": "확정 전"
+        },
+        {
+          "icon": "exchange",
+          "head": [
+            [
+              "청년도약계좌 갈아타기",
+              "charcoal"
+            ]
+          ],
+          "text": [
+            [
+              "조건은 발표에 없어요",
+              "charcoal"
+            ]
+          ],
+          "sub": "문의 1397 바로 3번"
+        }
+      ]
+    }
+  ]
+}

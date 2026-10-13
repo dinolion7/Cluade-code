@@ -1,0 +1,338 @@
+{
+  "post": "생계비계좌 이미 개설했다면 2027년 1월 1일 이후 무엇을 해야 할까",
+  "images": [
+    {
+      "file": "00_thumbnail",
+      "layout": "thumbnail",
+      "background": "thumb_bg.webp",
+      "lines": [
+        [
+          [
+            "생계비계좌 개설자",
+            "white"
+          ]
+        ],
+        [
+          [
+            "2027년 1월",
+            "orange"
+          ],
+          [
+            " 시행",
+            "white"
+          ]
+        ],
+        [
+          [
+            "직접",
+            "green"
+          ],
+          [
+            " 할 일은?",
+            "white"
+          ]
+        ]
+      ],
+      "badge": "새 정책 · 2027.1.1 시행"
+    },
+    {
+      "file": "01_limit",
+      "layout": "rows",
+      "heading": "생계비계좌에 한도를 넘는 돈이 들어오면 어땠을까?",
+      "title": [
+        [
+          "한도",
+          "green"
+        ],
+        [
+          " 넘으면 입금이 통째로 막혔어요",
+          "white"
+        ]
+      ],
+      "rows": [
+        {
+          "icon": "passbook",
+          "small": "한도",
+          "big": [
+            [
+              "250만 원",
+              "orange"
+            ]
+          ],
+          "sub": "잔액·월 누적 입금액 각각"
+        },
+        {
+          "icon": "desk_calendar",
+          "big": [
+            [
+              "초과 입금 시\n입금액 전액 불능",
+              "ink"
+            ]
+          ],
+          "sub": "정부 용어: 입금불능"
+        }
+      ],
+      "alert": {
+        "icon": "warning",
+        "text": "급여 계좌로 쓰기 어려웠어요"
+      }
+    },
+    {
+      "file": "02_split",
+      "layout": "split",
+      "heading": "분리송금은 한도 초과분을 어떻게 나눠 받는 걸까?",
+      "title": [
+        [
+          "한도 넘는 돈",
+          "white"
+        ],
+        [
+          ", 이렇게 ",
+          "white"
+        ],
+        [
+          "나눠",
+          "green"
+        ],
+        [
+          " 받아요",
+          "white"
+        ]
+      ],
+      "source": {
+        "icon": "envelope",
+        "text": "한도를 넘는 입금"
+      },
+      "left": {
+        "icon": "passbook",
+        "label": "생계비계좌",
+        "text": [
+          [
+            "한도",
+            "orange"
+          ],
+          [
+            "까지",
+            "ink"
+          ]
+        ],
+        "color": "green"
+      },
+      "right": {
+        "icon": "bank",
+        "label": "관리계좌",
+        "text": [
+          [
+            "넘는 ",
+            "ink"
+          ],
+          [
+            "나머지",
+            "orange"
+          ]
+        ],
+        "color": "blue"
+      },
+      "note": "금융기관이 자동으로 나눠 예치 · 정부 용어: 분리송금"
+    },
+    {
+      "file": "03_steps",
+      "layout": "steps",
+      "heading": "이미 개설한 생계비계좌는 시행일 이후 무엇을 해야 할까?",
+      "title": [
+        [
+          "기존 계좌도 ",
+          "white"
+        ],
+        [
+          "직접",
+          "green"
+        ],
+        [
+          " 해야 해요",
+          "white"
+        ]
+      ],
+      "steps": [
+        {
+          "icon": "desk_calendar_red",
+          "text": [
+            [
+              "2027년 1월 1일",
+              "orange"
+            ],
+            [
+              " 시행",
+              "ink"
+            ]
+          ]
+        },
+        {
+          "icon": "document",
+          "text": [
+            [
+              "약관 갱신",
+              "ink"
+            ]
+          ]
+        },
+        {
+          "icon": "passbook",
+          "text": [
+            [
+              "관리계좌 지정",
+              "ink"
+            ]
+          ]
+        },
+        {
+          "icon": "exchange",
+          "text": [
+            [
+              "그 뒤에 ",
+              "ink"
+            ],
+            [
+              "초과분 나눠 받기",
+              "green"
+            ],
+            [
+              " 가능",
+              "ink"
+            ]
+          ],
+          "highlight": true
+        }
+      ]
+    },
+    {
+      "file": "04_conditions",
+      "layout": "checks",
+      "heading": "관리계좌는 어떤 계좌로 지정할 수 있을까?",
+      "title": [
+        [
+          "관리계좌",
+          "green"
+        ],
+        [
+          " 지정 조건 ",
+          "white"
+        ],
+        [
+          "3가지",
+          "orange"
+        ]
+      ],
+      "items": [
+        {
+          "icon": "passbook",
+          "text": "본인 명의"
+        },
+        {
+          "icon": "calculator",
+          "text": "요구불예금계좌"
+        },
+        {
+          "icon": "bank",
+          "text": "생계비계좌를 개설한\n금융기관에서 지정"
+        }
+      ]
+    },
+    {
+      "file": "05_compare",
+      "layout": "compare",
+      "heading": "관리계좌를 지정하지 않으면 입금액은 어떻게 될까?",
+      "title": [
+        [
+          "지정 안 하면 ",
+          "white"
+        ],
+        [
+          "전액",
+          "orange"
+        ],
+        [
+          " 되돌아와요",
+          "white"
+        ]
+      ],
+      "left": {
+        "tone": "good",
+        "head": [
+          [
+            "관리계좌 지정",
+            "green"
+          ],
+          [
+            "\n+\n정상 거래 가능",
+            "ink"
+          ]
+        ],
+        "body": [
+          [
+            "한도 넘는 나머지는\n관리계좌에 예치",
+            "ink"
+          ]
+        ],
+        "icon": "passbook"
+      },
+      "right": {
+        "tone": "bad",
+        "head": [
+          [
+            "미지정 또는\n거래 불가",
+            "ink"
+          ]
+        ],
+        "body": [
+          [
+            "받은 금액 ",
+            "ink"
+          ],
+          [
+            "전액",
+            "orange"
+          ],
+          [
+            "\n보낸 사람에게 반환",
+            "ink"
+          ]
+        ],
+        "icon": "envelope"
+      }
+    },
+    {
+      "file": "06_checklist",
+      "layout": "checks",
+      "heading": "2027년 1월 1일 이후 이것만 확인하세요",
+      "title": [
+        [
+          "시행 전 ",
+          "white"
+        ],
+        [
+          "체크리스트",
+          "green"
+        ]
+      ],
+      "items": [
+        {
+          "icon": "bank",
+          "text": "개설한 금융기관 확인"
+        },
+        {
+          "icon": "passbook",
+          "text": "본인 명의\n요구불예금계좌 확인"
+        },
+        {
+          "icon": "exchange",
+          "text": "정상 거래 가능한지 확인"
+        },
+        {
+          "icon": "document",
+          "text": "시행 후 약관 갱신·지정"
+        }
+      ]
+    }
+  ]
+}
