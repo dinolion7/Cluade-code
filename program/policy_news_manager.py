@@ -5,19 +5,20 @@
 사전 준비:
     pip install feedparser openpyxl
 
-탭 구성: (Ver10.09 — 다중뉴스 사전검토·워터마크처리 탭 삭제. 탭 이름의 번호는 예전 그대로 둔다)
-    TAB1 수집          : RSS 수집(현재는 뉴스 리스트 페이지 스크래핑) → 후보 리스트 → 기사 선택
-    TAB3 분석준비      : 프롬프트A 복사(Claude 자동열기 없음) → 키워드/제목 확정
-    TAB4 글작성        : 프롬프트B 조합 → 복사 → 완성글 붙여넣기 → MD 파일 저장
-    TAB5 인포그래픽    : 프롬프트C 조합 → 복사 → Claude 웹에서 실행 → "발행준비완료" 표시
+탭 구성: (Ver10.10 — 화면 탭 번호 = 코드의 TAB 번호 = 탭 만드는 함수 _build_tabN_*)
+    TAB1 1)뉴스 수집        : 뉴스 리스트 페이지 수집 → 후보 리스트 → 기사 선택   (_build_tab1_collect)
+    TAB2 2)분석 및 초안작성 : 프롬프트A 복사 → 키워드/제목 확정                   (_build_tab2_analyze)
+    TAB3 3)최종각색         : 프롬프트B 조합 → 복사 → 완성글 붙여넣기 → MD 저장   (_build_tab3_write)
+    TAB4 4)인포그래픽 작성  : 프롬프트C(또는 코드 카드) → "발행준비완료" 표시     (_build_tab4_infographic)
                          (핵심DB 등록 안 함. 결과로 나온 인포그래픽 생성 프롬프트를 GPT에
                          붙여넣어 실제 이미지를 생성하는 건 그다음 단계 — 프롬프트C 자체는
                          A·B와 마찬가지로 Claude 웹에서 실행한다)
-    TAB7 이력관리      : 포스팅 이력 테이블 → 상태 관리 → 엑셀 저장
-    TAB8 메인 포스팅용 키워드 등록 : 작업폴더 MD를 신규/업데이트/중복의심/이미등록됨으로
+    TAB5 5)포스팅 이력관리  : 포스팅 이력 테이블 → 상태 관리 → 엑셀 저장          (_build_tab5_history)
+    TAB6 6)키워드 등록      : 작업폴더 MD를 신규/업데이트/중복의심/이미등록됨으로    (_build_tab6_register)
                          분류 → "엑셀에 추가" 실행 시점에 비로소 핵심DB 등록 +
                          "📤 포스팅완료"로 확정(실제 포스팅 확정 지점)
-    TAB9 설정          : RSS/키워드/프롬프트/폴더/API 관리
+    TAB7 7)설정             : 키워드/프롬프트/폴더/API 관리                          (_build_tab7_settings)
+    (아래 변경 이력의 TAB 번호·탭 이름은 그 버전 당시 기준이다.)
 
 [변경 이력 요약] (Ver7.04~7.12, 2026-07-05)
     1. 중복체크 알고리즘 버그 수정 — _NUM_PAT 캡처그룹 버그로 "15회"·"24회"가
@@ -1111,6 +1112,11 @@
         "🔍 통합"을 "📋 제목 복사"로 바꿨다. 🔍 앞구·🔍 뒷구 버튼 폭을 줄여 줄 전체 폭은 넓어지지 않게 했다.
         (5) 이름: "🖼 5)인포그래픽" → "🖼 5)인포그래픽 작성", 코드 카드 "③ 퍼플렉시티 그림 선택…" →
         "③ 퍼플렉시티/GPT 그림 선택…".
+    67. [Ver10.10, 2026-10-14] 탭 번호 통일 — 화면 탭 이름을 1)~7)로 다시 매기고(2)분석 및 초안작성
+        3)최종각색 4)인포그래픽 작성 5)포스팅 이력관리 6)키워드 등록 7)설정), 코드 안 안내 문구·메시지·
+        주석의 "TABn"·"n)탭이름" 표기와 탭 만드는 함수 이름(_build_tab6_register·_build_tab7_settings)을
+        같은 번호로 맞췄다. 변경 이력(이 블록)의 옛 번호는 당시 기록이라 그대로 둔다. 1)뉴스 수집 탭의
+        안내에 남아 있던 "대량검토 탭의 [TAB1 목록 복사]" 문구도 지웠다(Ctrl+C만 남음).
 """
 
 import os
@@ -1168,7 +1174,7 @@ except ImportError:
     HAS_UNIFIED_MODULE = False
 
 # ✅ [2026-09-29] 게시판(카테고리) 판정 공용 모듈(선택적 연동) - 이 모듈이나 게시판
-# 설정 엑셀이 없으면 8)키워드 등록 탭은 예전 방식(카테고리 입력란)으로 동작한다.
+# 설정 엑셀이 없으면 6)키워드 등록 탭은 예전 방식(카테고리 입력란)으로 동작한다.
 try:
     import Naver_blog_board_module as board_mod
     HAS_BOARD_MODULE = True
@@ -1778,7 +1784,7 @@ DUP_ACTION_LIST = ["일반 작성", "업데이트(추가정보) 작성"]
 
 # 전체 정부기관 RSS 주소 (2026.06 기준, RSS서비스 공식 목록 그대로).
 # 기본 수집(feeds)에는 쓰지 않지만, ① 특정 부처만 따로 보고 싶을 때
-# TAB6 설정에서 참고하거나, ② 아래 _ORG_PAT(기관명 추출 정규식)을
+# TAB7 설정에서 참고하거나, ② 아래 _ORG_PAT(기관명 추출 정규식)을
 # 만드는 근거 자료로 쓴다. 부처 개편 시 여기만 고치면 된다.
 # 주의: 기획재정부는 재정경제부로 개편됨. 예전 코드의 dept_mofe.xml은
 # 잘못된 URL(오타+구 부처명)로 항상 빈 결과를 반환했던 버그였음.
@@ -1882,7 +1888,7 @@ DEFAULT_CONFIG = {
     "prompt_a_file": "프롬프트A_키워드전략분석.md",
     "prompt_b_file": "프롬프트B_글작성.md",
     "prompt_c_file": "프롬프트C_인포그래픽메타.md",
-    # [Ver10.08] 코드 카드(선택) — 5)인포그래픽 탭의 체크를 켤 때만 쓴다.
+    # [Ver10.08] 코드 카드(선택) — 4)인포그래픽 탭의 체크를 켤 때만 쓴다.
     "prompt_c_card_file": "정책뉴스_C_카드설계.md",
     "card_tool_dir": "Naver_blog_SVG Card_images",
     "card_chrome_path": "",
@@ -1902,7 +1908,7 @@ DEFAULT_CONFIG = {
     "keyword_excel_path": "",
     "unified_keyword_excel_path": "",  # ✅ [2026-09-05] 통합 키워드 엑셀 경로. 빈
                                         # 문자열 = 통합 기능 미사용(dual-write 건너뜀)
-    "kw_last_category": "",  # ✅ [2026-09-05] TAB7 "카테고리" 입력란에 직접 입력한
+    "kw_last_category": "",  # ✅ [2026-09-05] TAB6 "카테고리" 입력란에 직접 입력한
                               # 값을 저장(복지로 서브프로그램과 동일한 방식) - 재시작
                               # 후에도 직전 카테고리가 입력란 기본값으로 복원됨
     "board_config_path": "",  # ✅ [2026-09-29] 게시판 설정 엑셀 경로. 빈 문자열이면
@@ -1999,7 +2005,7 @@ def load_config() -> dict:
     # config.json에는 폴더명(상대경로)만 저장돼 있는 게 정상이고(_to_stored_dir),
     # 예전 버전에서 절대경로로 저장된 파일이 남아있어도 _resolve_program_dir이
     # 안전하게 복구한다 — 이 in-memory cfg 값은 항상 "지금 이 PC에서 실제로
-    # 쓸 수 있는 절대경로"이므로, 이 값을 그대로 쓰는 다른 모든 코드(TAB6/TAB9
+    # 쓸 수 있는 절대경로"이므로, 이 값을 그대로 쓰는 다른 모든 코드(TAB7 설정
     # 등)는 수정할 필요가 없다.
     cfg["prompt_dir"] = _resolve_program_dir(cfg.get("prompt_dir", ""), PROMPT_DIR)
     cfg["output_dir"] = _resolve_program_dir(cfg.get("output_dir", ""), OUTPUT_DIR)
@@ -2339,7 +2345,7 @@ def _get_last_used_keyword_category_from_excel() -> str:
 
 
 def _get_default_keyword_category() -> str:
-    """✅ [2026-09-05] TAB7 "카테고리" 입력란의 기본값을 결정한다.
+    """✅ [2026-09-05] TAB6 "카테고리" 입력란의 기본값을 결정한다.
     (배경: 복지로 서브프로그램은 키워드 등록 시 카테고리를 직접 입력하는
     란이 있는데, 정책뉴스 서브프로그램에는 없어서 항상 "엑셀의 직전
     카테고리 재사용" 방식뿐이었음 - 복지로와 동일하게 입력란을 추가함.)
@@ -2391,7 +2397,7 @@ def _load_keyword_excel_titles() -> set:
 
 def _find_history_record_by_title(title: str) -> dict:
     """[Ver7.13 추가] 제목으로 이력에서 레코드를 찾는다.
-    TAB7 항목(_list_md_items_in_date_folder)은 MD 파일의 H1에서 제목만
+    TAB6 항목(_list_md_items_in_date_folder)은 MD 파일의 H1에서 제목만
     뽑아오므로 링크 정보가 없다 — 실제 확정(핵심DB 등록 + 포스팅완료
     전환) 시점에 이력의 link를 알아야 하므로, 저장 시점에 남겨둔
     saved_title/final_title/title과 정규화 비교해서 역으로 찾는다."""
@@ -2408,7 +2414,7 @@ def _append_titles_to_keyword_excel(titles: list, category="") -> str:
     지식인 프로그램의 add_approved_keywords와 동일한 규칙을 따른다:
     B열(카테고리)은 원래 B열에서 '데이터가 있는 마지막 행'의 값을 그대로
     재사용했으나, ✅ [2026-09-05] 복지로 서브프로그램과 동일하게 호출부
-    (TAB7 "카테고리" 입력란)에서 값을 받을 수 있도록 category 매개변수를
+    (TAB6 "카테고리" 입력란)에서 값을 받을 수 있도록 category 매개변수를
     추가했다 - 값을 주면 그 값을 쓰고, 비워두면(기본값) 기존 방식대로
     직전 값을 재사용한다(하위호환 - category를 안 넘기던 기존 호출부도
     그대로 동작). C열은 비워둔다(메인 프로그램이 C열을 자체적으로 채우는
@@ -2485,9 +2491,9 @@ def _append_titles_to_keyword_excel(titles: list, category="") -> str:
 
 
 def _get_work_folder() -> str:
-    """[Ver10.04 신규] 8)키워드 등록 탭이 읽는 작업 폴더 = MD 저장 폴더(설정의 output_dir).
-    예전에는 고정 상수 MAIN_WORK_FOLDER를 봐서, 설정에서 완성글 저장 폴더를 바꾸면 TAB4가
-    저장한 글이 8)키워드 등록 탭에 보이지 않았다. 기본 설정에서는 두 값이 같은 폴더다."""
+    """[Ver10.04 신규] 6)키워드 등록 탭이 읽는 작업 폴더 = MD 저장 폴더(설정의 output_dir).
+    예전에는 고정 상수 MAIN_WORK_FOLDER를 봐서, 설정에서 완성글 저장 폴더를 바꾸면 TAB3이
+    저장한 글이 6)키워드 등록 탭에 보이지 않았다. 기본 설정에서는 두 값이 같은 폴더다."""
     return load_config().get("output_dir", OUTPUT_DIR)
 
 
@@ -2713,7 +2719,7 @@ def fetch_feed(name: str, url: str, seen: set = None, log=print) -> list:
 
     if "korea.kr/rss/" in url and url.rstrip().lower().endswith(".xml"):
         log(f"  [경고] {name}: korea.kr RSS 서비스는 종료되었습니다. "
-            f"TAB6 설정에서 리스트 페이지 URL로 교체하세요. "
+            f"TAB7 설정에서 리스트 페이지 URL로 교체하세요. "
             f"(예: https://www.korea.kr/news/policyNewsList.do , "
             f"https://www.korea.kr/briefing/pressReleaseList.do)")
         return []
@@ -3656,12 +3662,12 @@ def add_history_record(record: dict):
 
 
 def is_published(link: str) -> bool:
-    """이 링크가 '포스팅완료'(TAB7 엑셀 추가로 확정된) 상태인지 확인한다.
+    """이 링크가 '포스팅완료'(TAB6 엑셀 추가로 확정된) 상태인지 확인한다.
     확정된 글은 패스·삭제·보류·신규 등으로 되돌릴 수 없게 막아야 하므로,
     그 판단을 위해 여러 곳에서 공통으로 쓰는 헬퍼다.
     [Ver7.13] '🟡 발행준비완료'는 이 확정 판단에서 제외한다 — MD·인포그래픽
     까지 만들었어도 실제로 포스팅 안 하고 지울 수 있어서, 그 단계까지는
-    얼마든지 되돌릴 수 있어야 한다. 실제 확정은 TAB7에서 '엑셀에 추가'가
+    얼마든지 되돌릴 수 있어야 한다. 실제 확정은 TAB6에서 '엑셀에 추가'가
     실행돼 '📤 포스팅완료'가 됐을 때만이다."""
     for r in load_history():
         if r.get("link") == link:
@@ -4121,7 +4127,7 @@ def remove_from_dup_db(link: str):
     """핵심DB(중복비교 DB)에서 특정 링크의 기록을 제거한다.
     저장(작성중)까지 갔다가 발행은 안 하고 패스로 되돌리는 경우,
     혹시 핵심DB에 남아있는 기록이 있다면 같이 지워야 한다.
-    (정상 흐름에서는 TAB7 '엑셀에 추가' 시점(포스팅완료 확정)에만
+    (정상 흐름에서는 TAB6 '엑셀에 추가' 시점(포스팅완료 확정)에만
     등록되므로 보통은 없겠지만, 과거 버전에서 저장 시점에 등록된
     기록이 남아있을 수도 있어 패스 처리 시 항상 한 번 더 정리한다.)"""
     records = load_dup_db()
@@ -4131,7 +4137,7 @@ def remove_from_dup_db(link: str):
 
 
 def add_to_dup_db(link: str, core: dict):
-    """TAB7 '엑셀에 추가'(포스팅 확정) 시 핵심DB에 추가"""
+    """TAB6 '엑셀에 추가'(포스팅 확정) 시 핵심DB에 추가"""
     records   = load_dup_db()
     existing  = {r.get("link","") for r in records}
     if link not in existing:
@@ -4521,7 +4527,7 @@ def validate_title(title: str) -> dict:
 
 # [Ver10.06 신규] 저장 전 모바일 문단 정리 — 지식인 관리 프로그램 Ver10.05(kin_manager.py)와 같은 코드.
 # ══════════════════════════════════════════════════════════
-# 저장 전 모바일 문단 정리 (정책뉴스: 4)최종각색 탭 "💾 MD 파일 저장", 기본 꺼짐)
+# 저장 전 모바일 문단 정리 (정책뉴스: 3)최종각색 탭 "💾 MD 파일 저장", 기본 꺼짐)
 # ──────────────────────────────────────────────────────────
 # 각색 결과는 이미 빈 줄로 문단이 나뉘어 있으므로(대부분 1~3문장, 중간값 약
 # 100자) 기존 문단 구분은 그대로 두고, 기준 글자 수(기본 150자, 4)탭에서 조정)를
@@ -5095,8 +5101,8 @@ class App(tk.Tk):
         self._build_tab3_write()
         self._build_tab4_infographic()
         self._build_tab5_history()
-        self._build_tab_main_register()
-        self._build_tab6_settings()
+        self._build_tab6_register()
+        self._build_tab7_settings()
         # [Ver10.09] 탭 이동은 번호가 아니라 탭 화면으로 한다(_select_tab) — 탭을 더하거나 빼도
         # 이동이 어긋나지 않게. 위 생성 순서와 같은 순서의 이름이다.
         self._tab_ids = dict(zip(["collect", "analyze", "write", "infographic",
@@ -5704,7 +5710,7 @@ class App(tk.Tk):
 
         ttk.Label(list_f,
                   text="Ctrl-클릭: 하나씩 추가/해제  |  Shift-클릭: 범위 선택  |  "
-                       "선택 후 Ctrl+C 또는 대량검토 탭의 [TAB1 목록 복사]로 선택한 것만 복사됩니다"
+                       "선택 후 Ctrl+C로 선택한 것만 복사됩니다"
                        "  (선택 없이 누르면 화면에 보이는 전체가 복사됩니다)",
                   style="Info.TLabel").grid(row=1, column=0, columnspan=2, sticky="w", pady=(2,0))
 
@@ -6038,7 +6044,7 @@ class App(tk.Tk):
     def _manual_add_article(self, dlg, link, title, dept, pub_str, body_type):
         """수동 등록 창의 '등록' 버튼 처리. self.collected(TAB1 메모리
         목록)에 추가하고, 후보군 엑셀에도 같이 저장해서 자동 수집으로
-        들어온 기사와 완전히 동일하게 취급되게 한다(TAB7 등록, 중복
+        들어온 기사와 완전히 동일하게 취급되게 한다(TAB6 등록, 중복
         체크 등 뒤이은 모든 과정에서 자동수집분과 구분할 필요가 없다)."""
         if not link or not title:
             messagebox.showwarning("입력 필요", "링크와 제목은 필수입니다.")
@@ -6268,7 +6274,7 @@ class App(tk.Tk):
         """MD 저장까지 갔지만(작성중) 발행준비완료·패스로 마무리되지
         않은 기사인지 확인한다. [Ver7.13] 예전에는 이 상태로 방치되면
         핵심DB에 영원히 등록 안 된다는 경고였지만, 이제 핵심DB 등록은
-        TAB7 확정 시점으로 옮겨갔다 — 여기서는 단순히 "작성중으로만
+        TAB6 확정 시점으로 옮겨갔다 — 여기서는 단순히 "작성중으로만
         남아 이력관리에서 진행 상황을 헷갈릴 수 있다"는 안내로 바뀐다."""
         if not link:
             return False, ""
@@ -6347,7 +6353,7 @@ class App(tk.Tk):
     def _mark_pass_core(self, art: dict) -> bool:
         """기사 1건을 '⏭ 패스' 상태로 기록하는 핵심 로직(팝업 없음).
         _mark_pass() 버튼 핸들러와 '새 글 시작'(_start_new_post) 양쪽에서
-        공통으로 쓴다 — 후자는 TAB2(분석준비)에서 호출되므로 "기사를
+        공통으로 쓴다 — 후자는 TAB2(분석 및 초안작성)에서 호출되므로 "기사를
         먼저 선택하세요" 같은 TAB1 전용 경고를 띄우면 맥락에 안 맞고,
         호출부가 이미 상황을 판단해 부르므로 여기서는 조건만 조용히
         확인하고 결과(True/False)만 돌려준다. 이미 포스팅완료된
@@ -6540,7 +6546,7 @@ class App(tk.Tk):
                     "❓ 본문유형 확인 필요 → 링크를 열어 본문이 있으면 캡처 PDF,\n"
                     "첨부파일만 있으면 첨부 PDF를 1개만 준비하세요.")
 
-        self._select_tab("analyze")  # 3)분석 및 초안작성
+        self._select_tab("analyze")  # 2)분석 및 초안작성
         self._log_collect(f"[→ 분석준비] 선택: {art['title'][:40]}...")
 
     def _log_collect(self, msg: str):
@@ -6558,7 +6564,7 @@ class App(tk.Tk):
         # 콘텐츠가 창 높이보다 길어져도 하단 버튼이 가려지지 않도록
         # 스크롤 가능한 캔버스로 감싼다.
         outer = ttk.Frame(self.nb)
-        self.nb.add(outer, text="🔍 3)분석 및 초안작성")
+        self.nb.add(outer, text="🔍 2)분석 및 초안작성")
         outer.rowconfigure(0, weight=1)
         outer.columnconfigure(0, weight=1)
 
@@ -7074,7 +7080,7 @@ class App(tk.Tk):
         나머지(이력 갱신 → 화면 새로고침 → 입력값 초기화 → TAB1 이동)는
         동일하게 맞췄다.
 
-        배경: TAB2(분석준비)에서 프롬프트A 판정이 '보류'로 나오는 등 이
+        배경: TAB2(분석 및 초안작성)에서 프롬프트A 판정이 '보류'로 나오는 등 이
         기사를 더 진행하지 않기로 한 경우, 예전에는 "새 글 시작"으로
         입력값만 비운 뒤 TAB1으로 돌아가 그 기사를 다시 찾아 클릭하고
         '⏭ 패스'를 눌러야 했다 — selected_article이 이미 비워진 뒤라
@@ -7278,7 +7284,7 @@ class App(tk.Tk):
         ("정책뉴스 핵심DB") 요구사항에 대응한다 — A가 자기잠식(자기
         블로그 기존 발행글과의 키워드 중복) 확인을 하려면 발행 이력이
         필요한데, 사용자가 겹칠 만한 글을 매번 스스로 찾아 입력하는
-        건 부담이 커서 실행이 안 되는 문제가 있었다. 이미 TAB7
+        건 부담이 커서 실행이 안 되는 문제가 있었다. 이미 TAB6
         "엑셀에 추가"(포스팅 확정) 시점에 정책뉴스_핵심DB.json에
         title·keyword·sub_keywords·date 등을 쌓아두고 있으므로
         (load_dup_db 참고), 그 파일을 그대로 읽어 프롬프트A [입력
@@ -7754,7 +7760,7 @@ class App(tk.Tk):
             filled.append(f"제목 후보 {len(title_candidates)}개")
 
         # [2026-09-29] 프롬프트A의 게시판 판정 - 저장 시 이력 레코드(board_a)에
-        # 함께 남기고, 8)키워드 등록 탭이 이 값을 읽는다.
+        # 함께 남기고, 6)키워드 등록 탭이 이 값을 읽는다.
         if parsed.get("board"):
             self.a_board = parsed["board"]
             filled.append(f"게시판 판정({parsed['board']['name']}, 신뢰도 {parsed['board']['conf']})")
@@ -8303,14 +8309,14 @@ class App(tk.Tk):
         self._open_naver_shared_chrome(f"https://search.naver.com/search.naver?ssc=tab.blog.all&sm=tab_jum&query={q}")
 
     # [Ver9.06 삭제] _open_naver_blog_search_draft_title/_open_naver_search_draft_title
-    # — TAB2(분석준비) STEP3의 "초안 제목" 검색 블록과 함께 제거(사용처 없음).
+    # — TAB2(분석 및 초안작성) STEP3의 "초안 제목" 검색 블록과 함께 제거(사용처 없음).
 
     # ──────────────────────────────────────────────────────
     # TAB 3 : 글 작성
     # ──────────────────────────────────────────────────────
     def _build_tab3_write(self):
         f = ttk.Frame(self.nb, padding=10)
-        self.nb.add(f, text="📋 4)최종각색")
+        self.nb.add(f, text="📋 3)최종각색")
         f.columnconfigure(0, weight=1)
 
         # STEP 1: 프롬프트B 복사
@@ -8499,7 +8505,7 @@ class App(tk.Tk):
 
         f.rowconfigure(1, weight=1)
 
-    # ── [Ver10.06 신규] 4)최종각색: 저장 전 모바일 문단 정리 ──
+    # ── [Ver10.06 신규] 3)최종각색: 저장 전 모바일 문단 정리 ──
     def _on_para_reflow_toggled(self):
         cfg = load_config()
         cfg["para_reflow_on"] = bool(self.para_reflow_var.get())
@@ -8991,7 +8997,7 @@ class App(tk.Tk):
                     "정확도가 떨어질 수 있습니다.\n\n"
                     "그래도 이대로 저장하시겠습니까?\n"
                     "(아니오를 누르면 TAB2로 돌아가 키워드를 입력할 수 있습니다)"):
-                self._select_tab("analyze")  # 3)분석 및 초안작성
+                self._select_tab("analyze")  # 2)분석 및 초안작성
                 return
 
         cfg     = load_config()
@@ -9053,7 +9059,7 @@ class App(tk.Tk):
         # 시점에서도 하지 않는다. 이 프로그램은 포스팅 프로그램이 아니라
         # 기초자료를 준비하는 프로그램이라 실제 네이버 포스팅 여부를 알
         # 방법이 없다 — MD·인포그래픽까지 만들어도 포스팅 안 하고 지울
-        # 수 있으므로, 핵심DB 등록은 TAB7에서 "엑셀에 추가"가 실행되는
+        # 수 있으므로, 핵심DB 등록은 TAB6에서 "엑셀에 추가"가 실행되는
         # 순간(실제 포스팅 확정 시점, _process_main_register 참고)으로
         # 미룬다. 중복비교는 진짜로 확정된 글끼리만 해야 의미가 있다.
         if art.get("link"):
@@ -9140,7 +9146,7 @@ class App(tk.Tk):
     # ──────────────────────────────────────────────────────
     def _build_tab4_infographic(self):
         f = ttk.Frame(self.nb, padding=10)
-        self.nb.add(f, text="🖼 5)인포그래픽 작성")
+        self.nb.add(f, text="🖼 4)인포그래픽 작성")
         f.columnconfigure(0, weight=1)
         # [Ver7.22] 프롬프트D 블록이 추가되며 STEP2(썸네일·소제목 목록)가
         # row3으로 밀림. 화면 세로 공간을 더 차지하지 않도록 row3(제목
@@ -9227,7 +9233,7 @@ class App(tk.Tk):
         # [Ver10.08 신규] 코드 카드(선택) — 체크를 켤 때만 펼쳐진다(기존 STEP은 그대로).
         self._build_card_panel(f, 4)
 
-    # ── [Ver10.08 신규] 5)인포그래픽: 코드 카드(선택) ──
+    # ── [Ver10.08 신규] 4)인포그래픽: 코드 카드(선택) ──
     def _build_card_panel(self, parent, row):
         """기존 STEP은 그대로 두고, 체크를 켤 때만 보이는 코드 카드 칸. 위에서 아래로 ①→④ 순서."""
         wrap = ttk.Frame(parent)
@@ -9285,7 +9291,7 @@ class App(tk.Tk):
         self.card_folder_var = tk.StringVar(value="")
         ttk.Label(r7, textvariable=self.card_folder_var, style="Info.TLabel").pack(side="left")
         ttk.Label(body, style="Info.TLabel", justify="left", text=(
-            "· 글 폴더 = 4)최종각색에서 방금 저장한 글 폴더(MD와 완성 이미지가 들어가는 곳) — 맨 아래 '📁 MD파일 저장폴더 열기'로 확인.\n"
+            "· 글 폴더 = 3)최종각색에서 방금 저장한 글 폴더(MD와 완성 이미지가 들어가는 곳) — 맨 아래 '📁 MD파일 저장폴더 열기'로 확인.\n"
             "· ③은 고른 그림을 카드 작업폴더(글 폴더 안 _카드작업)에 복사합니다. 내려받은 그림을 그 폴더에 직접 넣어도 되고, "
             "④는 그 폴더의 가장 최근 그림을 씁니다.\n"
             "· ②를 비워 두면 카드 작업폴더에 넣어 둔 JSON·답변 파일(.json/.txt/.md)을 읽습니다.")).grid(row=8, column=0, sticky="w", pady=(2, 0))
@@ -9299,7 +9305,7 @@ class App(tk.Tk):
     def _card_show_folder(self):
         """작은 안내 줄의 글 폴더 표시를 지금 기준으로 갱신한다."""
         folder = self._card_md_folder(ask=False)
-        self.card_folder_var.set(f"글 폴더: {folder}" if folder else "글 폴더: (아직 없음 — 4)최종각색에서 MD 파일을 먼저 저장하세요)")
+        self.card_folder_var.set(f"글 폴더: {folder}" if folder else "글 폴더: (아직 없음 — 3)최종각색에서 MD 파일을 먼저 저장하세요)")
 
     def _toggle_card_panel(self, save=True):
         if self.card_panel_on.get():
@@ -9313,12 +9319,12 @@ class App(tk.Tk):
             save_config(cfg)
 
     def _card_md_folder(self, ask=True) -> str:
-        """카드를 넣을 글 폴더 = 4)최종각색에서 저장한 글 폴더(키워드 등록이 읽는 곳 그대로)."""
+        """카드를 넣을 글 폴더 = 3)최종각색에서 저장한 글 폴더(키워드 등록이 읽는 곳 그대로)."""
         folder = self.last_saved_folder
         if folder and os.path.isdir(folder):
             return folder
         if ask:
-            messagebox.showwarning("글 폴더 없음", "4)최종각색에서 MD 파일을 먼저 저장하세요.\n"
+            messagebox.showwarning("글 폴더 없음", "3)최종각색에서 MD 파일을 먼저 저장하세요.\n"
                                    "(이력관리에서 글을 다시 불러온 경우에도 그 글의 저장 폴더를 씁니다)")
         return ""
 
@@ -9384,7 +9390,7 @@ class App(tk.Tk):
             return
         md_content = self.md_text.get("1.0", "end").strip()
         if not simplified and not md_content:
-            messagebox.showwarning("알림", "4)최종각색에서 완성 글을 먼저 붙여넣기 하세요.")
+            messagebox.showwarning("알림", "3)최종각색에서 완성 글을 먼저 붙여넣기 하세요.")
             return
         core_kw = self.core_keyword_var.get().strip() or self.confirmed_core_keyword.strip() or "(없음)"
         last_shape = cfg.get("card_last_shape", "") or "없음"
@@ -9477,7 +9483,7 @@ class App(tk.Tk):
         return path
 
     def _card_name(self, text: str) -> str:
-        """기존 이미지 파일명 규칙(8)키워드 등록의 _copy_matched_assets와 같음)."""
+        """기존 이미지 파일명 규칙(6)키워드 등록의 _copy_matched_assets와 같음)."""
         return safe_filename(_strip_trailing_punct_for_filename(text))
 
     def _card_after_render(self, res, work, folder, spec, matches):
@@ -9782,7 +9788,7 @@ class App(tk.Tk):
         그냥 지울 수도 있다. 그래서 여기서는:
           - 핵심DB(중복비교 DB) 등록을 하지 않는다.
           - 상태는 얼마든지 되돌릴 수 있다(패스·검토중 등으로).
-        실제 '확정' 시점은 TAB7에서 '엑셀에 추가'가 실행되는 순간이다
+        실제 '확정' 시점은 TAB6에서 '엑셀에 추가'가 실행되는 순간이다
         (_process_main_register 참고) — 그때만 핵심DB 등록과 최종 상태
         '📤 포스팅완료' 전환이 함께 일어나고, 그 이후부터는 되돌리기가
         보호(is_published)된다."""
@@ -9799,14 +9805,14 @@ class App(tk.Tk):
         # 여기서 곧바로 입력값 초기화 여부를 물어 한 번에 처리한다.
         if messagebox.askyesno("발행준비완료",
                 "🟡 발행준비완료로 상태가 업데이트되었습니다.\n"
-                "(실제 포스팅 확정은 TAB7에서 '엑셀에 추가'를 실행할 때 이루어집니다)\n\n"
+                "(실제 포스팅 확정은 TAB6에서 '엑셀에 추가'를 실행할 때 이루어집니다)\n\n"
                 "다음 글 작업을 위해 TAB2~TAB4 입력값을\n"
                 "지금 바로 초기화하시겠습니까?"):
             self._start_new_post_silent()
         # [Ver9.06 변경] 기존에는 "→ 이력 관리 탭으로" 버튼을 따로 눌러야
         # 이동했지만, 두 버튼이 헷갈린다는 지적에 따라 업데이트 직후
         # 항상(초기화 여부와 무관하게) 이력관리 탭으로 자동 이동한다.
-        self._select_tab("history")  # 7)포스팅 이력관리
+        self._select_tab("history")  # 5)포스팅 이력관리
 
     def _start_new_post_silent(self, keep_selected_article: bool = False):
         """입력값 일괄 초기화 — 확인창 없이 즉시 처리한다.
@@ -9908,7 +9914,7 @@ class App(tk.Tk):
     # ──────────────────────────────────────────────────────
     def _build_tab5_history(self):
         f = ttk.Frame(self.nb, padding=10)
-        self.nb.add(f, text="📋 7)포스팅 이력관리")
+        self.nb.add(f, text="📋 5)포스팅 이력관리")
         f.columnconfigure(0, weight=1)
         f.rowconfigure(3, weight=1)
 
@@ -10287,16 +10293,16 @@ class App(tk.Tk):
                     f"이력에 MD 파일명({md_file})이 있지만\n"
                     f"파일을 찾을 수 없습니다.\n\n"
                     f"TAB3에서 Claude 결과를 다시 붙여넣고 저장하세요.")
-                self._select_tab("write")  # 4)최종각색
+                self._select_tab("write")  # 3)최종각색
                 return
 
         # MD 없으면 상태에 따라 탭 이동
         if "작성중" in status:
-            self._select_tab("write")  # 4)최종각색
+            self._select_tab("write")  # 3)최종각색
             messagebox.showinfo("작업 재개",
                 "글작성 탭에서 Claude의 완성된 글을 붙여넣기 하세요.")
         else:
-            self._select_tab("analyze")  # 3)분석 및 초안작성
+            self._select_tab("analyze")  # 2)분석 및 초안작성
             messagebox.showinfo("작업 재개",
                 "분석준비 탭에서 프롬프트A 복사 후 순서대로 진행하세요.")
 
@@ -10423,9 +10429,9 @@ class App(tk.Tk):
     # 중복체크를 하므로 이 탭 자체가 필수는 아니다 — 사람이 눈으로 한 번
     # 더 확인하면서 더 꼼꼼하게 점검하기 위한 보조 기능이다.
     # ──────────────────────────────────────────────────────
-    def _build_tab_main_register(self):
+    def _build_tab6_register(self):
         f = ttk.Frame(self.nb, padding=10)
-        self.nb.add(f, text="📤 8)키워드 등록")
+        self.nb.add(f, text="📤 6)키워드 등록")
         f.columnconfigure(0, weight=1)
         f.rowconfigure(2, weight=1)
 
@@ -10575,7 +10581,7 @@ class App(tk.Tk):
            의도 표시도 없음. 절대 포스팅 폴더로 보내지 않고 처리 시
            '{날짜}/{DUP_SUBFOLDER_NAME}'로 이동시킨다
         4) 신규(검정)       — 위 셋 다 아님, 처리 시 키워드 엑셀 추가 + 포스팅 폴더 복사
-        [Ver7.10 추가] 중복체크는 TAB4(글작성)의 포스팅 중복 체크와 동일한
+        [Ver7.10 추가] 중복체크는 TAB3(최종각색)의 포스팅 중복 체크와 동일한
         extract_core/check_duplicate를 그대로 사용한다.
         [Ver7.12] 분류(중복체크, 무거움)와 화면 렌더링(필터, 가벼움)을
         분리했다 — 상태 필터를 바꿀 때마다 중복체크를 다시 돌리지 않도록
@@ -11026,13 +11032,13 @@ class App(tk.Tk):
         except Exception as e:
             messagebox.showerror("오류", f"삭제 중 오류 발생:\n{e}")
 
-    def _build_tab6_settings(self):
+    def _build_tab7_settings(self):
         # [수정] 항목이 많아 창 높이를 넘어가면 맨 아래 "설정 저장" 버튼이
-        # 화면 밖으로 밀려 안 보이는 문제가 있었다 — TAB3(분석준비)와 동일한
+        # 화면 밖으로 밀려 안 보이는 문제가 있었다 — TAB2(분석 및 초안작성)와 동일한
         # 스크롤 가능한 캔버스로 감싸서, 창 크기와 무관하게 항상 스크롤해서
         # 저장 버튼까지 볼 수 있게 한다.
         outer = ttk.Frame(self.nb)
-        self.nb.add(outer, text="⚙️ 9)설정")
+        self.nb.add(outer, text="⚙️ 7)설정")
         outer.rowconfigure(0, weight=1)
         outer.columnconfigure(0, weight=1)
 
@@ -11126,7 +11132,7 @@ class App(tk.Tk):
         row += 1
         ttk.Label(f,
             text="비워두면 프로그램 폴더의 Naver_blog_게시판설정.xlsx를 사용하고, 그 파일도 없으면 예전 카테고리 입력란 방식으로 동작합니다.\n"
-                 "경로를 바꾼 뒤에는 프로그램을 다시 시작해야 8)키워드 등록 탭에 반영됩니다.",
+                 "경로를 바꾼 뒤에는 프로그램을 다시 시작해야 6)키워드 등록 탭에 반영됩니다.",
             style="Info.TLabel", justify="left").grid(row=row, column=1, sticky="w", padx=5)
         row += 1
 
@@ -11147,13 +11153,13 @@ class App(tk.Tk):
                 row=row, column=2, padx=5)
             row += 1
 
-        # [Ver10.06 신규] 저장 전 모바일 문단 정리(GPT)용 OpenAI API 키 — 4)최종각색 탭의 체크를 켤 때만 쓴다.
+        # [Ver10.06 신규] 저장 전 모바일 문단 정리(GPT)용 OpenAI API 키 — 3)최종각색 탭의 체크를 켤 때만 쓴다.
         ttk.Label(f, text="OpenAI API 키:").grid(row=row, column=0, sticky="w", pady=3)
         self.settings_openai_key_var = tk.StringVar(value=cfg.get("openai_api_key", ""))
         ttk.Entry(f, textvariable=self.settings_openai_key_var, width=60, show="*").grid(
             row=row, column=1, sticky="w", padx=5)
         row += 1
-        ttk.Label(f, text="(4)최종각색 탭 \"📱 문단 정리(GPT)\"에만 사용 — 비워 두면 문단 정리는 건너뜁니다)",
+        ttk.Label(f, text="(3)최종각색 탭 \"📱 문단 정리(GPT)\"에만 사용 — 비워 두면 문단 정리는 건너뜁니다)",
                   style="Info.TLabel").grid(row=row, column=1, sticky="w", padx=5, pady=(0, 4))
         row += 1
 
@@ -11354,9 +11360,9 @@ class App(tk.Tk):
         없다. 예전 버전에서는 output_dir에서 MD 파일이 발견되고 이력에
         링크만 있으면 무조건 상태를 '발행완료'로 강제 변경했는데 — 이게
         저장만 해두고 아직 확정 전인(작성중·발행준비완료) 초안까지
-        핵심DB에 잘못 등록시켜, TAB7에서 자기 자신과 '중복의심'이 뜨는
+        핵심DB에 잘못 등록시켜, TAB6에서 자기 자신과 '중복의심'이 뜨는
         사고로 이어진 원인이었다. 지금부터는 상태를 절대로 강제 변경하지
-        않는다 — TAB7 '엑셀에 추가'를 실제로 거쳐 이미 '포스팅완료'로
+        않는다 — TAB6 '엑셀에 추가'를 실제로 거쳐 이미 '포스팅완료'로
         확정된 기록만 복구 대상으로 삼는다(핵심DB 파일이 실수로 지워진
         경우를 위한 순수 복구 기능)."""
         cfg = load_config()
@@ -11455,7 +11461,7 @@ class App(tk.Tk):
             var.set(path)
 
     def _update_window_title(self):
-        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-14_Ver 10.09")
+        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-14_Ver 10.10")
 
     def _browse_prompt_file(self, var: tk.StringVar):
         cfg      = load_config()
@@ -11566,7 +11572,7 @@ class App(tk.Tk):
         kw_path = _get_keyword_excel_path()
         os.makedirs(os.path.dirname(kw_path) or ".", exist_ok=True)
 
-        # [Ver7.14] TAB7 상단 안내 라벨에 표시된 키워드 엑셀 경로가
+        # [Ver7.14] TAB6 상단 안내 라벨에 표시된 키워드 엑셀 경로가
         # 방금 바뀐 설정을 바로 반영하도록 즉시 갱신(재시작 없이).
         if hasattr(self, "main_reg_info_label"):
             self.main_reg_info_label.config(
