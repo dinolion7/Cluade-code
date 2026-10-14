@@ -20,13 +20,13 @@
 | `prompts/src/{A_ClaudeSonnet,B_ClaudeSonnet,A_GPT,B_GPT}/` | 지식인 2차 최종각색 원본. `base.md`(공통) + `topics/{주제}.md`(@@ 필드) + `defaults.md` + `health.md` |
 | `prompts/src/health/` | 건강 ②검수(공통)·③편집 원본 |
 | `prompts/pipeline/` | 지식인 앞단계: 1 사전판단(10분야, 받은 그대로) · 2 Perplexity 조사(5주제) · 3 검증(Claude, 10분야) · 4 1차 각색(Claude·GPT 2개, 주제 공용) |
-| `prompts/policy/` | 정책뉴스 0 후보선별(V2)·A(V21)·B(V21)·C 이미지기획(V15)·C 카드설계(V19, 선택), 복지로 ⓪+① 통합(V10)·③ 초안작성(V13)·⑤ 2차각색 Claude(V9)·⑦ 인포그래픽(V6)·⑦ 카드설계(V8, 선택). 검색+홈판(경제판) 통합본 — 홈판 전용 A·B, Gemini 사전스크리닝, 별도 가치판단은 쓰지 않는다. 이미지는 두 시리즈가 공통 규칙을 공유하고 시그니처만 다르다(정책 네이비+그린 / 복지로 틸+골드+배지) |
-| `prompts/dist/` | **최종본 전부.** 바로 아래 지식인 2차 48개, `지식인_앞단계/` 27개, `정책복지로/` 10개. `python3 tools/build.py`로 만든다 — dist는 직접 고치지 않는다 |
+| `prompts/policy/` | 정책뉴스 0 후보선별(V2)·A(V21)·B(V21)·C 이미지기획(V15)·C 카드설계(V19, 선택), 복지로 빠른 판정(V1)·⓪+① 통합(V11)·③ 초안작성(V13)·⑤ 2차각색 Claude(V9)·⑦ 인포그래픽(V6)·⑦ 카드설계(V8, 선택). 검색+홈판(경제판) 통합본 — 홈판 전용 A·B, Gemini 사전스크리닝, 별도 가치판단은 쓰지 않는다. 이미지는 두 시리즈가 공통 규칙을 공유하고 시그니처만 다르다(정책 네이비+그린 / 복지로 틸+골드+배지) |
+| `prompts/dist/` | **최종본 전부.** 바로 아래 지식인 2차 48개, `지식인_앞단계/` 27개, `정책복지로/` 11개. `python3 tools/build.py`로 만든다 — dist는 직접 고치지 않는다 |
 | `prompts/original/` | 처음 받은 지식인 원본 42개(기록용) |
 | `tools/rulecheck.py` | 결과물 형식 점검: `python3 tools/rulecheck.py <결과 파일> <A_Claude|B_Claude|A_GPT|B_GPT>` |
 | `eval/` | 예전 모델 비교 실험 결과(참고용). `eval/samples/`는 사용자가 준 실제 최종 결과물 — 프로그램 기능 설계·시험 때 먼저 본다 |
 | `program/` | 지식인 관리 프로그램 `kin_manager.py`(Ver10.05, CRLF). 탭 구성·저장 흐름·문단 정리·바뀐 점은 `program/README.md` |
-| `program/welfare_manager.py` | 복지로 관리 프로그램(Ver10.07 — 코드 카드 추가, Ver10.06: 원래 파일명 welfare_collector_gui). Gemini 경로 삭제, 속마음 후킹 제목 점검, ⑥ 저장 전 문단 정리(GPT, 기본 꺼짐). 바뀐 점은 `program/README.md` |
+| `program/welfare_manager.py` | 복지로 관리 프로그램(Ver10.08 — 탭 이름 정책뉴스식 1)~9), 4)포스팅 관리를 STEP 1~7(빠른 판정 → 자료 준비 → 본 분석 → 제목 확정 → 초안 → 최종각색 → 완료), 경쟁 블로그 칸, 개선 목록 `docs/welfare_program_todo.md`. Ver10.07 — 코드 카드 추가, Ver10.06: 원래 파일명 welfare_collector_gui). Gemini 경로 삭제, 속마음 후킹 제목 점검, ⑥ 저장 전 문단 정리(GPT, 기본 꺼짐). 바뀐 점은 `program/README.md` |
 | `program/policy_news_manager.py` | 정책뉴스 관리 프로그램(Ver10.10, LF). Ver10.06은 받은 그대로 커밋(aa58833) — 프롬프트 한 세트(0·A V20·B V21·C V15), 프롬프트D 삭제, 제목 속마음 후킹 점검, 저장 전 문단 정리. Ver10.07: 8)키워드 등록에서 중복의심 글을 골라 포스팅("✅ 중복 허용"). Ver10.08: 5탭 코드 카드(선택). Ver10.09: 다중뉴스 사전검토·워터마크처리 탭 삭제, 탭 이동을 탭 화면 기준으로, 통합검색 버튼 → 제목 복사(개선 목록 `docs/policy_program_todo.md`). Ver10.10: 탭 번호 1)~7)로 통일 — 화면 탭 = 코드 TABn = `_build_tabN_*` |
 | `program/Naver_blog_SVG Card_images/` | 코드 카드 도구 — 실행에 필요한 것만(받은 그대로, 고치지 않음): `cards/make_cards.py`(설계도 JSON → 썸네일 글자·인포그래픽 PNG, Playwright), `cards/icons.py`, `fonts/`(OFL.txt 포함). 받은 README·연결가이드는 `docs/code_cards/`, 예시 설계도 8개는 `eval/samples/code_cards/examples/`. 카드용 프롬프트는 `prompts/policy/정책뉴스_C_카드설계.md`(C V19)·`복지로_7_카드설계.md`(⑦ V8) — 파일명은 각 프로그램 설정 탭에서 바꿀 수 있다 |
 | `program/blog_poster.py` | **포스팅 전용 프로그램**(Ver9.16, CRLF, 원본 Ver9.15 커밋 c740cd9). 지식인·정책뉴스·복지로 MD를 네이버 에디터에 타이핑해 발행. MD 읽는 규칙은 `program/README.md` |
@@ -67,7 +67,9 @@
 
 브랜치는 `claude/prompt-modularization-strategy-339bau` 하나이며 기본 브랜치다.
 
-## 진행 상황 (2026-10-13 기준 — 새 대화는 여기서 이어간다)
+## 진행 상황 (2026-10-14 기준 — 새 대화는 여기서 이어간다)
+
+**2026-10-14 (이 대화방 `claude/gifted-faraday-g51g6r`):** 정책뉴스 Ver10.09~10.10(탭 정리·번호 통일), 복지로 Ver10.08 + 프롬프트 빠른 판정 V1·통합 V11. 가치판단을 두 단계로 — 빠른 판정(짧은 프롬프트, 원문 + 첨부 이름만)으로 진행/보류를 먼저 정하고, 진행일 때만 같은 대화창에 통합 프롬프트 + 리서치 + 경쟁 블로그 본문을 붙인다(보류될 서비스에 사용량을 쓰지 않게, 사용자 요청). 가상 화면·가짜 데이터로만 시험 — **Windows·실제 Claude로는 안 해 봤다.** 사용자가 설정에서 빠른 판정 파일명을 맞추고 써 본 결과를 받아 다듬는다. 이 브랜치는 아직 기본 브랜치에 합치지 않았다.
 
 **끝난 것:** 지식인 파이프라인 전체 정비(Perplexity 표기 태그, 검증 삭제·폐기 판정, 1차 문제 수정, 2차 제목·도입부·소제목·AEO 규칙), 정책 B V20·복지로 ③ V11·⑤ V8, 문단 규칙 원복(마지막 커밋), dist 79개 빌드. 사용자에게 준 압축은 지식인 75개(`naver-kin-prompts-…-v2.zip`, 정책복지로 제외)와 정책·복지로 4개(`policy-welfare-prompts-…-v2.zip`)로 나눈다 — 한 압축에 같은 파일을 겹쳐 넣지 않는다.
 
