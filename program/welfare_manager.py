@@ -1938,6 +1938,10 @@ v7.21 (2026-09-22): 🐛 parse_value_judgment_title_candidates() 헤더
                      실측 결과(현재창)"은 STEP 2로. 자동 준비 결과 줄에 원인(검색 0건·쓸 글 없음·스크랩
                      실패·API 없음)과 다음에 할 일을 적는다. 블로그 링크는 메인 키워드 결과가 모자라면
                      다음 키워드 결과로 채운다.
+                     (14) 버그: 키워드를 콤마로만 나눠, Claude가 "/"·"·"로 나눠 쓰면 묶음 한 줄이 통째로
+                     검색됐다(연탄쿠폰 사례 — 블로그 0건). split_keyword_line()으로 , / · | 、 ; 줄바꿈·목록
+                     기호까지 나누고, 키워드 칸을 읽는 모든 곳(리서치·본 분석 복사·결과 전달·블로그탭)에 씀.
+                     자동 준비 결과 줄에 키워드별 블로그 검색 건수를 보여 준다.
 """
 
 import sys
@@ -6158,12 +6162,7 @@ def parse_quick_judgment(text: str) -> dict:
         return m.group(1).strip() if m else ""
     v = line("판정")
     verdict = "보류" if ("보류" in v and "진행" not in v) else ("진행" if ("진행" in v and "보류" not in v) else "")
-    kw_raw = line("리서치 키워드").strip("()（）` ")
-    kws = []
-    for k in re.split(r"[,，]", kw_raw):
-        k = k.strip().strip("`\"'“”‘’").strip()
-        if k and k != "-" and k not in kws:
-            kws.append(k)
+    kws = split_keyword_line(_keyword_block(text or "", "리서치 키워드"))
     return {"verdict": verdict, "money": line("돈 갈래"), "reason": line("이유"),
             "attach": line("첨부 서식자료"), "blog": line("경쟁 블로그"), "keywords": ", ".join(kws)}
 
@@ -6184,6 +6183,35 @@ def check_source_line(text: str) -> list:
     return warns
 
 
+def split_keyword_line(raw: str) -> list:
+    """[Ver10.08] 키워드 여러 개를 하나씩 나눈다 — 콤마뿐 아니라 / · | 、 줄바꿈·목록 기호로 나눠 와도
+    키워드 묶음 한 줄이 통째로 검색되지 않게 한다(연탄쿠폰 사례: "/"로 나뉜 줄이 한 키워드로 검색됨)."""
+    kws = []
+    for k in re.split(r"[,，/／·ㆍ|｜、;\n]", raw or ""):
+        k = re.sub(r"^\s*(?:[-*•]|\d+[.)])\s*", "", k)
+        k = k.strip().strip("()（）[]`\"'“”‘’").strip()
+        if k and k != "-" and k not in kws:
+            kws.append(k)
+    return kws
+
+
+def _keyword_block(text: str, label: str) -> str:
+    """"라벨: 값" 줄의 값. 값이 비고 다음 줄들이 목록(- 키워드)이면 그 목록까지 이어 붙인다."""
+    m = re.search(rf"^[ \t>*-]*{label}[ \t]*:[ \t]*(.*)$", text, re.M)
+    if not m:
+        return ""
+    val = m.group(1).strip()
+    if val:
+        return val
+    out = []
+    for ln in text[m.end():].splitlines()[1:]:
+        if re.match(r"^\s*(?:[-*•]|\d+[.)])\s+\S", ln):
+            out.append(ln)
+        elif ln.strip():
+            break
+    return "\n".join(out)
+
+
 def strip_outer_code_fence(text: str) -> str:
     """[Ver10.08] 복사한 답이 ``` 코드블럭째면 바깥 울타리만 벗긴다(안쪽 내용은 그대로)."""
     t = (text or "").strip()
@@ -6198,13 +6226,7 @@ def extract_research_request_block_keywords(text: str) -> str:
         return ""
     body = m.group(1)
     cb = re.search(r"```[^\n]*\n(.*?)\n?```", body, re.S)
-    line = cb.group(1).strip().splitlines()[0] if cb and cb.group(1).strip() else ""
-    kws = []
-    for k in re.split(r"[,，]", line.strip("()（） ")):
-        k = k.strip().strip("`\"'“”‘’").strip()
-        if k and k not in kws:
-            kws.append(k)
-    return ", ".join(kws)
+    return ", ".join(split_keyword_line(cb.group(1).strip() if cb else ""))
 
 
 def pick_competitor_blog_links(research, exclude_ids: list, n: int) -> list:
@@ -9450,7 +9472,7 @@ class WelfareCollectorGUI(tk.Tk):
             qj = parse_quick_judgment(quick) if quick else {}
             kw = qj.get("keywords") or row["servNm"]
             self.research_keyword_var.set(kw)
-            cached = get_cached_research(kw.split(",")[0].strip())
+            cached = get_cached_research((split_keyword_line(kw) or [""])[0])
             if cached:
                 self.research_status_var.set(f"✓ 리서치 완료 ({cached['researched_at']})")
             else:
@@ -9612,7 +9634,7 @@ class WelfareCollectorGUI(tk.Tk):
         # [v6.9] 콤마(,)로 구분하면 여러 키워드 후보를 한 번에 리서치한다
         # (예: 정식명/약칭 비교). 콤마 없이 하나만 입력하면 기존과 동일하게
         # 동작한다(하위 호환).
-        keywords = [k.strip() for k in keyword.split(",") if k.strip()]
+        keywords = split_keyword_line(keyword)
         if not keywords:
             messagebox.showwarning("알림", "검색 키워드를 입력하세요.")
             return
@@ -9653,7 +9675,7 @@ class WelfareCollectorGUI(tk.Tk):
             messagebox.showwarning("알림", "검색 키워드 칸이 비어 있습니다.\nAI가 요청한 키워드를 먼저 붙여넣고 '키워드 리서치 실행'을 누르세요.")
             return
 
-        keywords = [k.strip() for k in raw.split(",") if k.strip()]
+        keywords = split_keyword_line(raw)
         if not keywords:
             messagebox.showwarning("알림", "검색 키워드를 입력하세요.")
             return
@@ -10107,7 +10129,7 @@ class WelfareCollectorGUI(tk.Tk):
             messagebox.showinfo("실행 중", "이미 검색량·자동완성 조회가 진행 중입니다.")
             return
 
-        keywords = [k.strip() for k in keyword.split(",") if k.strip()]
+        keywords = split_keyword_line(keyword)
         if not keywords:
             messagebox.showwarning("알림", "검색 키워드를 입력하세요.")
             return
@@ -10193,7 +10215,7 @@ class WelfareCollectorGUI(tk.Tk):
         # 있는 항목만 모아 research_map을 구성한다(research_map은 원래도
         # 여러 항목을 받는 범용 구조 — build_*_package가 그대로 처리한다).
         keyword_input = self.research_keyword_var.get().strip() or row["servNm"]
-        keywords = [k.strip() for k in keyword_input.split(",") if k.strip()] or [row["servNm"]]
+        keywords = split_keyword_line(keyword_input) or [row["servNm"]]
         # [v6.9.1] get_cached_research()는 호출마다 캐시 파일 전체를
         # 디스크에서 읽으므로, 키워드마다 두 번씩 부르지 않고 한 번만
         # 읽어 재사용한다(콤마 다중 키워드일수록 절약 효과가 커짐).
@@ -10450,7 +10472,7 @@ class WelfareCollectorGUI(tk.Tk):
 
     # ── [Ver10.08] 판정 읽기 뒤 자료 자동 준비(키워드 리서치 + 경쟁 블로그 스크랩) ──
     def _start_auto_prep(self, row, qj):
-        keywords = [k.strip() for k in (qj.get("keywords") or row["servNm"]).split(",") if k.strip()]
+        keywords = split_keyword_line(qj.get("keywords") or row["servNm"])
         if getattr(self, "_auto_prep_running", False):
             messagebox.showinfo("실행 중", "자료 자동 준비가 이미 진행 중입니다.")
             return
@@ -10481,7 +10503,8 @@ class WelfareCollectorGUI(tk.Tk):
                 for kw, research in zip(keywords, results):
                     set_cached_research(kw, research)
                 links = pick_competitor_blog_links(results or [], exclude, n_blog) if want_blog else []
-                diag["search_hits"] = sum(len((r or {}).get("blog_titles") or []) for r in (results or []))
+                diag["per_kw"] = [(k, len((r or {}).get("blog_titles") or [])) for k, r in zip(keywords, results or [])]
+                diag["search_hits"] = sum(n for _k, n in diag["per_kw"])
                 diag["blog_skipped"] = next((r.get("blog_skipped_reason") for r in (results or [])
                                              if r and r.get("blog_skipped_reason")), "")
                 diag["links"] = len(links)
@@ -10543,6 +10566,8 @@ class WelfareCollectorGUI(tk.Tk):
             self.research_status_var.set(f"✅ 리서치 완료 ({len(done)}/{len(p['keywords'])}건)" if done else "❌ 리서치 실패")
         diag = p.get("diag", {})
         lines = []
+        if diag.get("per_kw"):
+            lines.append("블로그 검색: " + " · ".join(f"'{k}' {n}건" for k, n in diag["per_kw"]))
         if done:
             lines.append(f"✅ 키워드 리서치 {len(done)}/{len(p['keywords'])}개 완료")
         else:
@@ -10631,7 +10656,7 @@ class WelfareCollectorGUI(tk.Tk):
     def _open_blog_tab_with_main_keyword(self):
         """[Ver10.08] 검색 키워드 칸의 첫 키워드(메인)로 네이버 블로그탭을 비로그인 새 창으로 연다 —
         상위 블로그 글 주소를 골라 STEP 1 주소 칸에 넣는 용도."""
-        kw = self.research_keyword_var.get().split(",")[0].strip()
+        kw = (split_keyword_line(self.research_keyword_var.get()) or [""])[0]
         if not kw:
             messagebox.showwarning("알림", "검색 키워드 칸이 비어 있습니다. 먼저 항목을 선택하거나 키워드를 입력하세요.")
             return
@@ -10726,7 +10751,7 @@ class WelfareCollectorGUI(tk.Tk):
 
         # [v6.9] 콤마(,)로 구분해 여러 키워드를 리서치했다면, 캐시에 실제로 있는 항목만 모은다.
         keyword_input = self.research_keyword_var.get().strip() or row["servNm"]
-        keywords = [k.strip() for k in keyword_input.split(",") if k.strip()] or [row["servNm"]]
+        keywords = split_keyword_line(keyword_input) or [row["servNm"]]
         _research_cache_now = load_research_cache()
         research_map = {kw: _research_cache_now[kw] for kw in keywords if kw in _research_cache_now}
         if not research_map:
@@ -10836,7 +10861,7 @@ class WelfareCollectorGUI(tk.Tk):
         # 있는 항목만 모아 research_map을 구성한다(research_map은 원래도
         # 여러 항목을 받는 범용 구조 — build_*_package가 그대로 처리한다).
         keyword_input = self.research_keyword_var.get().strip() or row["servNm"]
-        keywords = [k.strip() for k in keyword_input.split(",") if k.strip()] or [row["servNm"]]
+        keywords = split_keyword_line(keyword_input) or [row["servNm"]]
         # [v6.9.1] get_cached_research()는 호출마다 캐시 파일 전체를
         # 디스크에서 읽으므로, 키워드마다 두 번씩 부르지 않고 한 번만
         # 읽어 재사용한다(콤마 다중 키워드일수록 절약 효과가 커짐).
@@ -10922,7 +10947,7 @@ class WelfareCollectorGUI(tk.Tk):
         # 있는 항목만 모아 research_map을 구성한다(research_map은 원래도
         # 여러 항목을 받는 범용 구조 — build_*_package가 그대로 처리한다).
         keyword_input = self.research_keyword_var.get().strip() or row["servNm"]
-        keywords = [k.strip() for k in keyword_input.split(",") if k.strip()] or [row["servNm"]]
+        keywords = split_keyword_line(keyword_input) or [row["servNm"]]
         # [v6.9.1] get_cached_research()는 호출마다 캐시 파일 전체를
         # 디스크에서 읽으므로, 키워드마다 두 번씩 부르지 않고 한 번만
         # 읽어 재사용한다(콤마 다중 키워드일수록 절약 효과가 커짐).
@@ -10992,7 +11017,7 @@ class WelfareCollectorGUI(tk.Tk):
         # 있는 항목만 모아 research_map을 구성한다(research_map은 원래도
         # 여러 항목을 받는 범용 구조 — build_*_package가 그대로 처리한다).
         keyword_input = self.research_keyword_var.get().strip() or row["servNm"]
-        keywords = [k.strip() for k in keyword_input.split(",") if k.strip()] or [row["servNm"]]
+        keywords = split_keyword_line(keyword_input) or [row["servNm"]]
         # [v6.9.1] get_cached_research()는 호출마다 캐시 파일 전체를
         # 디스크에서 읽으므로, 키워드마다 두 번씩 부르지 않고 한 번만
         # 읽어 재사용한다(콤마 다중 키워드일수록 절약 효과가 커짐).
