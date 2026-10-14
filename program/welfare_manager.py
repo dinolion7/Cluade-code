@@ -1883,11 +1883,11 @@ v7.21 (2026-09-22): 🐛 parse_value_judgment_title_candidates() 헤더
 2026-10-14 Ver10.08: 정책뉴스 Ver10.09~10.10과 같은 컨셉 + 가치판단 두 단계(개선 목록
                      docs/welfare_program_todo.md 1·3~7번).
                      (1) 탭 이름을 정책뉴스처럼 "아이콘 + 1)이름"으로(🏛 1)중앙부처복지서비스 ~
-                     ⚙️ 9)설정), 안내 문구의 탭 표기도 맞춤. "인포그래픽 작업" → "인포그래픽 작성".
+                     ⚙️ 8)설정 — 블로그 스크랩 탭은 (11)에서 삭제), 안내 문구의 탭 표기도 맞춤. "인포그래픽 작업" → "인포그래픽 작성".
                      (2) 4)포스팅 관리 탭을 실행 순서대로 STEP 1~7 칸으로: 빠른 판정 → 자료 준비 →
                      본 분석 → 제목 후보 확정(위로 옮김) → 초안 → 최종각색 → 완료 처리. 버튼의
                      동그라미 번호를 빼고 칸마다 "→ 다음: STEP n" 안내. 인포그래픽 프롬프트 복사
-                     2개는 6)인포그래픽 작성 탭으로 옮김(그 탭의 대상 서비스 기준).
+                     2개는 5)인포그래픽 작성 탭으로 옮김(그 탭의 대상 서비스 기준).
                      (3) STEP 1 빠른 판정(새 프롬프트 복지로_00_빠른판정.md V1, 설정
                      prompt_quick_judgment_file): 원문 + 첨부파일 이름만 복사. 결과 저장
                      (stage_outputs의 quick_judgment) 때 보류면 확인 후 "⏸ 보류", 진행이면 리서치
@@ -1923,6 +1923,10 @@ v7.21 (2026-09-22): 🐛 parse_value_judgment_title_candidates() 헤더
                      (10) "기타 관리" 칸 삭제 — 버튼을 쓰는 자리로: 새로고침·엑셀·자료 폴더는 목록
                      아래, 첨부파일 폴더는 STEP 2, 최종원고 폴더는 STEP 4, 제목 블로그검색·제목 복사·
                      연관 정책 확인은 STEP 5 "포스팅 전 확인".
+                     (11) 5)블로그 스크랩 탭 삭제(화면·_bs_* 메서드) — 자동 준비가 스크랩하고, 직접 고를
+                     때는 수동 보조의 주소 칸 + "🕸 주소 스크랩해서 채우기"(서비스 폴더
+                     competitor_blogs_md/). "스크랩 폴더에서 불러오기" 삭제. 탭 번호 5)~8)로 당김.
+                     blog_scrap_* 함수는 그대로 둔다.
 """
 
 import sys
@@ -1970,7 +1974,7 @@ except ImportError:
     HAS_UNIFIED_MODULE = False
 
 # ✅ [2026-09-29] 게시판(카테고리) 판정 공용 모듈(선택적 연동) - 이 모듈이나 게시판
-# 설정 엑셀이 없으면 7)키워드 등록 탭은 예전 방식(카테고리 입력란)으로 동작한다.
+# 설정 엑셀이 없으면 6)키워드 등록 탭은 예전 방식(카테고리 입력란)으로 동작한다.
 try:
     import Naver_blog_board_module as board_mod
     HAS_BOARD_MODULE = True
@@ -1978,7 +1982,7 @@ except ImportError:
     board_mod = None
     HAS_BOARD_MODULE = False
 
-# 5)블로그 스크랩 탭(v4.5) 전용 — naver_blog_scraper.py 독립 프로그램을 통째로
+# 블로그 스크랩(v4.5, 예전 5)블로그 스크랩 탭 — Ver10.08에서 탭은 삭제, 자동 준비가 씀) — naver_blog_scraper.py 독립 프로그램을 통째로
 # 이식. selenium이 없어도 프로그램 자체는 뜨게 하고(다른 탭은 정상 사용),
 # 이 탭 실행 시점에만 안내 메시지로 막는다(다른 optional 의존성과 동일 패턴).
 try:
@@ -2520,7 +2524,7 @@ def set_posting_status(serv_id: str, new_status: str, serv_nm: str = "", source:
         return False, (
             "이미 '📤 포스팅완료'로 표시된 자료는 다른 상태로 되돌릴 수 없습니다.\n"
             "(외부 포스팅 프로그램과의 중복 방지 이력을 보호하기 위한 제한입니다)\n"
-            "실제로 블로그에서 글을 삭제했다면, 8)포스팅 이력관리 탭의 "
+            "실제로 블로그에서 글을 삭제했다면, 7)포스팅 이력관리 탭의 "
             "'🗑️ 포스팅완료 삭제 처리' 버튼을 사용하세요."
         )
     # [2026-09-29 2차] 기존 항목을 복사해 갱신한다 - 게시판 값 등 덧붙인 필드 보존
@@ -2747,13 +2751,13 @@ _DEFAULT_CONFIG = {
     "openai_api_key": "",
     "para_reflow_on": False,
     "para_reflow_limit": 150,
-    # [Ver10.07] 코드 카드(선택) — 6)인포그래픽 작성 탭의 체크를 켤 때만 쓴다.
+    # [Ver10.07] 코드 카드(선택) — 5)인포그래픽 작성 탭의 체크를 켤 때만 쓴다.
     "prompt_infographic_card_file": "복지로_7_카드설계.md",
     "card_tool_dir": "Naver_blog_SVG Card_images",
     "card_chrome_path": "",
     "card_panel_on": False,
     "card_last_shape": "",
-    "kw_last_category": "",  # 7)키워드 등록 탭 카테고리 입력란 마지막 값(복지로 전용 — 다른 서브프로그램과 공유하지 않음)
+    "kw_last_category": "",  # 6)키워드 등록 탭 카테고리 입력란 마지막 값(복지로 전용 — 다른 서브프로그램과 공유하지 않음)
 }
 
 
@@ -3598,7 +3602,7 @@ def para_reflow_with_gpt(openai_client, md_text, limit=PARA_REFLOW_DEFAULT_LIMIT
 def save_final_adaptation_markdown(serv_id: str, serv_nm: str, text: str) -> str:
     """최종각색 결과를 "final_posts/{제목}/{제목}.md"로 저장하고 그 경로를
     돌려준다. 파일 하나가 아니라 제목별 폴더로 만드는 이유: 이 폴더 안에
-    인포그래픽 이미지(6)인포그래픽 작성 탭에서 만든 것)도 같이 넣어서,
+    인포그래픽 이미지(5)인포그래픽 작성 탭에서 만든 것)도 같이 넣어서,
     나중에 "📤 키워드 등록" 탭이 MD+이미지를 통째로 한 번에 옮길 수 있게
     하기 위함(정책뉴스 프로그램의 제목별 폴더 관례와 동일). 폴더명 = 제목
     그대로(그 외 아무것도 붙이지 않음). 같은 제목으로 다시 저장하면 같은
@@ -3624,7 +3628,7 @@ def get_final_adaptation_text_for_use(serv_id: str, serv_nm: str = "") -> str:
     {제목}.md 파일이 이미 저장되어 있으면 그 파일 내용을 최우선으로
     읽어온다 — 사용자가 "📂 자료폴더 열기"로 폴더를 열어 메모장 등으로
     MD 파일을 직접 고친 경우, 그 수정 내용이 항상 최신이기 때문이다.
-    (이전 버전 문제: 6)인포그래픽 작성 탭의 "제목 목록 새로고침"·
+    (이전 버전 문제: 5)인포그래픽 작성 탭의 "제목 목록 새로고침"·
     "📂 자료폴더 열기"가 stage_outputs.json에 저장된 텍스트만 읽어서,
     MD 파일을 직접 고쳐도 목록/프롬프트가 계속 옛날 내용으로 나왔음.)
     .md 파일이 아직 없으면(최종각색 결과를 아직 저장 전) stage_outputs.
@@ -3966,7 +3970,7 @@ _SCORE_CACHE = {"중앙부처": None, "지자체": None}
 # v6.3: build_listing_rows()가 지자체 행마다(이름이 중앙부처와 매칭될 때)
 # central_detail.json + lcgv_detail.json을 매번 다시 읽고 confirm_duplicate_
 # via_detail()을 재계산하던 부분 — 캐시가 전혀 없어 build_listing_rows()를
-# 부를 때마다(3)리스트업, 4)포스팅 관리 새로고침, 8)포스팅 이력관리 등) 매번 같은
+# 부를 때마다(3)리스트업, 4)포스팅 관리 새로고침, 7)포스팅 이력관리 등) 매번 같은
 # 계산을 반복하고 있었음. (central_sid, lcgv_sid) 쌍 -> bool(중복 확정 여부)
 # 로 캐시하고, detail 데이터가 바뀔 때만(=invalidate_score_cache 호출 시점과
 # 완전히 동일한 시점) 함께 비운다 — 점수 캐시와 무효화 조건이 정확히
@@ -4508,7 +4512,7 @@ def build_listing_rows(include_fuzzy: bool = False) -> list:
 
 
 def get_infographic_candidate_rows() -> list:
-    """6)인포그래픽 작성 탭 콤보박스용 후보 목록(servId/servNm/source만
+    """5)인포그래픽 작성 탭 콤보박스용 후보 목록(servId/servNm/source만
     필요)을 만든다. 예전에는 build_listing_rows()를 그대로 재사용했는데,
     그 함수는 중앙부처+지자체 전체(수천 건)를 순회하며 건마다 detail.json
     존재 확인(os.path.exists) + 지자체는 중복정책 대조용 detail.json
@@ -6776,7 +6780,7 @@ def get_unresolved_related_lcgv_ids(row: dict, rows_by_id: dict = None) -> list:
 
 
 # ============================================================
-# 5)블로그 스크랩 탭 — naver_blog_scraper.py(독립 프로그램) 이식.
+# 블로그 스크랩 함수 — naver_blog_scraper.py(독립 프로그램) 이식. [Ver10.08] 탭은 삭제, 자료 자동 준비·수동 보조가 쓴다.
 #   ⓪ 사전스크리닝(Gemini)이 "경쟁 블로그 샘플"로 참조할 상위노출
 #   블로그 게시글을 URL만으로 마크다운(.md)으로 저장해두는 용도. 외부
 #   모듈 파일로 분리하지 않고, 이 프로그램 안에 함수/클래스를 그대로
@@ -7119,7 +7123,6 @@ class WelfareCollectorGUI(tk.Tk):
         self._refresh_ig_service_list()
         self._refresh_keyword_reg_preview()
         self.after(150, self._poll_log_queue)
-        self.after(200, self._bs_poll_log_queue)
         if self._missing_prompt_files_at_startup:
             # 로그창이 뜬 뒤에 안내되도록 약간 지연 — _poll_log_queue가 먼저 돌기 시작해야 함
             self.after(300, self._warn_missing_prompt_files)
@@ -7182,7 +7185,7 @@ class WelfareCollectorGUI(tk.Tk):
     def _build_widgets(self):
         pad = {"padx": 8, "pady": 6}
 
-        # 인증키 입력은 v3.1부터 9)설정 탭으로 이동했다(예전엔 상단에
+        # 인증키 입력은 v3.1부터 8)설정 탭으로 이동했다(예전엔 상단에
         # 항상 떠 있었는데, 다른 탭 작업 중에도 계속 자리를 차지해서
         # 화면이 좁아 보인다는 피드백). self.key_var/self.show_key_var
         # 위젯 자체는 설정 탭 쪽에서 만들며, 실제 값(StringVar)은
@@ -7224,17 +7227,15 @@ class WelfareCollectorGUI(tk.Tk):
         infographic_tab = ttk.Frame(notebook)
         keyword_reg_tab = ttk.Frame(notebook)
         history_tab = ttk.Frame(notebook)
-        blog_scrap_tab = ttk.Frame(notebook)
         settings_tab = ttk.Frame(notebook)
         notebook.add(central_tab, text="🏛 1)중앙부처복지서비스")
         notebook.add(lcgv_tab, text="🏘 2)지자체복지서비스")
         notebook.add(listing_tab, text="📋 3)리스트업")
         notebook.add(posting_tab, text="📝 4)포스팅 관리")
-        notebook.add(blog_scrap_tab, text="📰 5)블로그 스크랩")
-        notebook.add(infographic_tab, text="🖼 6)인포그래픽 작성")
-        notebook.add(keyword_reg_tab, text="📤 7)키워드 등록")
-        notebook.add(history_tab, text="📊 8)포스팅 이력관리")
-        notebook.add(settings_tab, text="⚙️ 9)설정")
+        notebook.add(infographic_tab, text="🖼 5)인포그래픽 작성")
+        notebook.add(keyword_reg_tab, text="📤 6)키워드 등록")
+        notebook.add(history_tab, text="📊 7)포스팅 이력관리")
+        notebook.add(settings_tab, text="⚙️ 8)설정")
         self.notebook = notebook
         self.settings_tab = settings_tab
 
@@ -7514,7 +7515,7 @@ class WelfareCollectorGUI(tk.Tk):
         pplaceholder_f.grid(row=1, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
         tk.Label(pplaceholder_f,
                  text="순서: 목록에서 서비스 선택 → STEP 1 빠른 판정·자료 자동 준비 → STEP 2 본 분석 → "
-                      "STEP 3 제목 확정 → STEP 4 초안·최종각색 → 6)인포그래픽 작성 탭 → STEP 5 완료 처리",
+                      "STEP 3 제목 확정 → STEP 4 초안·최종각색 → 5)인포그래픽 작성 탭 → STEP 5 완료 처리",
                  bg="#EEF2FF", fg="#3730A3", font=("맑은 고딕", 9),
                  wraplength=900, justify="left").pack(side="left")
 
@@ -7719,22 +7720,28 @@ class WelfareCollectorGUI(tk.Tk):
         # 스크랩할 경쟁 블로그를 직접 찾을 때 — 검색 키워드 칸의 첫 키워드(메인)로 블로그탭을 연다.
         ttk.Button(blog_bar, text="🔍 메인 키워드로 블로그탭 열기",
                    command=self._open_blog_tab_with_main_keyword).pack(side="left", padx=(6, 0))
-        ttk.Button(blog_bar, text="📂 스크랩 폴더에서 불러오기",
-                   command=self._load_competitor_blogs_from_scrap).pack(side="left", padx=(6, 4))
         ttk.Button(blog_bar, text="지우기",
                    command=self._clear_competitor_blogs).pack(side="left", padx=(0, 8))
         self.competitor_blog_info_var = tk.StringVar(value="")
         ttk.Label(blog_bar, textvariable=self.competitor_blog_info_var,
                   foreground="#1565C0").pack(side="left")
+        # [Ver10.08] 직접 고른 글 주소(한 줄에 하나) → 스크랩해서 칸 채우기(예전 5)블로그 스크랩 탭 대신)
+        url_f = ttk.Frame(blog_f)
+        url_f.grid(row=1, column=0, sticky="ew", pady=(4, 0))
+        url_f.columnconfigure(0, weight=1)
+        self.competitor_url_text = tk.Text(url_f, height=3, wrap="none", font=("맑은 고딕", 9))
+        self.competitor_url_text.grid(row=0, column=0, sticky="ew")
+        ttk.Button(url_f, text="🕸 주소 스크랩해서 채우기",
+                   command=self._scrape_competitor_urls).grid(row=0, column=1, sticky="n", padx=(6, 0))
         self.competitor_blog_text = scrolledtext.ScrolledText(blog_f, wrap="word", height=5,
                                                               font=("맑은 고딕", 9))
-        self.competitor_blog_text.grid(row=1, column=0, sticky="ew", pady=(4, 0))
+        self.competitor_blog_text.grid(row=3, column=0, sticky="ew", pady=(4, 0))
         self.competitor_blog_text.bind("<FocusOut>", lambda e: self._save_competitor_blogs())
         self._competitor_blog_serv = None   # 칸에 지금 들어 있는 글의 서비스(서비스별로 따로 저장)
         ttk.Label(blog_f,
-                  text="판정 읽기 때 메인 키워드 상위 블로그를 자동으로 스크랩해 채웁니다(설정에서 개수·내 블로그 제외). "
-                       "다른 글로 바꾸려면 블로그탭에서 고른 글을 '5)블로그 스크랩'으로 저장한 뒤 불러오세요. "
-                       "블로그는 글 구성 참고용일 뿐 사실 근거·출처로 쓰지 않습니다.",
+                  text="판정 읽기 때 메인 키워드 상위 블로그를 자동으로 스크랩해 아래 칸을 채웁니다(설정에서 개수·내 블로그 제외). "
+                       "다른 글로 바꾸려면 블로그탭에서 고른 글 주소를 위 칸에 한 줄에 하나씩 넣고 '🕸 주소 스크랩해서 채우기'. "
+                       "아래 칸은 직접 붙여넣거나 고쳐도 됩니다. 블로그는 글 구성 참고용일 뿐 사실 근거·출처로 쓰지 않습니다.",
                   foreground="gray", wraplength=1000, justify="left").grid(row=2, column=0, sticky="w", pady=(2, 0))
         prep_f.grid_remove()
 
@@ -7885,7 +7892,7 @@ class WelfareCollectorGUI(tk.Tk):
             side="left", padx=(0, 6), pady=(0, 6))
         ttk.Button(final_row, text="📝 최종원고(.md) 폴더 열기",
                    command=self._open_final_posts_folder).pack(side="left", padx=(0, 6), pady=(0, 6))
-        _next_hint(final_row, "→ 다음: 6)인포그래픽 작성 탭 → STEP 5")
+        _next_hint(final_row, "→ 다음: 5)인포그래픽 작성 탭 → STEP 5")
 
         # ---- STEP 5 완료 처리 ----
         done_f = ttk.LabelFrame(pt, text="STEP 5 — 완료 처리")
@@ -8116,89 +8123,12 @@ class WelfareCollectorGUI(tk.Tk):
         ttk.Button(hist_btn_f, text="🗑️ 포스팅완료 삭제 처리 (블로그에서 실제 삭제한 경우)",
                    command=self._history_mark_deleted).pack(side="left", padx=(8, 0))
 
-        # ---- 블로그 스크랩 탭 ----
-        # ⓪ 사전스크리닝(Gemini)이 참조할 "경쟁 블로그 샘플"을 URL만
-        # 넣으면 마크다운(.md)으로 저장해두는 탭. naver_blog_scraper.py
-        # 독립 프로그램을 그대로 이식(외부 모듈 파일 분리 없이 내부 함수/
-        # 로직으로 심음).
-        blog_scrap_tab.columnconfigure(0, weight=1)
-        blog_scrap_tab.rowconfigure(2, weight=1)
-
-        if not HAS_SELENIUM:
-            bs_warn_f = tk.Frame(blog_scrap_tab, bg="#F8D7DA", padx=8, pady=6)
-            bs_warn_f.grid(row=0, column=0, sticky="ew", padx=6, pady=(6, 4))
-            tk.Label(bs_warn_f,
-                     text="⚠️  selenium 패키지가 설치되어 있지 않아 이 탭은 동작하지 않습니다. "
-                          "터미널에서 'pip install selenium'을 실행한 뒤 프로그램을 다시 시작하세요.",
-                     bg="#F8D7DA", fg="#721C24", font=("맑은 고딕", 9, "bold"),
-                     wraplength=900, justify="left").pack(anchor="w")
-
-        bs_input_f = ttk.LabelFrame(blog_scrap_tab, text="블로그 URL 추가")
-        bs_input_f.grid(row=1, column=0, sticky="ew", padx=6, pady=(0, 6))
-
-        self.bs_url_entry = ttk.Entry(bs_input_f)
-        self.bs_url_entry.pack(side="left", fill="x", expand=True, padx=(8, 4), pady=8)
-        self.bs_url_entry.bind("<Return>", lambda e: self._bs_add_single_url())
-        ttk.Button(bs_input_f, text="추가", command=self._bs_add_single_url).pack(
-            side="left", padx=4, pady=8)
-        ttk.Button(bs_input_f, text="여러 줄 붙여넣기", command=self._bs_paste_multiple_urls).pack(
-            side="left", padx=(4, 8), pady=8)
-
-        bs_list_f = ttk.LabelFrame(blog_scrap_tab, text="등록된 URL 목록")
-        bs_list_f.grid(row=2, column=0, sticky="nsew", padx=6, pady=(0, 6))
-        blog_scrap_tab.rowconfigure(2, weight=1)
-
-        bs_listbox_inner = ttk.Frame(bs_list_f)
-        bs_listbox_inner.pack(fill="both", expand=True, padx=8, pady=8)
-        bs_scrollbar = ttk.Scrollbar(bs_listbox_inner, orient="vertical")
-        self.bs_url_listbox = tk.Listbox(
-            bs_listbox_inner, selectmode=tk.EXTENDED, yscrollcommand=bs_scrollbar.set)
-        bs_scrollbar.config(command=self.bs_url_listbox.yview)
-        self.bs_url_listbox.pack(side="left", fill="both", expand=True)
-        bs_scrollbar.pack(side="right", fill="y")
-
-        bs_list_btn_f = ttk.Frame(bs_list_f)
-        bs_list_btn_f.pack(fill="x", padx=8, pady=(0, 8))
-        ttk.Button(bs_list_btn_f, text="선택 삭제", command=self._bs_remove_selected).pack(
-            side="left", padx=(0, 4))
-        ttk.Button(bs_list_btn_f, text="전체 삭제", command=self._bs_clear_all).pack(side="left")
-
-        bs_folder_f = ttk.LabelFrame(blog_scrap_tab, text="저장 폴더")
-        bs_folder_f.grid(row=3, column=0, sticky="ew", padx=6, pady=(0, 6))
-        self.bs_output_dir_var = tk.StringVar(value=blog_scrap_default_output_dir())
-        # v6.5: 버튼을 하나 더 추가하면서, 인풋창은 expand=True로 "남는
-        # 공간만큼만" 채우는 구조라 자동으로 좁아진다 — 인풋창 자체에
-        # 고정 width를 새로 주지 않아도 전체 가로 사이즈(bs_folder_f는
-        # sticky="ew"라 탭 폭에 맞춰짐, 탭 폭 자체는 다른 더 넓은 위젯
-        # 들이 이미 결정해둔 값이라 이 행 때문에 창이 더 넓어지지 않음)
-        # 그대로 유지된다.
-        ttk.Entry(bs_folder_f, textvariable=self.bs_output_dir_var).pack(
-            side="left", fill="x", expand=True, padx=(8, 4), pady=8)
-        ttk.Button(bs_folder_f, text="폴더 선택", command=self._bs_choose_folder).pack(
-            side="left", padx=4, pady=8)
-        ttk.Button(bs_folder_f, text="저장 폴더 열기", command=self._bs_open_output_folder).pack(
-            side="left", padx=4, pady=8)
-        ttk.Button(bs_folder_f, text="🗑️ 폴더 내 자료 삭제", command=self._bs_clear_output_folder).pack(
-            side="left", padx=(4, 8), pady=8)
-
-        bs_run_f = ttk.Frame(blog_scrap_tab)
-        bs_run_f.grid(row=4, column=0, sticky="ew", padx=6, pady=(0, 6))
-        self.bs_run_button = ttk.Button(bs_run_f, text="▶ 스크랩 시작", command=self._bs_start_scraping)
-        self.bs_run_button.pack(side="left")
-        self.bs_progress_var = tk.StringVar(value="")
-        ttk.Label(bs_run_f, textvariable=self.bs_progress_var).pack(side="left", padx=12)
-
-        bs_log_f = ttk.LabelFrame(blog_scrap_tab, text="진행 로그")
-        bs_log_f.grid(row=5, column=0, sticky="nsew", padx=6, pady=(0, 6))
-        self.bs_log_text = scrolledtext.ScrolledText(bs_log_f, height=8, state="disabled")
-        self.bs_log_text.pack(fill="both", expand=True, padx=8, pady=8)
-
-        self.bs_log_queue = queue.Queue()
-        self.bs_is_running = False
+        # [Ver10.08] 5)블로그 스크랩 탭 삭제 — 경쟁 블로그는 판정 읽기 때 자동 스크랩, 직접 고를 때는
+        # 4)포스팅 관리 "🛠 수동 보조"의 주소 칸에서 스크랩한다(blog_scrap_* 함수는 그대로 쓴다).
 
         # ---- 설정 탭 ----
         # 항목이 많아 창을 아무리 키워도 잘리는 문제가 있어, 스크롤 가능한
-        # 캔버스로 감쌌다(6)인포그래픽 작성 탭의 제목 목록과 동일한 패턴).
+        # 캔버스로 감쌌다(5)인포그래픽 작성 탭의 제목 목록과 동일한 패턴).
         # 실제 위젯은 settings_tab이 아니라 그 안의 settings_inner에 넣는다.
         settings_canvas = tk.Canvas(settings_tab, highlightthickness=0)
         settings_scrollbar = ttk.Scrollbar(settings_tab, orient="vertical", command=settings_canvas.yview)
@@ -8279,7 +8209,7 @@ class WelfareCollectorGUI(tk.Tk):
         srow += 1
         ttk.Label(settings_inner,
                   text="비워두면 프로그램 폴더의 Naver_blog_게시판설정.xlsx를 사용하고, 그 파일도 없으면 예전 카테고리 입력란 방식으로 동작합니다. "
-                       "경로를 바꾼 뒤에는 프로그램을 다시 시작해야 7)키워드 등록 탭에 반영됩니다.",
+                       "경로를 바꾼 뒤에는 프로그램을 다시 시작해야 6)키워드 등록 탭에 반영됩니다.",
                   foreground="gray", wraplength=900, justify="left").grid(
             row=srow, column=1, sticky="w", padx=6, pady=(0, 4))
         srow += 1
@@ -8872,156 +8802,6 @@ class WelfareCollectorGUI(tk.Tk):
         except queue.Empty:
             pass
         self.after(150, self._poll_log_queue)
-
-    # ---------------- 5)블로그 스크랩 탭 ----------------
-    def _bs_add_single_url(self):
-        url = self.bs_url_entry.get().strip()
-        if not url:
-            return
-        self._bs_add_url_to_list(url)
-        self.bs_url_entry.delete(0, tk.END)
-
-    def _bs_paste_multiple_urls(self):
-        try:
-            clipboard_text = self.clipboard_get()
-        except tk.TclError:
-            messagebox.showwarning("안내", "클립보드에 텍스트가 없습니다.")
-            return
-        lines = [line.strip() for line in clipboard_text.splitlines() if line.strip()]
-        added = 0
-        for line in lines:
-            if self._bs_add_url_to_list(line, silent=True):
-                added += 1
-        messagebox.showinfo("완료", f"{added}개의 URL을 추가했습니다.")
-
-    def _bs_add_url_to_list(self, url: str, silent: bool = False) -> bool:
-        if "blog.naver.com" not in url:
-            if not silent:
-                messagebox.showwarning("안내", "네이버 블로그 URL이 아닙니다.")
-            return False
-        self.bs_url_listbox.insert(tk.END, url)
-        return True
-
-    def _bs_remove_selected(self):
-        for idx in reversed(self.bs_url_listbox.curselection()):
-            self.bs_url_listbox.delete(idx)
-
-    def _bs_clear_all(self):
-        self.bs_url_listbox.delete(0, tk.END)
-
-    def _bs_choose_folder(self):
-        folder = filedialog.askdirectory(initialdir=self.bs_output_dir_var.get() or os.getcwd())
-        if folder:
-            self.bs_output_dir_var.set(folder)
-
-    def _bs_open_output_folder(self):
-        folder = self.bs_output_dir_var.get().strip() or blog_scrap_default_output_dir()
-        os.makedirs(folder, exist_ok=True)
-        self._open_folder(folder)
-
-    def _bs_clear_output_folder(self):
-        """저장 폴더 '안의' 파일/하위폴더를 전부 삭제한다(폴더 자체는
-        남겨둔다 — 경로가 사라지면 다음 스크랩 시 다시 만들어야 하므로).
-        스크랩 결과 md/이미지가 계속 쌓여서 정리하고 싶을 때 쓰는
-        용도이며, 되돌릴 수 없는 삭제라 개수를 보여주고 한 번 더
-        확인한다(v6.5 신설)."""
-        folder = self.bs_output_dir_var.get().strip() or blog_scrap_default_output_dir()
-        if not os.path.isdir(folder):
-            messagebox.showinfo("안내", "폴더가 존재하지 않습니다(삭제할 자료가 없습니다).")
-            return
-        entries = os.listdir(folder)
-        if not entries:
-            messagebox.showinfo("안내", "폴더 안에 자료가 없습니다.")
-            return
-        if not messagebox.askyesno(
-            "⚠️ 폴더 내 자료 삭제",
-            f"'{folder}'\n\n안의 파일/폴더 {len(entries)}개를 전부 삭제합니다.\n"
-            f"(저장 폴더 자체는 남고, 안의 내용만 지워집니다)\n\n"
-            f"되돌릴 수 없습니다. 계속하시겠습니까?"
-        ):
-            return
-        errors = []
-        for name in entries:
-            path = os.path.join(folder, name)
-            try:
-                if os.path.isdir(path):
-                    shutil.rmtree(path)
-                else:
-                    os.remove(path)
-            except OSError as e:
-                errors.append(f"{name} ({e})")
-        deleted = len(entries) - len(errors)
-        if errors:
-            messagebox.showwarning(
-                "일부 삭제 실패",
-                f"{deleted}개 삭제 완료, {len(errors)}개 실패:\n" + "\n".join(errors)
-            )
-        else:
-            messagebox.showinfo("완료", f"{deleted}개 삭제 완료.")
-        self._log(f"🗑️ 블로그 스크랩 저장 폴더 비움: {folder} (삭제 {deleted}건, 실패 {len(errors)}건)")
-
-    def _bs_start_scraping(self):
-        if not HAS_SELENIUM:
-            messagebox.showerror("오류", "selenium 패키지가 설치되어 있지 않습니다.\n"
-                                          "터미널에서 'pip install selenium'을 실행한 뒤 다시 시도하세요.")
-            return
-        if self.bs_is_running:
-            messagebox.showinfo("안내", "이미 스크랩이 진행 중입니다.")
-            return
-        urls = list(self.bs_url_listbox.get(0, tk.END))
-        if not urls:
-            messagebox.showwarning("안내", "등록된 URL이 없습니다.")
-            return
-        output_dir = self.bs_output_dir_var.get().strip() or blog_scrap_default_output_dir()
-        self.bs_is_running = True
-        self.bs_run_button.config(state="disabled")
-        self.bs_progress_var.set("진행 중...")
-        self.bs_log_text.config(state="normal")
-        self.bs_log_text.delete("1.0", tk.END)
-        self.bs_log_text.config(state="disabled")
-
-        thread = threading.Thread(
-            target=self._bs_run_scraping_worker, args=(urls, output_dir), daemon=True)
-        thread.start()
-
-    def _bs_run_scraping_worker(self, urls, output_dir):
-        driver = None
-        try:
-            driver = blog_scrap_build_driver()
-            total = len(urls)
-            for i, url in enumerate(urls, start=1):
-                self.bs_log_queue.put(f"[{i}/{total}] 스크랩 시작: {url}")
-                try:
-                    post = blog_scrap_scrape_post(driver, url)
-                    saved_path = blog_scrap_save_as_md(post, output_dir)
-                    self.bs_log_queue.put(f"    → 저장 완료: {saved_path}")
-                except Exception as e:
-                    self.bs_log_queue.put(f"    → 실패: {e}")
-                time.sleep(1)
-            self.bs_log_queue.put("모든 작업이 완료되었습니다.")
-        except Exception as e:
-            self.bs_log_queue.put(f"드라이버 오류: {e}")
-        finally:
-            if driver:
-                blog_scrap_cleanup_driver(driver)
-            self.bs_log_queue.put("__BS_DONE__")
-
-    def _bs_poll_log_queue(self):
-        try:
-            while True:
-                msg = self.bs_log_queue.get_nowait()
-                if msg == "__BS_DONE__":
-                    self.bs_is_running = False
-                    self.bs_run_button.config(state="normal")
-                    self.bs_progress_var.set("완료")
-                else:
-                    self.bs_log_text.config(state="normal")
-                    self.bs_log_text.insert(tk.END, msg + "\n")
-                    self.bs_log_text.see(tk.END)
-                    self.bs_log_text.config(state="disabled")
-        except queue.Empty:
-            pass
-        self.after(200, self._bs_poll_log_queue)
 
     def _refresh_status(self):
         """상태 표시 + 3개 트리(listing/posting/history) 새로고침 — 동기
@@ -9786,7 +9566,7 @@ class WelfareCollectorGUI(tk.Tk):
                 "API 설정 필요",
                 "다음 API 인증정보가 아직 설정되지 않았습니다:\n\n"
                 + "\n".join(f"- {m}" for m in missing)
-                + "\n\n'9)설정' 탭에서 먼저 등록한 뒤 다시 시도해주세요."
+                + "\n\n'8)설정' 탭에서 먼저 등록한 뒤 다시 시도해주세요."
             )
             if hasattr(self, "notebook") and hasattr(self, "settings_tab"):
                 self.notebook.select(self.settings_tab)
@@ -10717,6 +10497,12 @@ class WelfareCollectorGUI(tk.Tk):
                         f.write(text + "\n")
                 except OSError as e:
                     p["errors"].append(str(e))
+        if p.get("manual"):
+            self._update_competitor_blog_info()
+            if not files:
+                self.competitor_blog_info_var.set("❌ 스크랩 못 함 — 주소를 확인하세요")
+            self._log(f"📰 경쟁 블로그 직접 스크랩 끝: {len(files)}개" + (f" (실패 {len(p['errors'])}건)" if p["errors"] else ""))
+            return
         if hasattr(self, "research_status_var"):
             self.research_status_var.set(f"✅ 리서치 완료 ({len(done)}/{len(p['keywords'])}건)" if done else "❌ 리서치 실패")
         parts = [f"✅ 자료 준비 완료 — 리서치 {len(done)}/{len(p['keywords'])}개"]
@@ -10793,7 +10579,7 @@ class WelfareCollectorGUI(tk.Tk):
 
     def _open_blog_tab_with_main_keyword(self):
         """[Ver10.08] 검색 키워드 칸의 첫 키워드(메인)로 네이버 블로그탭을 비로그인 새 창으로 연다 —
-        상위 블로그 URL을 골라 5)블로그 스크랩에 넣는 용도."""
+        상위 블로그 글 주소를 골라 수동 보조의 주소 칸에 넣는 용도."""
         kw = self.research_keyword_var.get().split(",")[0].strip()
         if not kw:
             messagebox.showwarning("알림", "검색 키워드 칸이 비어 있습니다. 먼저 항목을 선택하거나 키워드를 입력하세요.")
@@ -10812,85 +10598,59 @@ class WelfareCollectorGUI(tk.Tk):
         self.competitor_blog_text.delete("1.0", "end")
         self._save_competitor_blogs()
 
-    def _load_competitor_blogs_from_scrap(self):
-        """5)블로그 스크랩 폴더의 .md 목록을 띄워 고른 글을 칸에 채운다(본문 그대로).
-        최근 스크랩한 날짜의 글이 기본으로 체크돼 있다."""
+    def _scrape_competitor_urls(self):
+        """[Ver10.08] 수동 보조의 주소 칸(한 줄에 하나)에 넣은 블로그 글을 스크랩해 경쟁 블로그 칸을 채운다.
+        자동으로 고른 글이 마음에 안 들 때 쓴다(예전 5)블로그 스크랩 탭 대신). 서비스 폴더
+        competitor_blogs_md/에 저장하고, 칸 내용은 이번에 스크랩한 글로 바꾼다."""
         row = self._get_selected_posting_row()
         if row is None:
             messagebox.showwarning("알림", "먼저 항목을 선택하세요.")
             return
+        if not HAS_SELENIUM:
+            messagebox.showerror("오류", "selenium 패키지가 설치되어 있지 않습니다.\n"
+                                          "터미널에서 'pip install selenium'을 실행한 뒤 다시 시도하세요.")
+            return
+        if getattr(self, "_auto_prep_running", False):
+            messagebox.showinfo("실행 중", "자료 준비·스크랩이 이미 진행 중입니다.")
+            return
+        urls = []
+        for ln in self.competitor_url_text.get("1.0", "end").splitlines():
+            u = ln.strip()
+            if re.match(r"https?://", u) and u not in urls:
+                urls.append(u)
+        if not urls:
+            messagebox.showwarning("알림", "스크랩할 블로그 글 주소를 한 줄에 하나씩 넣으세요.")
+            return
         if getattr(self, "_competitor_blog_serv", None) is None or \
                 self._competitor_blog_serv.get("servId") != row["servId"]:
             self._load_competitor_blogs_for_row(row)
-        folder = (self.bs_output_dir_var.get().strip() if hasattr(self, "bs_output_dir_var") else "") \
-            or blog_scrap_default_output_dir()
-        files = []
-        if os.path.isdir(folder):
-            files = [os.path.join(folder, fn) for fn in os.listdir(folder) if fn.lower().endswith(".md")]
-        if not files:
-            messagebox.showinfo("스크랩 글 없음",
-                                f"스크랩 폴더에 .md 파일이 없습니다.\n{folder}\n\n"
-                                "'5)블로그 스크랩' 탭에서 경쟁 블로그 URL을 넣어 먼저 저장하세요.")
-            return
-        files.sort(key=os.path.getmtime, reverse=True)
-        files = files[:60]
-        newest_day = datetime.date.fromtimestamp(os.path.getmtime(files[0]))
+        self._auto_prep_running = True
+        self.competitor_blog_info_var.set(f"⏳ {len(urls)}개 스크랩 중...")
+        out_dir = os.path.join(row["folder"], "competitor_blogs_md")
 
-        dlg = tk.Toplevel(self)
-        dlg.title(f"경쟁 블로그 불러오기 — {row['servNm']}")
-        dlg.geometry("760x480")
-        dlg.transient(self)
-        ttk.Label(dlg, text=f"스크랩 폴더: {folder}\n가장 최근에 스크랩한 날짜의 글을 골라 두었습니다(최신순 최대 60개).",
-                  padding=8, justify="left").pack(anchor="w")
-        lf = ttk.Frame(dlg)
-        lf.pack(fill="both", expand=True, padx=8)
-        cv = tk.Canvas(lf, highlightthickness=0)
-        sb = ttk.Scrollbar(lf, orient="vertical", command=cv.yview)
-        inner = ttk.Frame(cv)
-        inner.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
-        cv.create_window((0, 0), window=inner, anchor="nw")
-        cv.configure(yscrollcommand=sb.set)
-        cv.pack(side="left", fill="both", expand=True)
-        sb.pack(side="right", fill="y")
-        checks = []
-        for path in files:
-            mt = datetime.datetime.fromtimestamp(os.path.getmtime(path))
-            var = tk.BooleanVar(value=(mt.date() == newest_day))
-            ttk.Checkbutton(inner, variable=var,
-                            text=f"{mt:%m-%d %H:%M}  {os.path.basename(path)}").pack(anchor="w")
-            checks.append((var, path))
+        def task():
+            files, errors = [], []
+            driver = None
+            try:
+                driver = blog_scrap_build_driver()
+                for url in urls:
+                    try:
+                        post = blog_scrap_scrape_post(driver, url)
+                        files.append(blog_scrap_save_as_md(post, out_dir))
+                        self._log(f"  📰 경쟁 블로그 스크랩: {post.get('title', '')[:40]}")
+                    except Exception as e:
+                        errors.append(f"{url} — {e}")
+                    time.sleep(1)
+            except Exception as e:
+                errors.append(str(e))
+            finally:
+                if driver:
+                    blog_scrap_cleanup_driver(driver)
+            self.log_queue.put(("AUTO_PREP_DONE", {"row": row, "keywords": [], "files": files, "errors": errors,
+                                                   "want_blog": True, "qj": {}, "manual": True}))
 
-        def _set_all(v):
-            for var, _p in checks:
-                var.set(v)
+        threading.Thread(target=task, daemon=True).start()
 
-        def _apply():
-            picked = [p for var, p in checks if var.get()]
-            if not picked:
-                messagebox.showwarning("알림", "불러올 글을 하나 이상 고르세요.", parent=dlg)
-                return
-            blocks = []
-            for i, path in enumerate(picked, 1):
-                try:
-                    with open(path, "r", encoding="utf-8") as f:
-                        body = f.read().strip()
-                except OSError as e:
-                    body = f"(읽기 실패: {e})"
-                blocks.append(f"### 블로그 {i} — {os.path.basename(path)}\n\n{body}")
-            self.competitor_blog_text.delete("1.0", "end")
-            self.competitor_blog_text.insert("1.0", "\n\n".join(blocks))
-            self._save_competitor_blogs()
-            self._log(f"📂 경쟁 블로그 {len(picked)}개 불러옴: {row['servNm']}")
-            dlg.destroy()
-
-        bf = ttk.Frame(dlg)
-        bf.pack(fill="x", padx=8, pady=8)
-        ttk.Button(bf, text="전체 선택", command=lambda: _set_all(True)).pack(side="left")
-        ttk.Button(bf, text="전체 해제", command=lambda: _set_all(False)).pack(side="left", padx=(4, 0))
-        ttk.Button(bf, text="불러오기", command=_apply).pack(side="right")
-        ttk.Button(bf, text="취소", command=dlg.destroy).pack(side="right", padx=(0, 8))
-
-    # ── [Ver10.08] STEP 2 본 분석 ──
     def _copy_main_analysis_prompt(self, same_chat: bool = True):
         """통합 프롬프트(V11) + 빠른 판정 결과 + 리서치 + 첨부 안내 + 경쟁 블로그를 복사한다.
         same_chat=True(기본)는 빠른 판정을 한 대화창에 이어 붙이는 복사라 원문을 뺀다.
@@ -11441,7 +11201,7 @@ class WelfareCollectorGUI(tk.Tk):
             self.ig_service_var.set(list(self._ig_service_rows.keys())[0])
         self._generate_infographic_title_list()
 
-    # ── [Ver10.07 신규] 6)인포그래픽 작성: 코드 카드(선택) ──
+    # ── [Ver10.07 신규] 5)인포그래픽 작성: 코드 카드(선택) ──
     def _build_card_panel(self, parent, row):
         """기존 STEP은 그대로 두고, 체크를 켤 때만 보이는 코드 카드 칸. 위에서 아래로 ①→④ 순서."""
         wrap = ttk.Frame(parent)
@@ -11698,7 +11458,7 @@ class WelfareCollectorGUI(tk.Tk):
         return path
 
     def _card_name(self, text: str) -> str:
-        """기존 이미지 파일명 규칙(6)인포그래픽 작성의 [복사] 버튼 문구 + Windows 금지 문자 제거)."""
+        """기존 이미지 파일명 규칙(5)인포그래픽 작성의 [복사] 버튼 문구 + Windows 금지 문자 제거)."""
         return re.sub(r'[\\/:*?"<>|]', "", strip_trailing_punct_for_filename(text)).strip()
 
     def _card_after_render(self, res, work, folder, spec, matches):
@@ -11957,7 +11717,7 @@ class WelfareCollectorGUI(tk.Tk):
 
         지자체 연관 정책 미처리 여부는 여기서 확인하지 않는다 — 그 체크는
         "포스팅완료로 전환하는 시점"에만 적용된다(4)포스팅 관리 탭 STEP 7 완료 처리,
-        8)포스팅 이력관리 탭). 키워드 등록은 지자체 연관 여부와 무관하게
+        7)포스팅 이력관리 탭). 키워드 등록은 지자체 연관 여부와 무관하게
         진행한다."""
         items = getattr(self, "kw_reg_items", None)
         if items is None:
@@ -12036,7 +11796,7 @@ class WelfareCollectorGUI(tk.Tk):
         os.makedirs(POSTING_MD_FOLDER, exist_ok=True)
 
         # 지자체 연관 정책 미처리 체크는 여기서 하지 않는다 — 그 체크는
-        # "포스팅완료로 전환하는 시점"(4)포스팅 관리 탭 STEP 7 완료 처리 / 8)포스팅 이력관리
+        # "포스팅완료로 전환하는 시점"(4)포스팅 관리 탭 STEP 7 완료 처리 / 7)포스팅 이력관리
         # 탭)에만 적용되어야 한다. 키워드 등록은 지자체 연관 여부와
         # 무관하게 진행한다.
         for it in new_items:
@@ -12300,7 +12060,7 @@ class WelfareCollectorGUI(tk.Tk):
         self._refresh_listing_tree()
 
     def _copy_infographic_prompt(self):
-        """[Ver10.08] 6)인포그래픽 작성 탭의 "대상 서비스" 기준으로 복사한다(예전엔 포스팅 관리 탭 선택 기준)."""
+        """[Ver10.08] 5)인포그래픽 작성 탭의 "대상 서비스" 기준으로 복사한다(예전엔 포스팅 관리 탭 선택 기준)."""
         row = self._get_selected_ig_row()
         if row is None:
             messagebox.showwarning("알림", "먼저 대상 서비스를 선택하세요.")
