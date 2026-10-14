@@ -37,3 +37,19 @@
 - 탭 이름: "🖼 5)인포그래픽" → **"🖼 5)인포그래픽 작성"**. 탭 이름을 글자로 찾는 코드가 있으면 같이 맞춘다.
 - 코드 카드 칸의 버튼 이름만: "③ 퍼플렉시티 그림 선택…" → **"③ 퍼플렉시티/GPT 그림 선택…"**. 버튼 기능·다른 문구는 그대로.
 - 복지로 프로그램의 같은 버튼은 사용자가 요청하면 맞춘다(이번 목록은 정책뉴스만).
+
+## 4. "🩹 6)워터마크처리" 탭 삭제 (2026-10-14 요청)
+
+사용하지 않음. 다른 기능에 영향 없게.
+
+**지울 것**
+- 탭 화면 `_build_tab9_watermark`와 호출, 이 탭 전용 메서드 `_default_anchor_path`·`_wm_refresh_from_settings`·`_wm_browse_anchor`·`_wm_log`·`_wm_open_result_folder`·`_wm_save_options`·`_wm_get_options`·`_wm_find_target_images`·`_wm_preview`·`_wm_run_batch`
+- 워터마크 전용 함수·상수(영역 4.5): `SUPPORTED_IMAGE_EXTS`, `WM_OUTPUT_SUBFOLDER`, `_wm_find_images`, 앵커 합성 함수, `_wm_output_path` — 다른 곳에서 쓰지 않음(확인함)
+- Pillow(PIL) 선택 import와 `PIL_OK` — 워터마크에서만 씀(확인함). 지우면 Pillow가 없어도 되는 프로그램이 된다
+- 맨 위 탭 구성 설명(TAB6 워터마크가리기)·관련 주석
+
+**남길 것**
+- `get_env_value`·`update_env_value`(env.txt 읽기·쓰기) — 다른 설정도 쓴다. env.txt에 남아 있는 `wm_*` 값은 읽지 않을 뿐 그대로 둔다
+- 창 닫기 처리(`WM_DELETE_WINDOW`) — 이름만 비슷하고 워터마크와 무관
+
+**탭 번호:** 이 탭은 5)인포그래픽과 7)이력관리 사이에 있어서 지우면 이력관리·키워드 등록·설정 탭 번호가 당겨진다 → 1번 항목의 "번호 대신 탭을 직접 가리켜 이동"으로 함께 해결.
