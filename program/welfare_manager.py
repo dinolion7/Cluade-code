@@ -1920,6 +1920,9 @@ v7.21 (2026-09-22): 🐛 parse_value_judgment_title_candidates() 헤더
                      (9) 공식 출처 원칙(통합 V12·초안 V14·2차각색 V10과 짝): 본 분석 복사본의 경쟁
                      블로그 섹션에 "구성 참고용 — 사실 근거·출처로 쓰지 않음", 최종각색 저장 때 출처
                      줄 점검(check_source_line: 없음·블로그·전체 주소·"### 근거 출처" 잔재면 확인창).
+                     (10) "기타 관리" 칸 삭제 — 버튼을 쓰는 자리로: 새로고침·엑셀·자료 폴더는 목록
+                     아래, 첨부파일 폴더는 STEP 2, 최종원고 폴더는 STEP 4, 제목 블로그검색·제목 복사·
+                     연관 정책 확인은 STEP 5 "포스팅 전 확인".
 """
 
 import sys
@@ -7606,9 +7609,22 @@ class WelfareCollectorGUI(tk.Tk):
         def _next_hint(parent, text):
             ttk.Label(parent, text=text, foreground="gray").pack(side="left", padx=(8, 0), pady=6)
 
+        # [Ver10.08] "기타 관리" 칸을 없애고 버튼을 쓰는 자리로 옮겼다(사용자: 각자 필요한 위치에).
+        # 목록 도구(새로고침·엑셀·건수)는 목록 바로 아래.
+        list_bar = ttk.Frame(pt)
+        list_bar.grid(row=4, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
+        ttk.Button(list_bar, text="🔄 새로고침", command=self._refresh_posting_tree).pack(side="left")
+        ttk.Button(list_bar, text="📊 포스팅 이력 엑셀 저장",
+                   command=self._export_posting_history).pack(side="left", padx=(6, 0))
+        ttk.Button(list_bar, text="📁 자료 폴더 열기",
+                   command=self._open_selected_posting_folder).pack(side="left", padx=(6, 0))
+        self.posting_count_var = tk.StringVar(value="")
+        ttk.Label(list_bar, textvariable=self.posting_count_var,
+                  foreground="darkblue", font=("맑은 고딕", 9, "bold")).pack(side="left", padx=(12, 0))
+
         # ---- STEP 1 빠른 판정·자료 준비 ----
         quick_f = ttk.LabelFrame(pt, text="STEP 1 — 빠른 판정 · 자료 자동 준비 (Claude 새 대화창)")
-        quick_f.grid(row=4, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
+        quick_f.grid(row=5, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
         quick_row = ttk.Frame(quick_f)
         quick_row.pack(fill="x")
         ttk.Button(quick_row, text="① 📋 빠른 판정 복사",
@@ -7628,7 +7644,7 @@ class WelfareCollectorGUI(tk.Tk):
 
         # ---- STEP 2 본 분석 ----
         main_f = ttk.LabelFrame(pt, text="STEP 2 — 본 분석: 공식 출처 확인 · 가치판단 · 제목 후보 (같은 대화창)")
-        main_f.grid(row=5, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
+        main_f.grid(row=6, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
         main_row = ttk.Frame(main_f)
         main_row.pack(fill="x")
         ttk.Button(main_row, text="③ 📋 본 분석 복사 (같은 대화창)",
@@ -7636,7 +7652,9 @@ class WelfareCollectorGUI(tk.Tk):
             side="left", padx=(6, 4), pady=6)
         ttk.Button(main_row, text="④ 📥 결과 읽어 저장",
                    command=lambda: self._read_clipboard_result("value_judgment")).pack(
-            side="left", padx=(0, 12), pady=6)
+            side="left", padx=(0, 6), pady=6)
+        ttk.Button(main_row, text="📎 첨부파일 폴더 열기",
+                   command=self._open_selected_attachments_folder).pack(side="left", padx=(0, 12), pady=6)
         ttk.Button(main_row, text="새 대화창용 전체 복사",
                    command=lambda: self._copy_main_analysis_prompt(same_chat=False)).pack(
             side="left", padx=(0, 4), pady=6)
@@ -7651,7 +7669,7 @@ class WelfareCollectorGUI(tk.Tk):
 
         # ---- 수동 보조(접힘) — 키워드 리서치·블로그탭·경쟁 블로그 칸 ----
         manual_wrap = ttk.Frame(pt)
-        manual_wrap.grid(row=6, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
+        manual_wrap.grid(row=7, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
         manual_wrap.columnconfigure(0, weight=1)
         self.manual_panel_on = tk.BooleanVar(value=False)
         ttk.Checkbutton(manual_wrap, text="🛠 수동 보조 (필요할 때만) — 키워드 직접 조회 · 블로그탭 열기 · 경쟁 블로그 바꾸기",
@@ -7740,7 +7758,7 @@ class WelfareCollectorGUI(tk.Tk):
         # 누를 때 자동으로 함께 실어 보낸다.
         # [Ver10.08] STEP 3으로 — 본 분석 바로 아래(실행 순서대로).
         titlecand_f = ttk.LabelFrame(pt, text="STEP 3 — 제목 후보 확정 (본 분석 [2-A단계] 결과 기반 — STEP 4 초안에 그대로 전달됨)")
-        titlecand_f.grid(row=7, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
+        titlecand_f.grid(row=8, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
         titlecand_f.columnconfigure(1, weight=1)
 
         ttk.Button(titlecand_f, text="📋 가치판단 결과에서 제목 후보 추출",
@@ -7844,7 +7862,7 @@ class WelfareCollectorGUI(tk.Tk):
         # ---- STEP 4 초안·최종각색 ----
         # [Ver9.30] GPT용 최종각색 경로는 폐기 — Claude 2차 각색 하나만 쓴다.
         write_f = ttk.LabelFrame(pt, text="STEP 4 — 초안 → 최종각색 (Claude, 같은 대화창)")
-        write_f.grid(row=8, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
+        write_f.grid(row=9, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
         draft_row = ttk.Frame(write_f)
         draft_row.pack(fill="x")
         ttk.Label(draft_row, text="초안:", width=7).pack(side="left", padx=(6, 0))
@@ -7865,48 +7883,31 @@ class WelfareCollectorGUI(tk.Tk):
         ttk.Button(final_row, text="💾 최종각색 결과 저장 (.md)",
                    command=lambda: self._paste_and_save_stage_result("final_adaptation")).pack(
             side="left", padx=(0, 6), pady=(0, 6))
-        _next_hint(final_row, "→ 다음: 6)인포그래픽 작성 탭 → 끝나면 STEP 5 완료 처리")
+        ttk.Button(final_row, text="📝 최종원고(.md) 폴더 열기",
+                   command=self._open_final_posts_folder).pack(side="left", padx=(0, 6), pady=(0, 6))
+        _next_hint(final_row, "→ 다음: 6)인포그래픽 작성 탭 → STEP 5")
 
         # ---- STEP 5 완료 처리 ----
         done_f = ttk.LabelFrame(pt, text="STEP 5 — 완료 처리")
-        done_f.grid(row=9, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
+        done_f.grid(row=10, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
         ttk.Label(done_f, text="상태:").pack(side="left", padx=(6, 0), pady=6)
         self.posting_change_var = tk.StringVar(value=POSTING_STATUS_LIST[0])
         ttk.Combobox(done_f, textvariable=self.posting_change_var,
                      values=POSTING_STATUS_LIST, state="readonly", width=16).pack(
             side="left", padx=(4, 4), pady=6)
         ttk.Button(done_f, text="적용", command=self._apply_posting_status_change).pack(
-            side="left", padx=(0, 6), pady=6)
-
-        # 기타 관리 — 작업 순서와 무관한 부가 기능(폴더 열기/새로고침/엑셀)
-        pbtn_f = ttk.LabelFrame(pt, text="기타 관리")
-        pbtn_f.grid(row=10, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
-
-        ttk.Button(pbtn_f, text="📁 자료 폴더 열기",
-                   command=self._open_selected_posting_folder).pack(side="left", padx=(6, 8), pady=6)
-        ttk.Button(pbtn_f, text="📎 첨부파일 폴더 열기",
-                   command=self._open_selected_attachments_folder).pack(side="left", padx=(0, 8), pady=6)
-        ttk.Button(pbtn_f, text="📝 최종원고(.md) 폴더 열기",
-                   command=self._open_final_posts_folder).pack(side="left", padx=(0, 8), pady=6)
-        # [v7.0, 정책뉴스 TAB4 '제목 검색'에서 이식] 최종각색 제목이 이미 선점됐는지 확인 — 비로그인 새 창.
-        ttk.Button(pbtn_f, text="🔍 제목 블로그검색",
-                   command=self._open_naver_blog_search_for_title).pack(side="left", padx=(0, 8), pady=6)
+            side="left", padx=(0, 16), pady=6)
+        # 포스팅 전 확인 — 최종 제목 선점 여부, 연관 지자체 정책(포스팅완료 전에 처리해야 함)
+        ttk.Label(done_f, text="포스팅 전 확인:").pack(side="left", pady=6)
+        # [v7.0, 정책뉴스 TAB4 '제목 검색'에서 이식] 최종각색 제목이 이미 선점됐는지 — 비로그인 새 창.
+        ttk.Button(done_f, text="🔍 제목 블로그검색",
+                   command=self._open_naver_blog_search_for_title).pack(side="left", padx=(4, 4), pady=6)
         # [Ver10.08] 제목 통합검색 → 제목 복사(정책뉴스 Ver10.09와 같음)
-        ttk.Button(pbtn_f, text="📋 제목 복사",
-                   command=self._copy_final_title).pack(side="left", padx=(0, 8), pady=6)
-        ttk.Button(pbtn_f, text="🔗 연관 정책 확인",
-                   command=self._show_related_policies_popup_for_posting).pack(side="left", padx=(0, 8), pady=6)
-        ttk.Button(pbtn_f, text="🔄 새로고침", command=self._refresh_posting_tree).pack(side="left", padx=(0, 8), pady=6)
-        ttk.Button(pbtn_f, text="📊 포스팅 이력 엑셀 저장", command=self._export_posting_history).pack(side="left", pady=6)
-        # 예전 "📤 포스팅 키워드 엑셀 내보내기" 버튼은 v2.8부터 "📤 키워드 등록"
-        # 탭으로 대체됐다(스키마가 실제 메인 프로그램 요구사항과 달랐고,
-        # 매번 전체 덮어쓰기라 여러 번 실행하면 이전 등록 내역이 사라지는
-        # 문제가 있었음 — 새 탭은 append 방식 + 폴더 이동까지 처리한다).
+        ttk.Button(done_f, text="📋 제목 복사",
+                   command=self._copy_final_title).pack(side="left", padx=(0, 4), pady=6)
+        ttk.Button(done_f, text="🔗 연관 정책 확인",
+                   command=self._show_related_policies_popup_for_posting).pack(side="left", padx=(0, 6), pady=6)
 
-        self.posting_count_var = tk.StringVar(value="")
-        ttk.Label(pt, textvariable=self.posting_count_var,
-                  foreground="darkblue", font=("맑은 고딕", 9, "bold")).grid(
-            row=11, column=0, sticky="w", padx=6, pady=(0, 6))
 
         # ---- 인포그래픽 작성 탭 ----
         # 정책뉴스 프로그램 TAB4의 "썸네일·소제목 제목 목록" 방식을 그대로
