@@ -5,18 +5,14 @@
 사전 준비:
     pip install feedparser openpyxl
 
-탭 구성: (Ver9.06부터 실제 화면 순서·개수와 일치하도록 정리 — 뉴스 대량검토·
-          워터마크가리기 두 탭이 이후 버전에서 끼어들면서 예전 요약(TAB1~7)이
-          실제 9개 탭과 어긋나 있었음)
+탭 구성: (Ver10.09 — 다중뉴스 사전검토·워터마크처리 탭 삭제. 탭 이름의 번호는 예전 그대로 둔다)
     TAB1 수집          : RSS 수집(현재는 뉴스 리스트 페이지 스크래핑) → 후보 리스트 → 기사 선택
-    TAB2 뉴스 대량검토 : 프롬프트0(후보 1차 선별) 결과를 붙여넣어 검토중 상태 일괄 반영
     TAB3 분석준비      : 프롬프트A 복사(Claude 자동열기 없음) → 키워드/제목 확정
     TAB4 글작성        : 프롬프트B 조합 → 복사 → 완성글 붙여넣기 → MD 파일 저장
     TAB5 인포그래픽    : 프롬프트C 조합 → 복사 → Claude 웹에서 실행 → "발행준비완료" 표시
                          (핵심DB 등록 안 함. 결과로 나온 인포그래픽 생성 프롬프트를 GPT에
                          붙여넣어 실제 이미지를 생성하는 건 그다음 단계 — 프롬프트C 자체는
                          A·B와 마찬가지로 Claude 웹에서 실행한다)
-    TAB6 워터마크가리기: AI 생성 이미지 우측 하단 워터마크를 앵커 이미지로 덮어 가림
     TAB7 이력관리      : 포스팅 이력 테이블 → 상태 관리 → 엑셀 저장
     TAB8 메인 포스팅용 키워드 등록 : 작업폴더 MD를 신규/업데이트/중복의심/이미등록됨으로
                          분류 → "엑셀에 추가" 실행 시점에 비로소 핵심DB 등록 +
@@ -84,7 +80,7 @@
        항상 화면에 보이는 전체를 복사해버려서 선택이 반영되지 않았다 —
        진짜 문제는 선택 기능이 아니라 복사 로직이었다. 이제 그리드에서
        선택된 행이 있으면 그 행들만, 없으면 기존처럼 화면 전체를
-       복사한다(_copy_collect_list_for_prompt0). 그리드에 포커스가 있는
+       복사한다(_copy_collect_list). 그리드에 포커스가 있는
        상태에서 Ctrl+C로도 같은 동작을 하도록 단축키를 추가했고, 그리드
        위에 조작법 안내 라벨을 넣었다.
     10. [Ver7.19, 2026-07-15] TAB3(글작성) "포스팅 중복 체크" 자동화.
@@ -1103,6 +1099,18 @@
         넣는다 — 이름 규칙은 8)키워드 등록의 _copy_matched_assets와 같아 이후 흐름은 그대로다. 같은 이름의
         기존 그림은 _카드작업/_이전이미지로 옮긴다. 설정 탭: 카드용 프롬프트C 파일명, Naver_blog_SVG Card_images 폴더,
         크롬 경로(비우면 Windows 기본 설치 위치 → Playwright 크롬). 준비: pip install playwright.
+    66. [Ver10.09, 2026-10-14] 쓰지 않는 기능 정리와 이름 변경(저장소 docs/policy_program_todo.md 1~4).
+        (1) "🗂 2)다중뉴스 사전검토" 탭 삭제 — 프롬프트0 복사·1차 검토 결과 반영·프롬프트0 표 파싱·
+        후보군 엑셀 매칭, 설정 탭 "프롬프트0 파일명" 칸, 1)뉴스 수집 탭의 안내 줄을 지웠다. 1)탭 목록의
+        Ctrl+C 복사는 그대로(함수 이름만 _copy_collect_list로).
+        (2) "🩹 6)워터마크처리" 탭 삭제 — 앵커 이미지 합성 함수·상수와 Pillow 선택 import도 지웠다
+        (워터마크에서만 썼다). env.txt의 wm_* 값은 읽지 않을 뿐 그대로 둔다.
+        (3) 탭 이동을 번호(nb.select(2) 등) 대신 탭 화면으로(_select_tab) — 탭을 지워 번호가 당겨져도
+        엉뚱한 탭으로 가지 않는다.
+        (4) 네이버 통합검색 버튼 삭제 — 3)분석 및 초안작성(후보 3줄·직접 입력 줄)과 4)최종각색의
+        "🔍 통합"을 "📋 제목 복사"로 바꿨다. 🔍 앞구·🔍 뒷구 버튼 폭을 줄여 줄 전체 폭은 넓어지지 않게 했다.
+        (5) 이름: "🖼 5)인포그래픽" → "🖼 5)인포그래픽 작성", 코드 카드 "③ 퍼플렉시티 그림 선택…" →
+        "③ 퍼플렉시티/GPT 그림 선택…".
 """
 
 import os
@@ -1178,14 +1186,6 @@ try:
     SELENIUM_OK = True
 except ImportError:
     SELENIUM_OK = False
-
-# [신규] 이미지 워터마크 가리기 탭(TAB9)용 — 없으면 그 탭만 비활성 안내로 대체되고
-# 나머지 프로그램 동작에는 영향 없음(pip install pillow).
-try:
-    from PIL import Image
-    PIL_OK = True
-except ImportError:
-    PIL_OK = False
 
 # ════════════════════════════════════════════════════════════
 # [공통] 경로 및 상수
@@ -1683,7 +1683,7 @@ TITLE_MAX_LEN_MULTI = 75  # 복합 소재형(제목 후보 소재 3개 이상) �
 HOOK_WORDS = ["주목", "눈길", "관심", "충격", "화제", "이슈", "꿀팁", "대박"]
 
 # [Ver10.06] 프롬프트 세트(검색용/홈판용) 구분을 없앴다 — 프롬프트가 한 세트(0·A·B·C)로 합쳐졌다.
-PROMPT_FILE_KEYS = ["prompt_0_file", "prompt_a_file", "prompt_b_file", "prompt_c_file",
+PROMPT_FILE_KEYS = ["prompt_a_file", "prompt_b_file", "prompt_c_file",
                     "prompt_c_card_file"]   # [Ver10.08] 코드 카드용 프롬프트C(선택)
 
 
@@ -1879,7 +1879,6 @@ DEFAULT_CONFIG = {
         "관계기관 합동", "실무협의", "정책연구용역",
         "공모전", "체험 교구", "토론회", "설문조사 실시",
     ],
-    "prompt_0_file": "프롬프트0_후보1차선별.md",
     "prompt_a_file": "프롬프트A_키워드전략분석.md",
     "prompt_b_file": "프롬프트B_글작성.md",
     "prompt_c_file": "프롬프트C_인포그래픽메타.md",
@@ -2864,52 +2863,6 @@ def extract_news_id(url: str) -> str:
     m = re.search(r'newsId=(\d+)', url or "")
     return m.group(1) if m else ""
 
-
-def parse_screening_result(text: str) -> list:
-    """프롬프트0(후보 1차 선별)의 표 출력을 파싱한다.
-    형식: 탭 구분 표, 첫 행은 헤더(링크/제목/우선순위/한줄사유),
-    마지막에 "[요약] ..." 줄이 있을 수 있다(무시).
-    줄 끝의 trailing whitespace, 빈 줄, 헤더 행은 건너뛴다.
-
-    복사·붙여넣기 과정에서 탭 문자가 공백 여러 개로 바뀌는 경우가
-    흔하다(특정 메신저·메모장 등을 거치면 발생). 그래서 구분자를
-    탭 하나로만 제한하지 않고, 탭 또는 공백 2개 이상을 모두 구분자로
-    인정한다. 그래도 못 나뉘면 줄에서 링크(http로 시작하는 토큰)만이라도
-    뽑아 제목 없이 최소한으로 살린다 — 완전히 못 쓰는 것보다, 우선순위·
-    사유 없이라도 검토중으로 표시되는 쪽이 낫다.
-
-    반환: [{"link":..., "title":..., "priority":..., "reason":...}, ...]
-    """
-    results = []
-    for raw_line in text.splitlines():
-        line = raw_line.rstrip()
-        if not line.strip():
-            continue
-        if line.strip().startswith("[요약]") or line.strip().startswith("링크"):
-            continue
-
-        # 1차: 탭 또는 공백 2개 이상을 구분자로 분리
-        parts = [p.strip() for p in re.split(r'\t| {2,}', line) if p.strip()]
-
-        if parts and re.match(r'^https?://\S+$', parts[0]):
-            link     = parts[0]
-            title    = parts[1] if len(parts) > 1 else ""
-            priority = parts[2] if len(parts) > 2 else ""
-            reason   = parts[3] if len(parts) > 3 else ""
-            results.append({"link": link, "title": title,
-                             "priority": priority, "reason": reason})
-            continue
-
-        # 2차 fallback: 구분자 분리에 실패했어도, 줄 안에 링크 토큰이
-        # 있으면 링크만이라도 뽑아낸다 (제목·우선순위·사유는 빈 값)
-        m = re.search(r'https?://\S+', line)
-        if m:
-            link = m.group(0)
-            # 링크를 제외한 나머지 텍스트를 제목 후보로 사용
-            rest = line.replace(link, "").strip()
-            results.append({"link": link, "title": rest,
-                             "priority": "", "reason": ""})
-    return results
 
 
 def parse_prompt_a_result(text: str) -> dict:
@@ -5086,93 +5039,6 @@ def open_folder(path: str):
 
 
 # ════════════════════════════════════════════════════════════
-# [영역 4.5] 이미지 워터마크 가리기 (앵커 이미지 합성)
-# ════════════════════════════════════════════════════════════
-# 재미나이(Gemini) 등 AI 이미지 생성 서비스가 우측 하단에 붙이는 워터마크
-# 심볼은 직접 지우기 어렵다(주변 배경까지 같이 뭉개짐). 대신 그 자리를
-# 별도 이미지(앵커 이미지 — 예: 인물 캐릭터)로 덮어 가리는 방식은 배경
-# 손상 없이 간단하게 처리된다. PIL(Pillow)이 없으면 TAB9 자체를 안내
-# 문구로 대체하고, 이 영역의 함수들은 호출되지 않는다.
-
-SUPPORTED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
-WM_OUTPUT_SUBFOLDER = "_워터마크가림"
-
-
-def _wm_find_images(folder: str, recursive: bool) -> list:
-    """대상 폴더에서 처리할 이미지 파일 경로 목록을 모은다.
-    recursive=False면 folder 바로 안(1단계)만, True면 모든 하위 폴더까지 포함한다.
-    합성 결과가 저장되는 WM_OUTPUT_SUBFOLDER는 재귀 스캔에서 항상 제외한다 —
-    재실행 시 이미 처리된 결과물을 원본으로 오인해 또 처리하는 것을 막기 위함."""
-    results = []
-    if not os.path.isdir(folder):
-        return results
-    if recursive:
-        for root, dirs, files in os.walk(folder):
-            # WM_OUTPUT_SUBFOLDER("_워터마크가림")와 미리보기 폴더("_워터마크가림_미리보기")를
-            # 모두 재귀 스캔에서 제외한다 — 결과물/미리보기를 원본으로 오인해 또 처리하는 것을 막기 위함.
-            dirs[:] = [d for d in dirs if not d.startswith(WM_OUTPUT_SUBFOLDER)]
-            for fn in sorted(files):
-                if os.path.splitext(fn)[1].lower() in SUPPORTED_IMAGE_EXTS:
-                    results.append(os.path.join(root, fn))
-    else:
-        for fn in sorted(os.listdir(folder)):
-            fp = os.path.join(folder, fn)
-            if os.path.isfile(fp) and os.path.splitext(fn)[1].lower() in SUPPORTED_IMAGE_EXTS:
-                results.append(fp)
-    return results
-
-
-def composite_anchor_on_image(image_path: str, anchor_img, width_ratio: float = 0.22,
-                               margin_x_ratio: float = 0.02, margin_y_ratio: float = 0.0):
-    """base 이미지 우측 하단에 anchor_img(미리 로드된 RGBA PIL Image)를
-    비율에 맞게 리사이즈해 합성한 새 PIL Image를 반환한다(원본 객체는 안 건드림).
-    - width_ratio   : 앵커 이미지 폭 = base 폭 * width_ratio (워터마크를 확실히
-                       덮을 만큼 충분히 크게, 기본 22%)
-    - margin_x_ratio: 오른쪽 여백 = base 폭 * margin_x_ratio
-    - margin_y_ratio: 아래쪽 여백 = base 높이 * margin_y_ratio (기본 0 = 바닥에
-                       딱 붙임 — 인물 캐릭터가 이미지 하단 모서리에 서 있는 듯한
-                       자연스러운 배치가 되면서, 워터마크가 보통 찍히는 가장 낮은
-                       위치까지 확실히 덮는다)
-    JPG처럼 알파 채널이 없는 포맷은 최종적으로 RGB로 되돌려 저장 호환성을 유지한다."""
-    base = Image.open(image_path)
-    orig_mode = base.mode
-    base = base.convert("RGBA")
-    bw, bh = base.size
-
-    aw = max(1, int(bw * width_ratio))
-    ah = max(1, int(anchor_img.height * (aw / anchor_img.width)))
-    anchor_resized = anchor_img.resize((aw, ah), Image.LANCZOS)
-
-    margin_x = int(bw * margin_x_ratio)
-    margin_y = int(bh * margin_y_ratio)
-    x = max(0, bw - aw - margin_x)
-    y = max(0, bh - ah - margin_y)
-
-    base.paste(anchor_resized, (x, y), anchor_resized)
-
-    if orig_mode != "RGBA":
-        base = base.convert("RGB")
-    return base
-
-
-def _wm_output_path(src_path: str, target_folder: str, keep_original: bool) -> str:
-    """'원본 유지' 옵션이면 target_folder 아래 WM_OUTPUT_SUBFOLDER 안에
-    원본과 같은 상대경로 구조를 그대로 살려 저장 경로를 만든다(재귀 처리 시
-    하위 폴더별로 결과물이 섞이지 않게 하기 위함). 원본 덮어쓰기 옵션이면
-    같은 폴더·같은 파일명(확장자만 교체)으로 저장 경로를 만든다.
-
-    [수정] 합성 결과는 원본 확장자와 무관하게 항상 PNG로 저장한다 — 앵커
-    이미지(워터마크를 가리는 그림)가 투명 배경(RGBA)을 쓰는 경우가 많아
-    무손실 포맷이 안전하고, JPG로 저장할 때 생기는 재압축 열화나 앵커
-    경계 뭉개짐도 피할 수 있다. 그래서 확장자를 항상 .png로 바꾼다."""
-    if keep_original:
-        rel = os.path.relpath(src_path, target_folder)
-        rel_png = os.path.splitext(rel)[0] + ".png"
-        return os.path.join(target_folder, WM_OUTPUT_SUBFOLDER, rel_png)
-    return os.path.splitext(src_path)[0] + ".png"
-
-
-# ════════════════════════════════════════════════════════════
 # [영역 5] GUI
 # ════════════════════════════════════════════════════════════
 
@@ -5225,14 +5091,16 @@ class App(tk.Tk):
         self.nb.pack(fill="both", expand=True, padx=8, pady=8)
 
         self._build_tab1_collect()
-        self._build_tab_bulk_review()
         self._build_tab2_analyze()
         self._build_tab3_write()
         self._build_tab4_infographic()
-        self._build_tab9_watermark()   # [탭 순서 변경] 인포그래픽 ↔ 이력관리 사이로 이동
         self._build_tab5_history()
         self._build_tab_main_register()
         self._build_tab6_settings()
+        # [Ver10.09] 탭 이동은 번호가 아니라 탭 화면으로 한다(_select_tab) — 탭을 더하거나 빼도
+        # 이동이 어긋나지 않게. 위 생성 순서와 같은 순서의 이름이다.
+        self._tab_ids = dict(zip(["collect", "analyze", "write", "infographic",
+                                  "history", "register", "settings"], self.nb.tabs()))
 
         # 로딩 후 IP 자동 조회 (팝업 없이 라벨만 갱신)
         self.after(1500, self._refresh_ip_label_sub)
@@ -5711,6 +5579,10 @@ class App(tk.Tk):
     # ──────────────────────────────────────────────────────
     # TAB 1 : 수집
     # ──────────────────────────────────────────────────────
+    def _select_tab(self, key: str):
+        """[Ver10.09] 이름으로 탭 이동(collect·analyze·write·infographic·history·register·settings)."""
+        self.nb.select(self._tab_ids[key])
+
     def _build_tab1_collect(self):
         f = ttk.Frame(self.nb, padding=10)
         self.nb.add(f, text="📡 1)뉴스 수집")
@@ -5793,8 +5665,6 @@ class App(tk.Tk):
         # 사용처는 _on_collect/_run_auto_collect_once/_on_collect_done 참고.
         self._collecting = False
 
-        ttk.Label(f, text="💡 대량 후보 검토(프롬프트0 결과 반영)는 [🗂 2.뉴스대량검토] 탭에서 합니다.",
-                  style="Info.TLabel").grid(row=3, column=0, sticky="w", pady=(0,2))
 
         # 안내 — 부처/발행일 필터는 위쪽 자동수집 줄 앞쪽으로 이동했다.
         # (패스·완료는 검토 목적상 항상 숨김. 완료 항목은 이력관리 탭에서 본다)
@@ -5819,7 +5689,7 @@ class App(tk.Tk):
         # extended라 지금까지도 Ctrl/Shift-클릭으로 다중선택 자체는 됐지만,
         # 명시하지 않으면 다른 위젯 스타일 설정에 의해 조용히 바뀔 수 있어
         # 확실히 고정해둔다. 진짜 문제는 선택이 아니라 "선택한 것만 복사"가
-        # 안 됐던 것 — 아래 _copy_collect_list_for_prompt0에서 함께 고친다.
+        # 안 됐던 것 — 아래 _copy_collect_list에서 함께 고친다.
         self.collect_tree = ttk.Treeview(list_f, columns=cols, show="headings",
                                           height=20, selectmode="extended")
         widths = [60, 460, 60, 50, 55, 40]
@@ -5841,9 +5711,9 @@ class App(tk.Tk):
         self.collect_tree.bind("<<TreeviewSelect>>", self._on_article_select)
         # [Ver7.17 추가] Treeview에 포커스가 있는 상태에서 Ctrl+C를 누르면
         # 선택된 행들을 바로 클립보드에 복사한다(선택이 없으면 화면에
-        # 보이는 전체를 복사) — _copy_collect_list_for_prompt0와 동일한
+        # 보이는 전체를 복사) — _copy_collect_list와 동일한
         # 로직을 재사용한다.
-        self.collect_tree.bind("<Control-c>", lambda e: self._copy_collect_list_for_prompt0())
+        self.collect_tree.bind("<Control-c>", lambda e: self._copy_collect_list())
         self.collect_tree.tag_configure("new",  background="#E8F5E9")
         self.collect_tree.tag_configure("pdf",  background="#FFF3E0")
         self.collect_tree.tag_configure("screening", background="#FFF9C4")
@@ -6547,119 +6417,6 @@ class App(tk.Tk):
         self._update_xlsx_status()
         self._log_collect(f"[검토중] {art['title'][:40]}")
 
-    def _load_candidate_xlsx_map(self) -> dict:
-        """후보군 엑셀(XLSX_CANDIDATE) 전체를 newsId → 기사정보 딕셔너리로
-        읽어온다. TAB1 화면(self.collected)에는 필터나 재시작 등의
-        이유로 없을 수 있는 기사도, 엑셀에는 한 번 수집된 기록이
-        남아있으므로 1차 검토 결과 매칭의 2차 소스로 쓴다.
-        키는 전체 URL이 아니라 newsId — 부가 파라미터 차이를 피한다."""
-        result = {}
-        if not os.path.exists(_get_xlsx_candidate_path()) or not OPENPYXL_OK:
-            return result
-        try:
-            wb = load_workbook(_get_xlsx_candidate_path(), read_only=True)
-            ws = wb.active
-            for row in ws.iter_rows(min_row=2, values_only=True):
-                if not row or not row[2]:
-                    continue
-                link = str(row[7]).strip() if row[7] else ""
-                nid = extract_news_id(link)
-                if not nid or nid in result:
-                    continue
-                result[nid] = {
-                    "title":        str(row[2]).strip(),
-                    "dept":         str(row[3]).strip() if row[3] else "",
-                    "published":    str(row[4]).strip() if row[4] else "",
-                    "body_type":    str(row[5]).strip() if row[5] else "",
-                    "link":         link,
-                    "license_warn": "변경금지" in (str(row[6]).strip() if row[6] else ""),
-                }
-            wb.close()
-        except Exception as e:
-            self._log_collect(f"[1차 검토 매칭] 후보군 엑셀 읽기 오류: {e}")
-        return result
-
-    def _apply_screening_result(self):
-        """프롬프트0(후보 1차 선별)의 표 출력을 붙여넣은 텍스트박스에서
-        읽어와 파싱하고, 링크가 일치하는 기사들을 이력에 "검토중" 상태로
-        추가/갱신한다. 본문을 읽고 가치를 판단하는 건 여전히 Claude가
-        하는 일이고, 여기서는 그 판단 결과를 엑셀에 반영하는 손품만
-        줄여준다 — 그 다음 사람이 "검토중"만 모아서 세부 검토(프롬프트A)
-        를 진행하면 된다."""
-        text = self.screening_text.get("1.0", "end").strip()
-        if not text:
-            messagebox.showwarning("알림", "1차 선별 결과를 먼저 붙여넣으세요.")
-            return
-
-        parsed = parse_screening_result(text)
-        if not parsed:
-            messagebox.showwarning("알림",
-                "표에서 링크를 찾을 수 없습니다.\n"
-                "탭으로 구분된 표 형식(링크/제목/우선순위/한줄사유)인지 확인하세요.")
-            return
-
-        # 매칭은 두 단계로 한다.
-        # 1) 현재 TAB1에 떠 있는 기사(self.collected) — 가장 정확하고 최신
-        # 2) 후보군 엑셀(XLSX_CANDIDATE) — 화면에는 안 보여도(필터·재시작 등으로
-        #    self.collected가 비어있는 경우) 엑셀에는 남아있을 수 있어서 보강한다.
-        # 매칭 키는 전체 URL이 아니라 newsId다. "&call_from=rsslink"처럼
-        # 부가 파라미터가 붙거나 빠지면 URL 문자열은 달라지지만 같은 기사이므로,
-        # newsId 숫자만 비교해야 정확히 매칭된다.
-        collected_map = {extract_news_id(a["link"]): a for a in self.collected if extract_news_id(a["link"])}
-        xlsx_map = self._load_candidate_xlsx_map()
-
-        matched = 0
-        not_found = []
-        for item in parsed:
-            nid = extract_news_id(item["link"])
-            art = collected_map.get(nid) or xlsx_map.get(nid) if nid else None
-            if not art:
-                not_found.append(item.get("title", item["link"])[:30])
-                continue
-            note = item.get("priority", "")
-            reason = item.get("reason", "")
-            record = {
-                "title":     art["title"],  "link":      art["link"],
-                "dept":      art["dept"],   "published": art["published"],
-                "body_type": art["body_type"], "status": "🔎 검토중",
-                "screening_priority": note,
-                "screening_reason":   reason,
-            }
-            add_history_record(record)
-            update_history_status(art["link"], "🔎 검토중")
-            matched += 1
-
-        self.history = load_history()
-        # 우선순위·사유 필드를 기존 레코드에도 확실히 반영 (add_history_record는
-        # 중복 링크일 때 새 값을 덮어쓰지 않으므로 별도로 갱신)
-        for item in parsed:
-            for r in self.history:
-                if r.get("link") == item["link"]:
-                    r["screening_priority"] = item.get("priority", "")
-                    r["screening_reason"]   = item.get("reason", "")
-        save_history(self.history)
-
-        self._refresh_history_tree()
-        self._refresh_collect_tree()
-        self._update_xlsx_status()
-
-        msg = f"검토중 반영: {matched}건"
-        if not_found:
-            msg += f" / 미매칭: {len(not_found)}건"
-        self.screening_result_var.set(msg)
-        self._log_collect(
-            f"[뉴스 대량검토 반영] {matched}건을 검토중으로 표시" +
-            (f" (미매칭 {len(not_found)}건: {', '.join(not_found[:5])}{'...' if len(not_found)>5 else ''})" if not_found else ""))
-
-        # [Ver7.14 추가] 상단 라벨(screening_result_var)만으로는 작업이
-        # 끝났는지 놓치기 쉬워서, 완료 시 팝업으로 명확히 알려준다.
-        popup_msg = f"뉴스 대량검토 결과 반영이 끝났습니다.\n\n검토중으로 반영: {matched}건"
-        if not_found:
-            popup_msg += (f"\n미매칭(수집 목록에서 못 찾음): {len(not_found)}건\n"
-                          f" - {', '.join(not_found[:5])}{' ...' if len(not_found) > 5 else ''}")
-        messagebox.showinfo("✅뉴스 대량검토 완료", popup_msg)
-
-
     def _mark_all_pass(self):
         """현재 화면에 표시된 목록 중 "신규"만 패스 처리한다.
         검토중·보류는 이미 사람이나 1차 선별이 따로 분류해둔 의미 있는
@@ -6783,7 +6540,7 @@ class App(tk.Tk):
                     "❓ 본문유형 확인 필요 → 링크를 열어 본문이 있으면 캡처 PDF,\n"
                     "첨부파일만 있으면 첨부 PDF를 1개만 준비하세요.")
 
-        self.nb.select(2)  # 분석준비 탭 이동 (뉴스 대량검토 탭이 끼어들어 인덱스 +1)
+        self._select_tab("analyze")  # 3)분석 및 초안작성
         self._log_collect(f"[→ 분석준비] 선택: {art['title'][:40]}...")
 
     def _log_collect(self, msg: str):
@@ -6796,71 +6553,6 @@ class App(tk.Tk):
 
     # ──────────────────────────────────────────────────────
     # TAB 2 : 분석 준비
-    # ──────────────────────────────────────────────────────
-    # ──────────────────────────────────────────────────────
-    # TAB 1-2 : 뉴스 대량검토 (프롬프트0 후보 1차 선별 결과 반영)
-    # ──────────────────────────────────────────────────────
-    def _build_tab_bulk_review(self):
-        """1.수집 탭에서 분리한 "뉴스 대량검토" 전용 탭.
-        자동수집/낱개 단위 상세검토(1.수집)와 대량 후보 선별 작업의
-        성격이 달라서 한 탭에 다 있으면 헷갈리기 쉬웠다 — 여기서는
-        Claude가 정리해준 후보 목록(프롬프트0 출력)을 한 번에 붙여넣고
-        반영하는 일만 한다."""
-        f = ttk.Frame(self.nb, padding=10)
-        self.nb.add(f, text="🗂 2)다중뉴스 사전검토")
-        f.columnconfigure(0, weight=1)
-        f.rowconfigure(1, weight=1)
-
-        ttk.Label(f,
-            text="아래 두 버튼(프롬프트0 복사 → TAB1 목록 복사)을 순서대로 눌러 Claude에 붙여넣고 1차 선별을 받은 뒤,\n"
-                 "그 결과(표 형식)를 아래에 붙여넣으면 해당 기사들이 한 번에 '검토중' 상태로 바뀝니다. (엑셀을 직접 열 필요 없음)\n"
-                 "※ TAB1 그리드에서 Ctrl/Shift-클릭으로 여러 건을 미리 선택해두면 [TAB1 목록 복사]가 선택한 것만 복사합니다.\n"
-                 "  선택 없이 누르면 화면에 보이는 전체가 복사됩니다.",
-            style="Info.TLabel", justify="left").grid(row=0, column=0, sticky="w", pady=(0,8))
-
-        # 1차 검토 결과 반영 — 프롬프트0(후보 1차 선별)의 표 출력을 그대로
-        # 붙여넣으면, 링크가 일치하는 기사들의 상태를 "검토중"으로 한 번에
-        # 바꿔준다. 본문을 읽고 직접 판단하는 건 여전히 Claude가 하고,
-        # 여기서는 그 판단 결과를 엑셀/이력에 반영하는 손품만 줄여준다.
-        screen_f = ttk.LabelFrame(f,
-            text="🔎 1차 검토 결과 반영 — Claude가 정리해준 후보 목록(프롬프트0 출력)을 붙여넣으세요", padding=8)
-        screen_f.grid(row=1, column=0, sticky="nsew")
-        screen_f.columnconfigure(0, weight=1)
-        screen_f.rowconfigure(0, weight=1)
-
-        text_wrap_f = ttk.Frame(screen_f)
-        text_wrap_f.grid(row=0, column=0, sticky="nsew")
-        text_wrap_f.columnconfigure(0, weight=1)
-        text_wrap_f.rowconfigure(0, weight=1)
-
-        self.screening_text = tk.Text(text_wrap_f, height=20, wrap="none", font=("맑은 고딕", 9))
-        screen_vscroll = ttk.Scrollbar(text_wrap_f, orient="vertical", command=self.screening_text.yview)
-        screen_hscroll = ttk.Scrollbar(text_wrap_f, orient="horizontal", command=self.screening_text.xview)
-        self.screening_text.configure(yscrollcommand=screen_vscroll.set,
-                                       xscrollcommand=screen_hscroll.set)
-        self.screening_text.grid(row=0, column=0, sticky="nsew")
-        screen_vscroll.grid(row=0, column=1, sticky="ns")
-        screen_hscroll.grid(row=1, column=0, sticky="ew")
-
-        screen_btn_f = ttk.Frame(screen_f)
-        screen_btn_f.grid(row=1, column=0, sticky="ew", pady=(6,0))
-        ttk.Button(screen_btn_f, text="📋 프롬프트0 복사",
-                   command=self._copy_prompt_0,
-                   style="Copy.TButton").pack(side="left", padx=(0,8))
-        ttk.Button(screen_btn_f, text="📋 TAB1 목록 복사",
-                   command=self._copy_collect_list_for_prompt0,
-                   style="Copy.TButton").pack(side="left", padx=(0,8))
-        ttk.Button(screen_btn_f, text="✅ 1차 검토 결과 반영",
-                   command=self._apply_screening_result,
-                   style="Copy.TButton").pack(side="left", padx=(0,8))
-        ttk.Button(screen_btn_f, text="지우기",
-                   command=lambda: self.screening_text.delete("1.0", "end")).pack(side="left")
-        self.screening_result_var = tk.StringVar(value="")
-        ttk.Label(screen_btn_f, textvariable=self.screening_result_var,
-                  foreground="darkgreen", font=("맑은 고딕", 9, "bold")).pack(side="left", padx=(12,0))
-
-    # ──────────────────────────────────────────────────────
-    # TAB 2 : 분석준비
     # ──────────────────────────────────────────────────────
     def _build_tab2_analyze(self):
         # 콘텐츠가 창 높이보다 길어져도 하단 버튼이 가려지지 않도록
@@ -7207,7 +6899,7 @@ class App(tk.Tk):
         btn_f3 = ttk.Frame(result_f)
         btn_f3.grid(row=10, column=0, columnspan=3, sticky="e", pady=(8,0))
         ttk.Button(btn_f3, text="→ 글 작성으로 이동",
-                   command=lambda: self.nb.select(3),  
+                   command=lambda: self._select_tab("write"),  
                    style="Copy.TButton").pack(side="left")
 
         # [Ver9.15] STEP3 — 네이버 검색으로 키워드 경쟁도 확인 (선택) 삭제.
@@ -7263,20 +6955,21 @@ class App(tk.Tk):
             ttk.Label(self.title_cand_rows_frame, textvariable=self.title_cand_label_vars[i],
                        wraplength=560, justify="left").grid(row=row, column=1, sticky="w", padx=(4,4))
             ttk.Button(self.title_cand_rows_frame, text="🔍 블로그",
-                       command=lambda idx=i: self._open_naver_search_candidate(idx, blog=True)
+                       command=lambda idx=i: self._open_naver_search_candidate(idx)
                        ).grid(row=row, column=2, padx=(0,2))
-            ttk.Button(self.title_cand_rows_frame, text="🔍 통합",
-                       command=lambda idx=i: self._open_naver_search_candidate(idx, blog=False)
+            # [Ver10.09] 통합검색 대신 제목 복사
+            ttk.Button(self.title_cand_rows_frame, text="📋 제목 복사", width=11,
+                       command=lambda idx=i: self._copy_candidate_title(idx)
                        ).grid(row=row, column=3, padx=(0,8))
             ttk.Checkbutton(self.title_cand_rows_frame, text="탈락",
                              variable=self.title_reject_vars[i]
                              ).grid(row=row, column=4, sticky="w")
             # [Ver9.19 신규] 콤마 앞 핵심구 검색 버튼
-            ttk.Button(self.title_cand_rows_frame, text="🔍 앞구",
-                       command=lambda idx=i: self._open_naver_search_candidate(idx, blog=True, front=True)
+            ttk.Button(self.title_cand_rows_frame, text="🔍 앞구", width=7,   # [Ver10.09] 폭 축소
+                       command=lambda idx=i: self._open_naver_search_candidate(idx, front=True)
                        ).grid(row=row, column=5, padx=(6,0))
-            ttk.Button(self.title_cand_rows_frame, text="🔍 뒷구",
-                       command=lambda idx=i: self._open_naver_search_candidate(idx, blog=True, back=True)
+            ttk.Button(self.title_cand_rows_frame, text="🔍 뒷구", width=7,
+                       command=lambda idx=i: self._open_naver_search_candidate(idx, back=True)
                        ).grid(row=row, column=6, padx=(2,0))
             # [Ver9.12 신규] 자동 제목정밀검색 결과 — 후보 라벨 바로 아래
             # 작은 글씨로 표시. 사람이 🔍 버튼을 누르기 전에 어느
@@ -7302,13 +6995,13 @@ class App(tk.Tk):
             side="left", padx=(0,6))
         self.title_manual_var.trace_add("write", lambda *_: self._update_manual_title_len())
         ttk.Button(manual_row, text="🔍 블로그",
-                   command=lambda: self._open_naver_search_manual_title(blog=True)).pack(side="left", padx=(0,2))
-        ttk.Button(manual_row, text="🔍 통합",
-                   command=lambda: self._open_naver_search_manual_title(blog=False)).pack(side="left", padx=(0,2))
-        ttk.Button(manual_row, text="🔍 앞구",
-                   command=lambda: self._open_naver_search_manual_title(blog=True, front=True)).pack(side="left", padx=(0,2))
-        ttk.Button(manual_row, text="🔍 뒷구",
-                   command=lambda: self._open_naver_search_manual_title(blog=True, back=True)).pack(side="left")
+                   command=lambda: self._open_naver_search_manual_title()).pack(side="left", padx=(0,2))
+        ttk.Button(manual_row, text="📋 제목 복사", width=11,   # [Ver10.09] 통합검색 대신 제목 복사
+                   command=self._copy_manual_title).pack(side="left", padx=(0,2))
+        ttk.Button(manual_row, text="🔍 앞구", width=7,
+                   command=lambda: self._open_naver_search_manual_title(front=True)).pack(side="left", padx=(0,2))
+        ttk.Button(manual_row, text="🔍 뒷구", width=7,
+                   command=lambda: self._open_naver_search_manual_title(back=True)).pack(side="left")
         ttk.Button(manual_row, text="▶ 제목정밀검색",
                    command=self._start_manual_precheck).pack(side="left", padx=(10,0))
         ttk.Button(manual_row, text="📋 검색결과(Claude 검토용)복사",
@@ -7415,7 +7108,7 @@ class App(tk.Tk):
         self._update_xlsx_status()
         self._log_collect(f"[패스] {art.get('title','')[:40]} (새 글 시작 겸용)")
         self._start_new_post_silent(keep_selected_article=False)
-        self.nb.select(0)  # TAB1로 이동해서 다음 기사 선택을 바로 유도
+        self._select_tab("collect")  # TAB1로 이동해서 다음 기사 선택을 바로 유도
 
     def _on_title_change(self):
         """추출된 제목이 바뀔 때마다 글자수·호객형 수식어·동사형 종결
@@ -7500,11 +7193,11 @@ class App(tk.Tk):
             self._log_collect(
                 "[제목 키워드 자동감지] 매칭 실패 — TAB3에서 수동으로 확인하세요.")
 
-    def _copy_collect_list_for_prompt0(self):
+    def _copy_collect_list(self):
         """[Ver7.14 추가, Ver7.17 수정] TAB1(수집) 목록을 클립보드에
         복사한다. 열 순서(선택·상태·제목·부처·발행일·본문유형·비고·링크)는
-        후보군 엑셀(HEADERS)과 동일하게 맞춰서, 기존 프롬프트0이 기대하던
-        형식과 어긋나지 않게 했다.
+        후보군 엑셀(HEADERS)과 같다. [Ver10.09] 다중뉴스 사전검토 탭은 지웠고,
+        1)탭 목록의 Ctrl+C가 이 함수를 쓴다.
 
         [Ver7.17] 이전에는 필터가 적용된 화면 전체를 무조건 복사했는데,
         그리드에서 여러 행을 다중선택(Ctrl/Shift-클릭)해도 그 선택이
@@ -7543,30 +7236,7 @@ class App(tk.Tk):
         self.clipboard_append("\n".join(lines))
         self._log_collect(f"[목록 복사] TAB1에서 {scope_desc}을 클립보드에 복사했습니다.")
         messagebox.showinfo("복사 완료",
-            f"{scope_desc}이 클립보드에 복사되었습니다.\n"
-            f"프롬프트0 뒤에 이어서 붙여넣으세요.\n"
-            f"(엑셀을 따로 열 필요 없습니다)")
-
-    def _copy_prompt_0(self):
-        """프롬프트0(후보 1차 선별)을 클립보드에 복사한다.
-        이 단계는 원문 PDF 없이 제목·부처·발행일·링크 목록만으로
-        작동하므로, 프롬프트A 복사와 달리 기사 선택이나 PDF 확인
-        과정 없이 곧바로 복사한다. [Ver7.14] TAB1에서 보고 있는 기사
-        목록은 엑셀을 직접 열지 않고 바로 옆의 "📋 TAB1 목록 복사"
-        버튼으로 복사해서 이 프롬프트 뒤에 붙여넣으면 된다."""
-        cfg = load_config()
-        prompt_0 = load_prompt_file(prompt_file_name(cfg, "prompt_0_file"), cfg.get("prompt_dir", PROMPT_DIR))
-        if not prompt_0:
-            messagebox.showwarning("프롬프트 없음",
-                f"프롬프트0 파일이 없습니다.\n설정 탭에서 경로를 확인하세요.\n({_prompt_missing_hint(cfg, 'prompt_0_file')})")
-            return
-        self.clipboard_clear()
-        self.clipboard_append(prompt_0)
-        self._log_collect("[프롬프트0 복사] 클립보드에 복사됨 — 후보 목록을 뒤에 붙여 Claude에 전달하세요")
-        messagebox.showinfo("복사 완료",
-            "프롬프트0이 클립보드에 복사되었습니다.\n"
-            "Claude에 붙여넣은 뒤, 옆의 \"📋 TAB1 목록 복사\" 버튼으로\n"
-            "기사 목록을 복사해서 이어서 붙여넣으세요.")
+            f"{scope_desc}이 클립보드에 복사되었습니다.")
 
     def _build_pdf_attach_note(self) -> str:
         """첨부 목록(PDF·이미지 혼재 가능) + 채팅창에 직접 붙여넣는 원문
@@ -8283,7 +7953,7 @@ class App(tk.Tk):
         self._mark_pass()
         self._start_new_post_silent()
         popup.destroy()
-        self.nb.select(0)
+        self._select_tab("collect")
 
     def _check_dup_post(self):
         """포스팅 중복 체크 — 완성 본문 + 핵심 키워드 + 분산 키워드 3개를
@@ -8429,7 +8099,35 @@ class App(tk.Tk):
             has = i < len(self.title_candidates) and bool(self.title_candidates[i].get("title"))
             v.set("제목정밀검색 안 함 — 필요하면 아래 [▶ 후보 제목정밀검색 실행]" if has else "")
 
-    def _open_naver_search_candidate(self, idx, blog=True, front=False, back=False):
+    def _copy_title_text(self, title: str):
+        """[Ver10.09] 제목을 그대로 클립보드에 복사한다(통합검색 버튼 자리)."""
+        self.clipboard_clear()
+        self.clipboard_append(title)
+        messagebox.showinfo("복사 완료", f"제목을 복사했습니다.\n\n{title}")
+
+    def _copy_candidate_title(self, idx):
+        if idx >= len(self.title_candidates) or not self.title_candidates[idx].get("title"):
+            messagebox.showwarning("후보 없음",
+                "이 후보가 아직 채워지지 않았습니다.\n"
+                "위 [자동 채우기]로 프롬프트A 결과를 먼저 불러오세요.")
+            return
+        self._copy_title_text(self.title_candidates[idx]["title"])
+
+    def _copy_manual_title(self):
+        title = self.title_manual_var.get().strip()
+        if not title:
+            messagebox.showwarning("알림", "직접 입력 칸에 제목을 먼저 입력하세요.")
+            return
+        self._copy_title_text(title)
+
+    def _copy_final_title(self):
+        title = self.extracted_title_var.get().strip() if hasattr(self, "extracted_title_var") else ""
+        if not title:
+            messagebox.showwarning("알림", "추출된 제목이 없습니다.\nTAB2 STEP4에서 제목 후보를 먼저 확정하세요\n(또는 TAB3에서 완성 글을 붙여넣으면 h1에서 자동 추출됩니다).")
+            return
+        self._copy_title_text(title)
+
+    def _open_naver_search_candidate(self, idx, front=False, back=False):
         if idx >= len(self.title_candidates) or not self.title_candidates[idx].get("title"):
             messagebox.showwarning("후보 없음",
                 "이 후보가 아직 채워지지 않았습니다.\n"
@@ -8441,12 +8139,9 @@ class App(tk.Tk):
         elif back:  # [Ver9.26] 첫 콤마 뒤 구절로 검색
             title = policy_split_title_back(title) or title
         q = urllib.parse.quote(title)
-        if blog:
-            self._open_naver_shared_chrome(f"https://search.naver.com/search.naver?ssc=tab.blog.all&sm=tab_jum&query={q}")
-        else:
-            self._open_naver_shared_chrome(f"https://search.naver.com/search.naver?query={q}")
+        self._open_naver_shared_chrome(f"https://search.naver.com/search.naver?ssc=tab.blog.all&sm=tab_jum&query={q}")
 
-    def _open_naver_search_manual_title(self, blog=True, front=False, back=False):
+    def _open_naver_search_manual_title(self, front=False, back=False):
         title = self.title_manual_var.get().strip()
         if not title:
             messagebox.showwarning("알림", "직접 입력 칸에 제목을 먼저 입력하세요.")
@@ -8456,10 +8151,7 @@ class App(tk.Tk):
         elif back:  # [Ver9.26] 첫 콤마 뒤 구절로 검색
             title = policy_split_title_back(title) or title
         q = urllib.parse.quote(title)
-        if blog:
-            self._open_naver_shared_chrome(f"https://search.naver.com/search.naver?ssc=tab.blog.all&sm=tab_jum&query={q}")
-        else:
-            self._open_naver_shared_chrome(f"https://search.naver.com/search.naver?query={q}")
+        self._open_naver_shared_chrome(f"https://search.naver.com/search.naver?ssc=tab.blog.all&sm=tab_jum&query={q}")
 
     def _sync_core_keyword_to_title(self, title: str, reason: str = ""):
         """[Ver9.19 신규] 본문 h1 등 제목이 확정 제목과 달라졌을 때 TAB2 핵심 키워드를
@@ -8610,14 +8302,6 @@ class App(tk.Tk):
         q = urllib.parse.quote(title)
         self._open_naver_shared_chrome(f"https://search.naver.com/search.naver?ssc=tab.blog.all&sm=tab_jum&query={q}")
 
-    def _open_naver_search_title(self):
-        title = self.extracted_title_var.get().strip() if hasattr(self, "extracted_title_var") else ""
-        if not title:
-            messagebox.showwarning("알림", "추출된 제목이 없습니다.\nTAB2 STEP4에서 제목 후보를 먼저 확정하세요\n(또는 TAB3에서 완성 글을 붙여넣으면 h1에서 자동 추출됩니다).")
-            return
-        q = urllib.parse.quote(title)
-        self._open_naver_shared_chrome(f"https://search.naver.com/search.naver?query={q}")
-
     # [Ver9.06 삭제] _open_naver_blog_search_draft_title/_open_naver_search_draft_title
     # — TAB2(분석준비) STEP3의 "초안 제목" 검색 블록과 함께 제거(사용처 없음).
 
@@ -8736,8 +8420,8 @@ class App(tk.Tk):
         ttk.Label(title_meta_f, text="제목 검색:").pack(side="left", padx=(0,4))
         ttk.Button(title_meta_f, text="🔍 블로그",
                    command=self._open_naver_blog_search_title).pack(side="left", padx=(0,4))
-        ttk.Button(title_meta_f, text="🔍 통합",
-                   command=self._open_naver_search_title).pack(side="left", padx=(0,4))
+        ttk.Button(title_meta_f, text="📋 제목 복사",   # [Ver10.09] 통합검색 대신 제목 복사
+                   command=self._copy_final_title).pack(side="left", padx=(0,4))
         ttk.Label(title_meta_f, text="← 제목 선점 여부 확인",
                   style="Info.TLabel").pack(side="left")
 
@@ -8801,10 +8485,9 @@ class App(tk.Tk):
         ttk.Button(btn_save_f, text="📁 저장 폴더 열기",
                    command=self._open_last_saved_folder).pack(side="left")
         # TAB2 하단 "→ 글 작성으로 이동" 버튼과 동일한 흐름 — 다음 작업 탭으로
-        # 바로 넘어갈 수 있게 한다. 인포그래픽 탭은 대량검토 탭이 끼어들어
-        # 있어 인덱스 4(0-based).
+        # 바로 넘어갈 수 있게 한다.
         ttk.Button(btn_save_f, text="→ 인포그래픽으로 이동",
-                   command=lambda: self.nb.select(4),
+                   command=lambda: self._select_tab("infographic"),
                    style="Copy.TButton").pack(side="left", padx=(8,0))
 
         self.save_result_var = tk.StringVar()
@@ -9308,7 +8991,7 @@ class App(tk.Tk):
                     "정확도가 떨어질 수 있습니다.\n\n"
                     "그래도 이대로 저장하시겠습니까?\n"
                     "(아니오를 누르면 TAB2로 돌아가 키워드를 입력할 수 있습니다)"):
-                self.nb.select(2)  # 분석준비 탭으로 이동 (뉴스 대량검토 탭 끼어들어 +1)
+                self._select_tab("analyze")  # 3)분석 및 초안작성
                 return
 
         cfg     = load_config()
@@ -9457,7 +9140,7 @@ class App(tk.Tk):
     # ──────────────────────────────────────────────────────
     def _build_tab4_infographic(self):
         f = ttk.Frame(self.nb, padding=10)
-        self.nb.add(f, text="🖼 5)인포그래픽")
+        self.nb.add(f, text="🖼 5)인포그래픽 작성")
         f.columnconfigure(0, weight=1)
         # [Ver7.22] 프롬프트D 블록이 추가되며 STEP2(썸네일·소제목 목록)가
         # row3으로 밀림. 화면 세로 공간을 더 차지하지 않도록 row3(제목
@@ -9580,7 +9263,7 @@ class App(tk.Tk):
         # ③ 퍼플렉시티 그림 선택
         r4 = ttk.Frame(body)
         r4.grid(row=3, column=0, sticky="ew", pady=(8, 0))
-        ttk.Button(r4, text="③ 퍼플렉시티 그림 선택…", command=self._card_pick_background).pack(side="left", padx=(0, 6))
+        ttk.Button(r4, text="③ 퍼플렉시티/GPT 그림 선택…", command=self._card_pick_background).pack(side="left", padx=(0, 6))
         ttk.Button(r4, text="📁 카드 작업폴더 열기", command=self._card_open_work).pack(side="left", padx=(0, 8))
         self.card_bg_var = tk.StringVar(value="퍼플렉시티 그림: 없음")
         ttk.Label(r4, textvariable=self.card_bg_var).pack(side="left")
@@ -10123,7 +9806,7 @@ class App(tk.Tk):
         # [Ver9.06 변경] 기존에는 "→ 이력 관리 탭으로" 버튼을 따로 눌러야
         # 이동했지만, 두 버튼이 헷갈린다는 지적에 따라 업데이트 직후
         # 항상(초기화 여부와 무관하게) 이력관리 탭으로 자동 이동한다.
-        self.nb.select(6)  # 이력관리 탭 (대량검토+워터마크 탭 끼어들어 +2)
+        self._select_tab("history")  # 7)포스팅 이력관리
 
     def _start_new_post_silent(self, keep_selected_article: bool = False):
         """입력값 일괄 초기화 — 확인창 없이 즉시 처리한다.
@@ -10588,7 +10271,7 @@ class App(tk.Tk):
                     self.md_text.insert("end", content)
                     self._on_md_change()
                     self.last_saved_folder = os.path.dirname(md_path)
-                    self.nb.select(4)  # 인포그래픽 탭 (대량검토 탭 끼어들어 +1)
+                    self._select_tab("infographic")
                     messagebox.showinfo("작업 재개",
                         f"MD 파일을 TAB3에 자동 로드했습니다.\n\n"
                         f"파일: {md_file}\n\n"
@@ -10604,16 +10287,16 @@ class App(tk.Tk):
                     f"이력에 MD 파일명({md_file})이 있지만\n"
                     f"파일을 찾을 수 없습니다.\n\n"
                     f"TAB3에서 Claude 결과를 다시 붙여넣고 저장하세요.")
-                self.nb.select(3)  # 글작성 탭 (대량검토 탭 끼어들어 +1)
+                self._select_tab("write")  # 4)최종각색
                 return
 
         # MD 없으면 상태에 따라 탭 이동
         if "작성중" in status:
-            self.nb.select(3)  # 글작성 탭 (대량검토 탭 끼어들어 +1)
+            self._select_tab("write")  # 4)최종각색
             messagebox.showinfo("작업 재개",
                 "글작성 탭에서 Claude의 완성된 글을 붙여넣기 하세요.")
         else:
-            self.nb.select(2)  # 분석준비 탭 (대량검토 탭 끼어들어 +1)
+            self._select_tab("analyze")  # 3)분석 및 초안작성
             messagebox.showinfo("작업 재개",
                 "분석준비 탭에서 프롬프트A 복사 후 순서대로 진행하세요.")
 
@@ -11450,7 +11133,6 @@ class App(tk.Tk):
         # 프롬프트 파일명 ([Ver10.06] 세트 구분·프롬프트D 삭제)
         self._cfg_prompt_vars = {}
         for label, key, default in [
-            ("프롬프트0 파일명", "prompt_0_file", "정책뉴스_0_후보1차선별.md"),
             ("프롬프트A 파일명", "prompt_a_file", "정책뉴스_A_전략브리핑.md"),
             ("프롬프트B 파일명", "prompt_b_file", "정책뉴스_B_글작성.md"),
             ("프롬프트C 파일명", "prompt_c_file", "정책뉴스_C_이미지기획.md"),
@@ -11773,7 +11455,7 @@ class App(tk.Tk):
             var.set(path)
 
     def _update_window_title(self):
-        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-13_Ver 10.08")
+        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-14_Ver 10.09")
 
     def _browse_prompt_file(self, var: tk.StringVar):
         cfg      = load_config()
@@ -11904,354 +11586,6 @@ class App(tk.Tk):
             self._update_manual_title_len()
         messagebox.showinfo("저장 완료", "설정이 저장되었습니다.")
 
-    # ──────────────────────────────────────────────────────
-    # [신규] TAB9 — 이미지 워터마크 가리기 (앵커 이미지 합성)
-    # ──────────────────────────────────────────────────────
-    def _build_tab9_watermark(self):
-        """재미나이 등 AI 생성 이미지 우측 하단 워터마크를 앵커 이미지
-        (인물 캐릭터 등)로 덮어 가리는 탭.
-        대상 폴더는 별도로 고르지 않고 설정 탭의 '완성글 저장 폴더'
-        (output_dir)를 그대로 쓴다 — 그 폴더 안에 날짜/제목별 하위 폴더로
-        MD와 이미지가 같이 들어있는 구조이므로(save_md_file 참고) 항상
-        하위 폴더까지 재귀적으로 훑는다. 앵커 이미지도 기본적으로 같은
-        폴더(완성글 저장 폴더) 안에 있다고 보고 자동으로 채운다.
-        크기·여백 옵션은 env.txt(IP 설정과 같은 공용 환경설정 파일)에
-        저장되어 프로그램을 다시 켜도 마지막 값이 그대로 로딩된다.
-        기본값은 '원본 유지'(같은 폴더 구조로 _워터마크가림 하위 폴더에
-        결과 저장) — 되돌릴 수 없는 원본 덮어쓰기는 체크를 명시적으로
-        해제해야만 가능하고, 그 경우 실행 전 경고 팝업을 한 번 더 띄운다."""
-        f = ttk.Frame(self.nb, padding=10)
-        self.nb.add(f, text="🩹 6)워터마크처리")
-
-        if not PIL_OK:
-            ttk.Label(f,
-                text="이 기능을 쓰려면 Pillow 라이브러리가 필요합니다.\n"
-                     "명령 프롬프트(cmd)에서 아래 명령을 실행한 뒤 프로그램을 다시 켜주세요:\n\n"
-                     "    pip install pillow",
-                style="Header.TLabel", justify="left").pack(anchor="w", padx=10, pady=20)
-            return
-
-        f.columnconfigure(0, weight=1)
-        row = 0
-
-        ttk.Label(f,
-            text="재미나이 등으로 만든 이미지의 우측 하단 워터마크를, 지정한 앵커 이미지로 덮어 가립니다.\n"
-                 "워터마크 자체를 지우는 게 아니라 그 자리 위에 이미지를 겹쳐 씌우는 방식입니다.",
-            style="Info.TLabel", justify="left").grid(row=row, column=0, sticky="w", pady=(0, 10))
-        row += 1
-
-        # ① 처리 대상 폴더 — 설정 탭 '완성글 저장 폴더'와 항상 동일(공유 폴더라 여기서 따로 고르지 않음)
-        target_f = ttk.LabelFrame(
-            f, text="① 처리 대상 폴더 (= 설정 탭의 '완성글 저장 폴더', 하위 날짜·제목 폴더까지 항상 자동 포함)",
-            padding=8)
-        target_f.grid(row=row, column=0, sticky="ew", pady=6)
-        target_f.columnconfigure(0, weight=1)
-        cfg = load_config()
-        self.wm_target_var = tk.StringVar(value=cfg.get("output_dir", OUTPUT_DIR))
-        ttk.Entry(target_f, textvariable=self.wm_target_var, state="readonly").grid(
-            row=0, column=0, sticky="ew", padx=(0, 6))
-        ttk.Button(target_f, text="🔄 새로고침", command=self._wm_refresh_from_settings).grid(row=0, column=1, padx=(0, 4))
-        ttk.Button(target_f, text="📂 폴더 열기", command=lambda: open_folder(self.wm_target_var.get())).grid(row=0, column=2)
-        ttk.Label(target_f, text="※ 폴더 자체를 바꾸려면 설정 탭에서 '완성글 저장 폴더'를 변경·저장한 뒤 여기서 새로고침을 누르세요.",
-                  style="Info.TLabel").grid(row=1, column=0, columnspan=3, sticky="w", pady=(6, 0))
-        row += 1
-
-        # ② 앵커 이미지 — 기본적으로 같은 폴더(완성글 저장 폴더) 안에서 찾는다
-        anchor_f = ttk.LabelFrame(f, text="② 앵커 이미지 (워터마크를 덮을 이미지 — 배경 투명 PNG 권장, 기본적으로 완성글 저장 폴더 안에서 찾음)", padding=8)
-        anchor_f.grid(row=row, column=0, sticky="ew", pady=6)
-        anchor_f.columnconfigure(0, weight=1)
-        # [버그 수정] 예전에는 앵커 이미지 경로가 옵션 저장(_wm_save_options)
-        # 대상에 빠져있어 "찾아보기"로 고른 경로가 재시작하면 항상 기본값으로
-        # 되돌아갔다(사실상 저장이 안 되는 것처럼 보였음). env.txt에 저장된
-        # 값이 있으면 그것을 최우선으로 쓰고, 없거나 파일이 사라졌을 때만
-        # _default_anchor_path()로 대체한다.
-        _saved_anchor = get_env_value("wm_anchor_path", "")
-        _initial_anchor = _saved_anchor if (_saved_anchor and os.path.exists(_saved_anchor)) else self._default_anchor_path()
-        self.wm_anchor_var = tk.StringVar(value=_initial_anchor)
-        ttk.Entry(anchor_f, textvariable=self.wm_anchor_var).grid(row=0, column=0, sticky="ew", padx=(0, 6))
-        ttk.Button(anchor_f, text="찾아보기", command=self._wm_browse_anchor).grid(row=0, column=1)
-        row += 1
-
-        # ③ 옵션 (env.txt에 저장 — 재시작 후에도 마지막 값 유지)
-        opt_f = ttk.LabelFrame(f, text="③ 옵션 (마지막 저장값이 프로그램 재시작 후에도 자동 로딩됩니다)", padding=8)
-        opt_f.grid(row=row, column=0, sticky="ew", pady=6)
-
-        ttk.Label(opt_f, text="앵커 크기 (원본 이미지 가로폭 대비 %):").grid(row=0, column=0, sticky="w")
-        self.wm_width_pct_var = tk.StringVar(value=get_env_value("wm_width_pct", "22"))
-        ttk.Entry(opt_f, textvariable=self.wm_width_pct_var, width=6).grid(row=0, column=1, sticky="w", padx=6)
-
-        ttk.Label(opt_f, text="오른쪽 여백(%):").grid(row=0, column=2, sticky="w", padx=(20, 0))
-        self.wm_margin_x_var = tk.StringVar(value=get_env_value("wm_margin_x_pct", "2"))
-        ttk.Entry(opt_f, textvariable=self.wm_margin_x_var, width=6).grid(row=0, column=3, sticky="w", padx=6)
-
-        ttk.Label(opt_f, text="아래쪽 여백(%):").grid(row=1, column=0, sticky="w", pady=(6, 0))
-        self.wm_margin_y_var = tk.StringVar(value=get_env_value("wm_margin_y_pct", "0"))
-        ttk.Entry(opt_f, textvariable=self.wm_margin_y_var, width=6).grid(
-            row=1, column=1, sticky="w", padx=6, pady=(6, 0))
-        ttk.Label(opt_f, text="(기본값: 크기 22% / 오른쪽 여백 2% / 아래쪽 여백 0% = 바닥에 딱 붙임)",
-                  style="Info.TLabel").grid(row=2, column=0, columnspan=4, sticky="w", pady=(4, 0))
-
-        self.wm_keep_original_var = tk.BooleanVar(value=get_env_value("wm_keep_original", "1") == "1")
-        ttk.Checkbutton(
-            opt_f,
-            text="원본 유지 (결과를 대상 폴더 안 '_워터마크가림' 하위 폴더에 별도 저장 — 권장)",
-            variable=self.wm_keep_original_var
-        ).grid(row=3, column=0, columnspan=4, sticky="w", pady=(8, 0))
-
-        ttk.Button(opt_f, text="💾 옵션 저장", command=self._wm_save_options).grid(
-            row=4, column=0, sticky="w", pady=(8, 0))
-        row += 1
-
-        # 실행 버튼
-        btn_f = ttk.Frame(f)
-        btn_f.grid(row=row, column=0, sticky="w", pady=8)
-        ttk.Button(btn_f, text="🔍 미리보기 (1장만 테스트)", command=self._wm_preview).pack(side="left", padx=(0, 8))
-        ttk.Button(btn_f, text="▶ 전체 합성 실행", command=self._wm_run_batch, style="Copy.TButton").pack(side="left", padx=(0, 8))
-        ttk.Button(btn_f, text="📂 결과 폴더 열기", command=self._wm_open_result_folder).pack(side="left")
-        row += 1
-
-        # 로그
-        log_f = ttk.LabelFrame(f, text="처리 로그", padding=6)
-        log_f.grid(row=row, column=0, sticky="nsew", pady=(6, 0))
-        f.rowconfigure(row, weight=1)
-        self.wm_log_box = scrolledtext.ScrolledText(log_f, height=12, wrap="word", font=("맑은 고딕", 9))
-        self.wm_log_box.pack(fill="both", expand=True)
-        self.wm_log_box.config(state="disabled")
-
-    def _default_anchor_path(self) -> str:
-        """완성글 저장 폴더(output_dir) 안에 '앵커이미지.png'가 있으면 그 경로를,
-        없으면 프로그램 폴더(BASE_DIR) 안의 것을 찾아 기본값으로 채운다."""
-        cfg = load_config()
-        output_dir = cfg.get("output_dir", OUTPUT_DIR)
-        p1 = os.path.join(output_dir, "앵커이미지.png")
-        if os.path.exists(p1):
-            return p1
-        p2 = os.path.join(BASE_DIR, "앵커이미지.png")
-        return p2 if os.path.exists(p2) else ""
-
-    def _wm_refresh_from_settings(self):
-        """설정 탭에서 '완성글 저장 폴더'를 바꾸고 저장한 뒤, 프로그램을
-        재시작하지 않고도 이 탭에 바로 반영하기 위한 새로고침 버튼."""
-        cfg = load_config()
-        output_dir = cfg.get("output_dir", OUTPUT_DIR)
-        self.wm_target_var.set(output_dir)
-        # 앵커 이미지도 아직 사용자가 직접 고르지 않았거나 예전 기본값 그대로라면 같이 갱신
-        new_default = self._default_anchor_path()
-        if new_default and (not self.wm_anchor_var.get().strip() or not os.path.exists(self.wm_anchor_var.get().strip())):
-            self.wm_anchor_var.set(new_default)
-        self._wm_log(f"[새로고침] 대상 폴더 = {output_dir}")
-
-    def _wm_browse_anchor(self):
-        path = filedialog.askopenfilename(
-            title="앵커 이미지 선택",
-            filetypes=[("이미지 파일", "*.png *.jpg *.jpeg *.webp"), ("모든 파일", "*.*")])
-        if path:
-            self.wm_anchor_var.set(path)
-            # 고른 즉시 env.txt에 저장 — "옵션 저장" 버튼을 따로 누르지 않아도
-            # 재시작 후 이 앵커 이미지가 그대로 유지된다.
-            update_env_value("wm_anchor_path", path)
-
-    def _wm_log(self, msg: str):
-        self.wm_log_box.config(state="normal")
-        self.wm_log_box.insert("end", msg + "\n")
-        self.wm_log_box.see("end")
-        self.wm_log_box.config(state="disabled")
-
-    def _wm_open_result_folder(self):
-        """방금(또는 예전에) 합성한 결과물이 쌓이는 폴더를 OS 기본 탐색기로
-        연다. '원본 유지'가 켜져 있으면 결과는 대상 폴더 안 '_워터마크가림'
-        하위 폴더에 있고, 꺼져 있으면(원본 덮어쓰기) 원본과 같은 자리이므로
-        대상 폴더 자체를 연다. 아직 한 번도 실행 전이라 폴더가 없으면
-        안내만 하고 열지 않는다."""
-        target = self.wm_target_var.get().strip()
-        if not target or not os.path.isdir(target):
-            messagebox.showinfo("알림", "완성글 저장 폴더가 아직 없습니다.\n설정 탭에서 먼저 지정·저장하세요.")
-            return
-        keep_original = self.wm_keep_original_var.get()
-        result_dir = os.path.join(target, WM_OUTPUT_SUBFOLDER) if keep_original else target
-        if not os.path.isdir(result_dir):
-            messagebox.showinfo("알림", f"아직 합성 결과가 없습니다.\n(먼저 '전체 합성 실행'을 한 번 실행해야 폴더가 생깁니다)\n\n예정 위치: {result_dir}")
-            return
-        open_folder(result_dir)
-
-    def _wm_save_options(self):
-        """앵커 이미지 경로·크기·여백·원본유지 옵션을 env.txt(공용 환경설정)에
-        저장한다. 프로그램을 다시 켜면 _build_tab9_watermark가 get_env_value로
-        이 값들을 그대로 읽어와 입력칸을 자동으로 채운다.
-        [버그 수정] 앵커 이미지 경로는 원래 "찾아보기"로 고르면 즉시 저장되지만,
-        입력칸에 경로를 직접 타이핑/수정한 경우까지 놓치지 않도록 여기서도
-        함께 저장한다."""
-        update_env_value("wm_anchor_path", self.wm_anchor_var.get().strip())
-        update_env_value("wm_width_pct", self.wm_width_pct_var.get().strip())
-        update_env_value("wm_margin_x_pct", self.wm_margin_x_var.get().strip())
-        update_env_value("wm_margin_y_pct", self.wm_margin_y_var.get().strip())
-        update_env_value("wm_keep_original", "1" if self.wm_keep_original_var.get() else "0")
-        self._wm_log("[옵션 저장 완료] 다음 실행 시에도 이 값으로 자동 로딩됩니다.")
-
-    def _wm_get_options(self):
-        """입력값 검증 후 (anchor_path, target, width_ratio, margin_x_ratio,
-        margin_y_ratio, keep_original) 튜플을 반환한다. 대상 폴더는 항상
-        설정 탭의 완성글 저장 폴더이고 항상 하위 폴더까지 재귀 처리한다
-        (날짜/제목별 하위 폴더 구조이므로 재귀가 아니면 이미지가 하나도
-        안 걸린다). 검증 실패 시 팝업을 띄우고 None을 반환한다."""
-        anchor_path = self.wm_anchor_var.get().strip()
-        if not anchor_path or not os.path.exists(anchor_path):
-            messagebox.showwarning("알림", "앵커 이미지 파일을 먼저 선택하세요.\n"
-                                             "(완성글 저장 폴더 안에 '앵커이미지.png'를 두면 자동으로 채워집니다)")
-            return None
-        target = self.wm_target_var.get().strip()
-        if not target or not os.path.isdir(target):
-            messagebox.showwarning("알림", "완성글 저장 폴더가 아직 없습니다.\n설정 탭에서 먼저 지정·저장하세요.")
-            return None
-        try:
-            width_ratio    = float(self.wm_width_pct_var.get().strip()) / 100
-            margin_x_ratio = float(self.wm_margin_x_var.get().strip()) / 100
-            margin_y_ratio = float(self.wm_margin_y_var.get().strip()) / 100
-        except ValueError:
-            messagebox.showwarning("알림", "크기·여백 값은 숫자(%)로 입력하세요.")
-            return None
-        if not (0 < width_ratio <= 1):
-            messagebox.showwarning("알림", "앵커 크기는 1~100 사이 값으로 입력하세요.")
-            return None
-        return (anchor_path, target, width_ratio, margin_x_ratio, margin_y_ratio,
-                self.wm_keep_original_var.get())
-
-    def _wm_find_target_images(self, target: str, anchor_path: str) -> list:
-        """대상 폴더에서 처리할 이미지 목록을 찾되, 앵커 이미지 자기 자신은
-        제외한다. 앵커 이미지가 완성글 저장 폴더 안에 직접 놓여있는 경우
-        (지금 기본 위치가 바로 그곳이다), 스캔 결과에 앵커 이미지 자신이
-        섞여 들어가 '앵커 위에 앵커를 합성'하는 상황이 생길 수 있다 —
-        미리보기가 그냥 앵커 이미지처럼 보이는 원인이 이것이다."""
-        images = _wm_find_images(target, recursive=True)
-        try:
-            anchor_norm = os.path.normcase(os.path.normpath(os.path.abspath(anchor_path)))
-        except Exception:
-            anchor_norm = None
-        return [p for p in images
-                if anchor_norm is None or os.path.normcase(os.path.normpath(os.path.abspath(p))) != anchor_norm]
-
-    def _wm_preview(self):
-        """찾은 이미지 중 첫 한 장만 합성해 임시 폴더에 저장하고 OS 기본
-        뷰어로 열어 보여준다 — 전체 실행 전에 크기·위치가 적절한지
-        눈으로 확인하기 위한 용도. 대상 폴더 안에는 아무 것도 남기지 않는다."""
-        opts = self._wm_get_options()
-        if not opts:
-            return
-        anchor_path, target, width_ratio, margin_x_ratio, margin_y_ratio, _keep = opts
-        self._wm_save_options()  # 미리보기까지 갔다는 건 값이 확정됐다는 뜻이므로 같이 저장
-
-        images = self._wm_find_target_images(target, anchor_path)
-        if not images:
-            messagebox.showinfo("알림", "대상 폴더(완성글 저장 폴더)에서 이미지 파일을 찾지 못했습니다.")
-            return
-
-        try:
-            anchor_img = Image.open(anchor_path).convert("RGBA")
-        except Exception as e:
-            messagebox.showerror("오류", f"앵커 이미지를 열 수 없습니다:\n{e}")
-            return
-
-        sample = images[0]
-        try:
-            result = composite_anchor_on_image(sample, anchor_img, width_ratio, margin_x_ratio, margin_y_ratio)
-        except Exception as e:
-            messagebox.showerror("오류", f"미리보기 합성 실패:\n{sample}\n{e}")
-            return
-
-        preview_dir = os.path.join(target, "_워터마크가림_미리보기")
-        os.makedirs(preview_dir, exist_ok=True)
-        # [수정] 미리보기도 실제 배치 실행과 동일하게 항상 PNG로 저장한다.
-        preview_name = os.path.splitext(os.path.basename(sample))[0] + ".png"
-        preview_path = os.path.join(preview_dir, "미리보기_" + preview_name)
-        try:
-            result.save(preview_path, format="PNG")
-        except Exception as e:
-            messagebox.showerror("오류", f"미리보기 저장 실패:\n{e}")
-            return
-
-        self._wm_log(f"[미리보기] {sample} → {preview_path}")
-        open_folder(preview_path)  # OS 기본 이미지 뷰어로 열기 (폴더/파일 공용 오픈 함수)
-
-    def _wm_run_batch(self):
-        """대상 폴더(또는 하위 폴더 전체)의 이미지를 전부 합성한다.
-        '원본 유지'가 켜져 있으면 결과는 _워터마크가림 하위 폴더에만
-        쌓이고 원본은 절대 건드리지 않는다. 꺼져 있으면(원본 덮어쓰기)
-        실행 전 경고 팝업을 한 번 더 띄워 명시적 동의를 받는다.
-        시간이 걸릴 수 있으므로 백그라운드 스레드에서 실행하고, 진행
-        상황은 self.after(0, ...)로 메인 스레드 로그창에 반영한다."""
-        opts = self._wm_get_options()
-        if not opts:
-            return
-        anchor_path, target, width_ratio, margin_x_ratio, margin_y_ratio, keep_original = opts
-        self._wm_save_options()  # 실행 확정 시점에 현재 옵션값을 env.txt에 저장(다음 실행에도 자동 로딩)
-
-        images = self._wm_find_target_images(target, anchor_path)
-        if not images:
-            messagebox.showinfo("알림", "대상 폴더(완성글 저장 폴더)에서 이미지 파일을 찾지 못했습니다.")
-            return
-
-        if keep_original:
-            save_desc = (f"결과를 원본과 별도로 '{WM_OUTPUT_SUBFOLDER}' 폴더에 PNG로 저장합니다 "
-                         f"(원본은 그대로 유지됩니다).")
-        else:
-            save_desc = ("⚠️ 원본 파일을 PNG로 합성 결과로 덮어씁니다 — 실행 후 되돌릴 수 없습니다.\n"
-                         "원본이 PNG가 아니었다면(JPG 등) 확장자가 .png로 바뀌고,\n"
-                         "옛 확장자 원본 파일은 자동 삭제됩니다.")
-
-        if not messagebox.askyesno(
-                "실행 확인",
-                f"대상(완성글 저장 폴더): {target}\n하위 날짜·제목 폴더 포함, 찾은 이미지: {len(images)}개\n\n{save_desc}\n\n계속하시겠습니까?"):
-            return
-        if not keep_original:
-            if not messagebox.askyesno(
-                    "⚠️ 최종 확인",
-                    "원본 덮어쓰기를 선택하셨습니다. 실행 후에는 되돌릴 수 없습니다.\n"
-                    "정말로 원본 파일에 바로 합성하시겠습니까?"):
-                return
-
-        self._wm_log(f"── 합성 시작 (대상 {len(images)}개) ──")
-
-        def worker():
-            try:
-                anchor_img = Image.open(anchor_path).convert("RGBA")
-            except Exception as e:
-                self.after(0, lambda e=e: messagebox.showerror("오류", f"앵커 이미지를 열 수 없습니다:\n{e}"))
-                return
-
-            success = fail = 0
-            for src in images:
-                try:
-                    result = composite_anchor_on_image(src, anchor_img, width_ratio, margin_x_ratio, margin_y_ratio)
-                    out_path = _wm_output_path(src, target, keep_original)
-                    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-                    # [수정] 결과는 항상 PNG로 저장(무손실 — JPG 재압축으로
-                    # 앵커 경계가 뭉개지는 걸 피함). quality 옵션은 더 이상 필요 없다.
-                    result.save(out_path, format="PNG")
-                    # 원본 덮어쓰기 모드에서 원본이 PNG가 아니었다면 out_path가
-                    # src와 다른 파일명(확장자만 .png로 교체)이 된다 — 그대로
-                    # 두면 옛 확장자 원본 파일이 폴더에 그대로 남아 같은
-                    # 이미지가 2개(예: photo.jpg + photo.png)로 보이므로,
-                    # 저장 성공 후 옛 원본 파일을 지워 실제 "덮어쓰기"가
-                    # 되게 한다. out_path == src(원본이 이미 PNG)면 지울 게 없다.
-                    if not keep_original and os.path.abspath(out_path) != os.path.abspath(src):
-                        try:
-                            os.remove(src)
-                        except Exception:
-                            pass
-                    success += 1
-                    self.after(0, lambda p=src: self._wm_log(f"  ✅ {os.path.relpath(p, target)}"))
-                except Exception as e:
-                    fail += 1
-                    self.after(0, lambda p=src, err=e: self._wm_log(f"  ❌ {os.path.relpath(p, target)} — {err}"))
-
-            def done():
-                self._wm_log(f"── 완료: 성공 {success}건 / 실패 {fail}건 ──")
-                messagebox.showinfo("완료", f"이미지 합성 완료\n성공 {success}건 / 실패 {fail}건")
-                if success > 0:
-                    self._wm_open_result_folder()  # 결과를 바로 확인할 수 있도록 폴더를 자동으로 연다
-            self.after(0, done)
-
-        threading.Thread(target=worker, daemon=True).start()
 
 
 # ════════════════════════════════════════════════════════════
