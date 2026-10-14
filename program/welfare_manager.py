@@ -1904,6 +1904,8 @@ v7.21 (2026-09-22): 🐛 parse_value_judgment_title_candidates() 헤더
                      "## 경쟁 블로그 샘플 (N개)"로 들어간다.
                      (6) STEP 3 본 분석(통합 V11): 기본은 빠른 판정한 대화창에 이어 붙이는 복사
                      (원문 생략), 새 대화창용 전체 복사도 둠. 빠른 판정 결과를 함께 넣는다.
+                     STEP 2에 "🔍 메인 키워드로 블로그탭 열기"(검색 키워드 칸 첫 키워드, 비로그인
+                     새 창) — 스크랩할 경쟁 블로그를 찾는 용도.
                      (7) 🔍 통합(네이버 통합검색) → 📋 제목 복사(후보 4줄·직접 입력·기타 관리).
                      코드 카드 버튼 "③ 퍼플렉시티/GPT 그림 선택…".
 """
@@ -7596,6 +7598,9 @@ class WelfareCollectorGUI(tk.Tk):
         blog_bar = ttk.Frame(blog_f)
         blog_bar.grid(row=0, column=0, sticky="ew")
         ttk.Label(blog_bar, text="경쟁 블로그 글:").pack(side="left")
+        # [Ver10.08] 스크랩할 경쟁 블로그를 찾을 때 — 검색 키워드 칸의 첫 키워드(메인)로 블로그탭을 연다.
+        ttk.Button(blog_bar, text="🔍 메인 키워드로 블로그탭 열기",
+                   command=self._open_blog_tab_with_main_keyword).pack(side="left", padx=(6, 0))
         ttk.Button(blog_bar, text="📂 스크랩 폴더에서 불러오기",
                    command=self._load_competitor_blogs_from_scrap).pack(side="left", padx=(6, 4))
         ttk.Button(blog_bar, text="지우기",
@@ -7609,7 +7614,8 @@ class WelfareCollectorGUI(tk.Tk):
         self.competitor_blog_text.bind("<FocusOut>", lambda e: self._save_competitor_blogs())
         self._competitor_blog_serv = None   # 칸에 지금 들어 있는 글의 서비스(서비스별로 따로 저장)
         ttk.Label(blog_f,
-                  text="'5)블로그 스크랩' 탭으로 저장한 글을 불러오거나 직접 붙여넣으세요(서비스별로 저장). "
+                  text="'🔍 메인 키워드로 블로그탭 열기'로 상위 글을 찾아 '5)블로그 스크랩' 탭에서 저장한 뒤, "
+                       "여기서 불러오거나 직접 붙여넣으세요(서비스별로 저장). "
                        "내용이 있으면 STEP 3 복사본 끝에 '경쟁 블로그 샘플'로 들어가 파일을 따로 첨부하지 않아도 됩니다. "
                        "첨부 서식자료는 빠른 판정이 '필요'라고 한 파일만 STEP 3 때 대화창에 올리세요"
                        "(아래 '기타 관리'의 📎 첨부파일 폴더 열기).",
@@ -10501,6 +10507,21 @@ class WelfareCollectorGUI(tk.Tk):
         text = self.competitor_blog_text.get("1.0", "end").strip()
         n = count_competitor_blogs(text)
         self.competitor_blog_info_var.set(f"{n}개 · {len(text):,}자 (STEP 3 복사에 들어감)" if n else "비어 있음")
+
+    def _open_blog_tab_with_main_keyword(self):
+        """[Ver10.08] 검색 키워드 칸의 첫 키워드(메인)로 네이버 블로그탭을 비로그인 새 창으로 연다 —
+        상위 블로그 URL을 골라 5)블로그 스크랩에 넣는 용도."""
+        kw = self.research_keyword_var.get().split(",")[0].strip()
+        if not kw:
+            messagebox.showwarning("알림", "검색 키워드 칸이 비어 있습니다. 먼저 항목을 선택하거나 키워드를 입력하세요.")
+            return
+        if self._check_ip_before_naver_open():
+            return  # IP 불일치 등으로 차단 — 게이트 함수 안에서 이미 안내함
+        ok = open_naver_search_in_chrome(kw, blog_only=True)
+        if ok:
+            self._log(f"🔍 블로그탭 열기(비로그인 새 창): {kw}")
+        else:
+            self._log(f"⚠️ 크롬을 찾지 못해 기본 브라우저로 열었습니다(비로그인 보장 안 됨): {kw}")
 
     def _clear_competitor_blogs(self):
         if not hasattr(self, "competitor_blog_text"):
