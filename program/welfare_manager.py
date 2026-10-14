@@ -1927,6 +1927,12 @@ v7.21 (2026-09-22): 🐛 parse_value_judgment_title_candidates() 헤더
                      때는 수동 보조의 주소 칸 + "🕸 주소 스크랩해서 채우기"(서비스 폴더
                      competitor_blogs_md/). "스크랩 폴더에서 불러오기" 삭제. 탭 번호 5)~8)로 당김.
                      blog_scrap_* 함수는 그대로 둔다.
+                     (12) 버튼 이름 규칙(사용자): "📋 (단계) 자료+프롬프트(새창/현재창)", "📋 (단계)
+                     프롬프트(현재창)", "💾 (단계) 저장(메모리값)" — 클립보드에서 읽어 저장. 본 분석 저장을
+                     줄 맨 끝으로, "프롬프트만 복사"(본 분석) 삭제. 초안·최종각색 저장도 메모리값에서
+                     읽음(초안: 자료 요청·정보 부족 판정이면 저장 안 함, 최종각색: 클립보드 내용을 채운
+                     확인 창). 초안 프롬프트(현재창)에 확정 제목을 함께 넣음. "첨부" → "공식자료",
+                     대화창에 넣기 → "올리기"로 화면 용어 통일(목록 열 이름 포함).
 """
 
 import sys
@@ -6030,7 +6036,7 @@ def format_attachments_for_prompt(attachments: list) -> str:
         lines = [f"## 첨부 서식자료 ({len(attachments)}건)\n",
                  "아래 파일이 자료 폴더의 attachments 폴더에 있습니다. 이 대화에 함께 "
                  "업로드했다면 반드시 읽고 내용을 반영해주세요. 아직 업로드하지 않았다면, "
-                 "'📎 첨부파일 폴더 열기' 버튼으로 폴더를 열어 파일을 끌어다 올려주신 뒤 "
+                 "'📂 공식자료 폴더 열기' 버튼으로 폴더를 열어 파일을 끌어다 올려주신 뒤 "
                  "다시 요청해주세요."]
         for fn in attachments:
             lines.append(f"- {fn}")
@@ -7296,7 +7302,7 @@ class WelfareCollectorGUI(tk.Tk):
 
         self.download_files_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(
-            central_btn_frame, text="첨부 서식파일 같이 받기", variable=self.download_files_var
+            central_btn_frame, text="공식자료(첨부 서식파일) 같이 받기", variable=self.download_files_var
         ).pack(side="left", padx=8)
 
         ttk.Label(central_tab, text=f"※ 일일 한도 - 목록조회 {DAILY_QUOTA_LIST}건 / 상세조회 {DAILY_QUOTA_DETAIL}건",
@@ -7366,7 +7372,7 @@ class WelfareCollectorGUI(tk.Tk):
 
         self.lcgv_download_files_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(
-            lcgv_btn_frame, text="첨부 서식파일 같이 받기", variable=self.lcgv_download_files_var
+            lcgv_btn_frame, text="공식자료(첨부 서식파일) 같이 받기", variable=self.lcgv_download_files_var
         ).pack(side="left", padx=8)
 
         ttk.Label(lcgv_tab,
@@ -7560,7 +7566,7 @@ class WelfareCollectorGUI(tk.Tk):
         posting_sort_combo.pack(side="left")
         posting_sort_combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_posting_tree())
 
-        cols2 = ("우선순위", "출처", "서비스명", "서비스ID", "연관정책", "첨부", "포스팅상태", "최초발견일")
+        cols2 = ("우선순위", "출처", "서비스명", "서비스ID", "연관정책", "공식자료", "포스팅상태", "최초발견일")
         self.posting_tree = ttk.Treeview(pt, columns=cols2, show="headings", height=14)
         widths2 = [70, 70, 440, 130, 110, 60, 150, 110]
         for col, w in zip(cols2, widths2):
@@ -7624,16 +7630,19 @@ class WelfareCollectorGUI(tk.Tk):
                   foreground="darkblue", font=("맑은 고딕", 9, "bold")).pack(side="left", padx=(12, 0))
 
         # ---- STEP 1 빠른 판정·자료 준비 ----
-        quick_f = ttk.LabelFrame(pt, text="STEP 1 — 빠른 판정 · 자료 자동 준비 (Claude 새 대화창)")
+        # [Ver10.08] 버튼 이름 규칙(사용자): 📋 = 클립보드로 복사 — "자료+프롬프트"는 서비스 자료까지,
+        # "프롬프트"는 지시문만, (새창)/(현재창)은 붙여넣을 Claude 대화창. 💾 … 저장(메모리값) = Claude 답을
+        # 복사해 둔 클립보드(메모리값)에서 읽어 저장. "공식자료" = 복지로 첨부 서식자료(사업안내·신청서 등).
+        quick_f = ttk.LabelFrame(pt, text="STEP 1 — 빠른 판정 · 자료 자동 준비")
         quick_f.grid(row=5, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
         quick_row = ttk.Frame(quick_f)
         quick_row.pack(fill="x")
-        ttk.Button(quick_row, text="① 📋 빠른 판정 복사",
+        ttk.Button(quick_row, text="① 📋 빠른판정 자료+프롬프트(새창)",
                    command=self._copy_quick_judgment_prompt).pack(side="left", padx=(6, 4), pady=6)
-        ttk.Button(quick_row, text="② 📥 판정 읽고 자료 자동 준비",
+        ttk.Button(quick_row, text="② 💾 빠른판정 저장(메모리값) + 자료 자동준비",
                    command=lambda: self._read_clipboard_result("quick_judgment")).pack(
             side="left", padx=(0, 6), pady=6)
-        _next_hint(quick_row, "① Claude 새 대화창에 붙여넣기 → 답 코드블럭 복사 → ② 누르기")
+        _next_hint(quick_row, "Claude 답 코드블럭을 복사한 뒤 ②")
         self.quick_status_var = tk.StringVar(value="")
         ttk.Label(quick_f, textvariable=self.quick_status_var, foreground="#1565C0",
                   font=("맑은 고딕", 9, "bold"), wraplength=1100, justify="left").pack(
@@ -7644,28 +7653,26 @@ class WelfareCollectorGUI(tk.Tk):
             anchor="w", padx=6, pady=(0, 6))
 
         # ---- STEP 2 본 분석 ----
-        main_f = ttk.LabelFrame(pt, text="STEP 2 — 본 분석: 공식 출처 확인 · 가치판단 · 제목 후보 (같은 대화창)")
+        main_f = ttk.LabelFrame(pt, text="STEP 2 — 본 분석: 공식 출처 확인 · 가치판단 · 제목 후보")
         main_f.grid(row=6, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
         main_row = ttk.Frame(main_f)
         main_row.pack(fill="x")
-        ttk.Button(main_row, text="③ 📋 본 분석 복사 (같은 대화창)",
+        ttk.Button(main_row, text="③ 📋 본분석 자료+프롬프트(현재창)",
                    command=lambda: self._copy_main_analysis_prompt(same_chat=True)).pack(
             side="left", padx=(6, 4), pady=6)
-        ttk.Button(main_row, text="④ 📥 결과 읽어 저장",
-                   command=lambda: self._read_clipboard_result("value_judgment")).pack(
-            side="left", padx=(0, 6), pady=6)
-        ttk.Button(main_row, text="📎 첨부파일 폴더 열기",
-                   command=self._open_selected_attachments_folder).pack(side="left", padx=(0, 12), pady=6)
-        ttk.Button(main_row, text="새 대화창용 전체 복사",
+        ttk.Button(main_row, text="📋 본분석 자료+프롬프트(새창)",
                    command=lambda: self._copy_main_analysis_prompt(same_chat=False)).pack(
             side="left", padx=(0, 4), pady=6)
-        ttk.Button(main_row, text="프롬프트만 복사",
-                   command=self._copy_prescreening_value_combo_prompt_only).pack(side="left", padx=(0, 4), pady=6)
+        ttk.Button(main_row, text="📂 공식자료 폴더 열기",
+                   command=self._open_selected_attachments_folder).pack(side="left", padx=(0, 12), pady=6)
+        ttk.Button(main_row, text="④ 💾 가치판단 저장(메모리값)",
+                   command=lambda: self._read_clipboard_result("value_judgment")).pack(
+            side="left", padx=(0, 6), pady=6)
         ttk.Label(main_f,
-                  text="③ 자료 준비가 끝나면 복사해 빠른 판정한 대화창에 붙여넣으세요(첨부가 필요하면 폴더가 열립니다 — "
-                       "파일을 대화창에 올리세요). ④ 답을 복사해 누르면: 결과면 저장, AI가 자료를 요청하면 첨부 폴더를 "
-                       "열어 안내, 키워드 실측을 요청하면 리서치를 돌려 답변을 클립보드에 넣어 줍니다(같은 대화창에 "
-                       "붙여넣고 다시 ④). 공식 출처로 확인이 안 되면 AI가 보류합니다 — 블로그 정보로 쓰지 않습니다.",
+                  text="③ 빠른판정을 한 대화창(현재창)에 붙여넣으세요. 빠른판정이 공식자료가 필요하다고 했으면 폴더가 열립니다 — "
+                       "그 파일을 대화창에 올리세요. ④ Claude 답을 복사한 뒤 누르면: 결과면 저장, AI가 자료를 요청하면 "
+                       "공식자료 폴더를 열어 안내, 키워드 실측을 요청하면 리서치 결과를 클립보드에 넣어 줍니다(현재창에 "
+                       "붙여넣고 새 답을 복사해 다시 ④). 공식 출처로 확인이 안 되면 AI가 보류합니다 — 블로그 정보로 쓰지 않습니다.",
                   foreground="gray", wraplength=1100, justify="left").pack(anchor="w", padx=6, pady=(0, 6))
 
         # ---- 수동 보조(접힘) — 키워드 리서치·블로그탭·경쟁 블로그 칸 ----
@@ -7705,7 +7712,7 @@ class WelfareCollectorGUI(tk.Tk):
                   foreground="#1565C0", font=("맑은 고딕", 9, "bold"),
                   wraplength=1000, justify="left").grid(row=1, column=0, columnspan=6, sticky="w", pady=(4, 0))
         ttk.Label(research_f,
-                  text="보통은 손댈 필요 없습니다 — 판정 읽기·결과 읽기가 이 칸을 채우고 리서치까지 돌립니다. "
+                  text="보통은 손댈 필요 없습니다 — ② 빠른판정 저장·④ 가치판단 저장이 이 칸을 채우고 리서치까지 돌립니다. "
                        "키워드를 바꿔 다시 조회하고 싶을 때만 쓰세요.",
                   foreground="gray", wraplength=1000, justify="left").grid(
             row=2, column=0, columnspan=6, sticky="w", pady=(2, 6))
@@ -7739,7 +7746,7 @@ class WelfareCollectorGUI(tk.Tk):
         self.competitor_blog_text.bind("<FocusOut>", lambda e: self._save_competitor_blogs())
         self._competitor_blog_serv = None   # 칸에 지금 들어 있는 글의 서비스(서비스별로 따로 저장)
         ttk.Label(blog_f,
-                  text="판정 읽기 때 메인 키워드 상위 블로그를 자동으로 스크랩해 아래 칸을 채웁니다(설정에서 개수·내 블로그 제외). "
+                  text="② 빠른판정 저장 때 메인 키워드 상위 블로그를 자동으로 스크랩해 아래 칸을 채웁니다(설정에서 개수·내 블로그 제외). "
                        "다른 글로 바꾸려면 블로그탭에서 고른 글 주소를 위 칸에 한 줄에 하나씩 넣고 '🕸 주소 스크랩해서 채우기'. "
                        "아래 칸은 직접 붙여넣거나 고쳐도 됩니다. 블로그는 글 구성 참고용일 뿐 사실 근거·출처로 쓰지 않습니다.",
                   foreground="gray", wraplength=1000, justify="left").grid(row=2, column=0, sticky="w", pady=(2, 0))
@@ -7868,31 +7875,32 @@ class WelfareCollectorGUI(tk.Tk):
 
         # ---- STEP 4 초안·최종각색 ----
         # [Ver9.30] GPT용 최종각색 경로는 폐기 — Claude 2차 각색 하나만 쓴다.
-        write_f = ttk.LabelFrame(pt, text="STEP 4 — 초안 → 최종각색 (Claude, 같은 대화창)")
+        write_f = ttk.LabelFrame(pt, text="STEP 4 — 초안 → 최종각색")
         write_f.grid(row=9, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
         draft_row = ttk.Frame(write_f)
         draft_row.pack(fill="x")
-        ttk.Label(draft_row, text="초안:", width=7).pack(side="left", padx=(6, 0))
-        ttk.Button(draft_row, text="📋 초안 프롬프트+자료 복사",
-                   command=self._copy_draft_prompt).pack(side="left", padx=(0, 4), pady=6)
-        ttk.Button(draft_row, text="📋 프롬프트만 복사",
-                   command=self._copy_draft_prompt_only).pack(side="left", padx=(0, 4), pady=6)
-        ttk.Button(draft_row, text="💾 초안 결과 저장",
-                   command=lambda: self._paste_and_save_stage_result("draft")).pack(
+        ttk.Button(draft_row, text="📋 초안 프롬프트(현재창)",
+                   command=self._copy_draft_prompt_only).pack(side="left", padx=(6, 4), pady=6)
+        ttk.Button(draft_row, text="📋 초안 자료+프롬프트(새창)",
+                   command=self._copy_draft_prompt).pack(side="left", padx=(0, 12), pady=6)
+        ttk.Button(draft_row, text="💾 초안 저장(메모리값)",
+                   command=lambda: self._read_clipboard_result("draft")).pack(
             side="left", padx=(0, 6), pady=6)
         final_row = ttk.Frame(write_f)
         final_row.pack(fill="x")
-        ttk.Label(final_row, text="최종각색:", width=7).pack(side="left", padx=(6, 0))
-        ttk.Button(final_row, text="📋 최종각색 프롬프트+자료 복사",
-                   command=self._copy_claude_second_stage_prompt).pack(side="left", padx=(0, 4), pady=(0, 6))
-        ttk.Button(final_row, text="📋 프롬프트만 복사",
-                   command=self._copy_claude_second_stage_prompt_only).pack(side="left", padx=(0, 4), pady=(0, 6))
-        ttk.Button(final_row, text="💾 최종각색 결과 저장 (.md)",
-                   command=lambda: self._paste_and_save_stage_result("final_adaptation")).pack(
+        ttk.Button(final_row, text="📋 최종각색 프롬프트(현재창)",
+                   command=self._copy_claude_second_stage_prompt_only).pack(side="left", padx=(6, 4), pady=(0, 6))
+        ttk.Button(final_row, text="📋 최종각색 자료+프롬프트(새창)",
+                   command=self._copy_claude_second_stage_prompt).pack(side="left", padx=(0, 12), pady=(0, 6))
+        ttk.Button(final_row, text="💾 최종각색 저장(메모리값 → .md)",
+                   command=lambda: self._read_clipboard_result("final_adaptation")).pack(
             side="left", padx=(0, 6), pady=(0, 6))
         ttk.Button(final_row, text="📝 최종원고(.md) 폴더 열기",
                    command=self._open_final_posts_folder).pack(side="left", padx=(0, 6), pady=(0, 6))
-        _next_hint(final_row, "→ 다음: 5)인포그래픽 작성 탭 → STEP 5")
+        ttk.Label(write_f, text="본 분석을 한 대화창(현재창)에서 이어 가면 \"프롬프트(현재창)\"이면 됩니다(초안은 확정 제목을 함께 넣음). "
+                                "다른 대화창에서 하려면 \"자료+프롬프트(새창)\". 최종각색 저장은 확인 창이 한 번 뜹니다(제목·출처 점검, "
+                                "문단 정리). 끝나면 5)인포그래픽 작성 탭 → STEP 5.",
+                  foreground="gray", wraplength=1100, justify="left").pack(anchor="w", padx=6, pady=(0, 6))
 
         # ---- STEP 5 완료 처리 ----
         done_f = ttk.LabelFrame(pt, text="STEP 5 — 완료 처리")
@@ -7943,9 +7951,9 @@ class WelfareCollectorGUI(tk.Tk):
         # 인포그래픽은 이 탭에서). 위 "대상 서비스"를 기준으로 복사한다.
         ig_prompt_f = ttk.Frame(infographic_tab)
         ig_prompt_f.grid(row=1, column=0, sticky="ew", padx=6, pady=(0, 6))
-        ttk.Button(ig_prompt_f, text="📋 인포그래픽 프롬프트+자료 복사 (Claude)",
+        ttk.Button(ig_prompt_f, text="📋 인포그래픽 자료+프롬프트(새창)",
                    command=self._copy_infographic_prompt).pack(side="left")
-        ttk.Button(ig_prompt_f, text="📋 프롬프트만 복사",
+        ttk.Button(ig_prompt_f, text="📋 인포그래픽 프롬프트(현재창)",
                    command=self._copy_infographic_prompt_only).pack(side="left", padx=(4, 0))
         ttk.Label(ig_prompt_f,
                   text="선택한 서비스의 최종각색 결과에서 제목(썸네일)과 소제목을 자동으로 뽑습니다. "
@@ -8282,7 +8290,7 @@ class WelfareCollectorGUI(tk.Tk):
         cfg_now = load_config()
 
         # [Ver10.08] STEP 1 빠른 판정 프롬프트
-        ttk.Label(settings_inner, text="STEP 1 빠른 판정 프롬프트 파일명 (Claude):").grid(
+        ttk.Label(settings_inner, text="STEP 1 빠른판정 프롬프트 파일명 (Claude):").grid(
             row=srow, column=0, sticky="w", padx=6, pady=2)
         self.settings_prompt_quick_var = tk.StringVar(
             value=cfg_now.get("prompt_quick_judgment_file", _DEFAULT_CONFIG["prompt_quick_judgment_file"]))
@@ -8660,7 +8668,7 @@ class WelfareCollectorGUI(tk.Tk):
         self.stop_event.clear()
         self._set_running(True)
         download_files = self.download_files_var.get()
-        self._log(f"=== 상세조회 시작 (첨부파일 {'포함' if download_files else '제외'}) ===")
+        self._log(f"=== 상세조회 시작 (공식자료 {'포함' if download_files else '제외'}) ===")
 
         def task():
             try:
@@ -8723,7 +8731,7 @@ class WelfareCollectorGUI(tk.Tk):
         self.stop_event.clear()
         self._set_running(True)
         download_files = self.lcgv_download_files_var.get()
-        self._log(f"=== 지자체 상세조회 시작 (첨부파일 {'포함' if download_files else '제외'}) ===")
+        self._log(f"=== 지자체 상세조회 시작 (공식자료 {'포함' if download_files else '제외'}) ===")
 
         def task():
             try:
@@ -8786,7 +8794,7 @@ class WelfareCollectorGUI(tk.Tk):
                         if done:
                             self._copy_research_reply_for_posting()
                             self.auto_prep_status_var.set("📋 키워드 실측 답변을 클립보드에 넣었습니다 — 같은 대화창에 붙여넣고, "
-                                                          "새 답을 복사해 '④ 📥 결과 읽어 저장'")
+                                                          "새 답을 복사해 '④ 💾 가치판단 저장(메모리값)'")
                         else:
                             self.auto_prep_status_var.set("❌ 요청 키워드 리서치 실패 — '🛠 수동 보조'에서 다시 시도하세요")
                 elif kind == "AUTO_PREP_DONE":   # [Ver10.08] 판정 읽기 뒤 자료 자동 준비
@@ -9752,7 +9760,7 @@ class WelfareCollectorGUI(tk.Tk):
             messagebox.showwarning(
                 "가치판단 결과 없음",
                 "저장된 가치판단 결과가 없습니다.\n"
-                "먼저 STEP 2 본 분석을 실행하고 '④ 📥 결과 읽어 저장'으로 저장하세요."
+                "먼저 STEP 2 본 분석을 실행하고 '④ 💾 가치판단 저장(메모리값)'으로 저장하세요."
             )
             return
 
@@ -10277,12 +10285,12 @@ class WelfareCollectorGUI(tk.Tk):
             return
         self.clipboard_clear()
         self.clipboard_append(package)
-        self._log(f"📋 빠른 판정 프롬프트 복사 완료: {row['servNm']} (첨부 이름 {len(attachments)}건)")
+        self._log(f"📋 빠른 판정 프롬프트 복사 완료: {row['servNm']} (공식자료 이름 {len(attachments)}건)")
         messagebox.showinfo(
             "빠른 판정 복사 완료",
             f"'{row['servNm']}' 빠른 판정 프롬프트를 복사했습니다.\n\n"
-            "Claude 새 대화창에 붙여넣기만 하세요 — 이 단계에서는 파일을 첨부하지 않습니다.\n"
-            "답 코드블럭을 복사한 뒤 '② 📥 판정 읽고 자료 자동 준비'를 누르세요.")
+            "Claude 새 대화창에 붙여넣기만 하세요 — 이 단계에서는 공식자료를 올리지 않습니다.\n"
+            "답 코드블럭을 복사한 뒤 '② 💾 빠른판정 저장(메모리값) + 자료 자동준비'를 누르세요.")
         if advance_posting_status(row["servId"], "🔎 가치판단대기", row["servNm"], row["source"]):
             self._refresh_posting_tree()
 
@@ -10296,8 +10304,8 @@ class WelfareCollectorGUI(tk.Tk):
         head = "✅ 진행" if qj["verdict"] == "진행" else "⏸ 보류"
         text = f"빠른 판정: {head}" + (f" — {qj['reason']}" if qj.get("reason") else "")
         if qj["verdict"] == "진행":
-            text += (f"\n필요 자료 · 첨부 서식자료: {qj.get('attach') or '(표시 없음)'}"
-                     f"\n필요 자료 · 경쟁 블로그: {qj.get('blog') or '(표시 없음)'}")
+            text += (f"\n공식자료 올리기: {qj.get('attach') or '(표시 없음)'}"
+                     f"\n경쟁 블로그: {qj.get('blog') or '(표시 없음)'}")
         self.quick_status_var.set(text)
 
     def _after_quick_judgment_saved(self, row, content):
@@ -10360,16 +10368,44 @@ class WelfareCollectorGUI(tk.Tk):
             self._after_quick_judgment_saved(row, text)
             return
 
+        if stage_key == "final_adaptation":
+            # 최종각색은 제목·출처 점검과 문단 정리가 있는 확인 창으로 — 클립보드 내용을 채워 연다
+            self._paste_and_save_stage_result(stage_key, prefill=text)
+            return
+
+        if stage_key == "draft":
+            if re.search(r"^\s*##\s*(첨부파일 필요|핵심 키워드 확정 필요)", text, re.M):
+                attach = list_attachment_files(row["folder"])
+                msg = ("AI가 자료를 요청했습니다(저장하지 않음).\n\n" + text.strip()[:700]
+                       + "\n\n요청한 파일을 같은 대화창에 올리고 \"올렸습니다\"라고 보낸 뒤, 새 답을 복사해 다시 초안 저장을 누르세요.")
+                if attach and messagebox.askyesno("자료 요청", msg + "\n\n지금 공식자료 폴더를 열까요?"):
+                    self._open_folder(os.path.join(row["folder"], "attachments"))
+                elif not attach:
+                    messagebox.showwarning("자료 요청", msg)
+                return
+            if re.search(r"^\s*##\s*정보 부족 판정", text, re.M):
+                messagebox.showwarning("정보 부족", "AI가 공식 정보가 부족해 초안을 쓰지 않았습니다(저장하지 않음).\n\n"
+                                       + text.strip()[:700] + "\n\n공식자료를 더 구할 수 없으면 STEP 5에서 '⏸ 보류'로 두세요.")
+                return
+            if not re.search(r"^\s*#{2,3}\s*(초안|제목|서론|본문)", text, re.M):
+                messagebox.showinfo("결과 형식 아님", "클립보드 내용이 초안 결과로 보이지 않습니다.\n열리는 창에 직접 붙여넣어 저장하세요.")
+                self._paste_and_save_stage_result(stage_key)
+                return
+            set_stage_output(row["servId"], stage_key, text)
+            self._log(f"📥 {label} 저장 완료(클립보드): {row['servNm']} ({len(text)}자)")
+            messagebox.showinfo("초안 저장", f"초안을 저장했습니다({len(text):,}자).\n다음: 📋 최종각색 프롬프트(현재창)")
+            return
+
         # 본 분석 — 자료 요청
         if re.search(r"^\s*##\s*(자료 요청|첨부파일 확인 필요|첨부파일 필요)", text, re.M):
             attach = list_attachment_files(row["folder"])
             msg = ("AI가 공식 자료를 요청했습니다(저장하지 않음).\n\n" + text.strip()[:700]
-                   + "\n\n요청한 파일을 같은 대화창에 올리고 \"올렸습니다\"라고 보낸 뒤, 새 답을 복사해 다시 ④를 누르세요.")
+                   + "\n\n요청한 파일을 같은 대화창에 올리고 \"올렸습니다\"라고 보낸 뒤, 새 답을 복사해 다시 ④ 가치판단 저장을 누르세요.")
             if attach:
-                if messagebox.askyesno("자료 요청", msg + "\n\n지금 첨부파일 폴더를 열까요?"):
+                if messagebox.askyesno("자료 요청", msg + "\n\n지금 공식자료 폴더를 열까요?"):
                     self._open_folder(os.path.join(row["folder"], "attachments"))
             else:
-                messagebox.showwarning("자료 요청", msg + "\n\n이 서비스에는 받아 둔 첨부파일이 없습니다 — "
+                messagebox.showwarning("자료 요청", msg + "\n\n이 서비스에는 받아 둔 공식자료가 없습니다 — "
                                        "공식 자료를 구할 수 없으면 STEP 5에서 '⏸ 보류'로 두세요.")
             self._log(f"📎 AI 자료 요청(공식 출처 확인): {row['servNm']}")
             return
@@ -10425,7 +10461,7 @@ class WelfareCollectorGUI(tk.Tk):
             messagebox.showinfo("실행 중", "자료 자동 준비가 이미 진행 중입니다.")
             return
         if not self._check_research_api_keys():
-            self.auto_prep_status_var.set("⚠ API 설정이 없어 자동 준비를 못 했습니다 — 설정 후 '② 판정 읽고 자료 자동 준비'를 다시 누르세요")
+            self.auto_prep_status_var.set("⚠ API 설정이 없어 자동 준비를 못 했습니다 — 설정 후 '② 빠른판정 저장(메모리값)'을 다시 누르세요")
             return
         want_blog = not (qj.get("blog") or "").strip().startswith("불필요")
         cfg = load_config()
@@ -10512,9 +10548,9 @@ class WelfareCollectorGUI(tk.Tk):
             parts.append("경쟁 블로그 건너뜀(selenium 없음)")
         else:
             parts.append("경쟁 블로그 건너뜀(빠른 판정: 불필요)")
-        msg = " · ".join(parts) + ". 다음: STEP 2 '③ 본 분석 복사'"
+        msg = " · ".join(parts) + ". 다음: STEP 2 '③ 본분석 자료+프롬프트(현재창)'"
         if (p["qj"].get("attach") or "").strip().startswith("필요"):
-            msg += " — 첨부파일을 대화창에 올려야 합니다(복사 때 폴더를 엽니다)"
+            msg += " — 공식자료를 대화창에 올려야 합니다(③ 때 폴더를 엽니다)"
         self.auto_prep_status_var.set(msg)
         self._log(f"✅ 자료 자동 준비 끝: {row['servNm']}" + (f" (오류 {len(p['errors'])}건: {p['errors'][0][:80]})" if p["errors"] else ""))
 
@@ -10669,7 +10705,7 @@ class WelfareCollectorGUI(tk.Tk):
             if not messagebox.askyesno(
                     "빠른 판정 결과 없음",
                     "저장된 빠른 판정 결과가 없습니다 — 이어 붙일 대화창이 없을 수 있습니다.\n\n"
-                    "원문까지 넣은 '새 대화창용 전체 복사'로 할까요?"):
+                    "원문까지 넣은 '본분석 자료+프롬프트(새창)'으로 복사할까요?"):
                 return
             same_chat = False
 
@@ -10683,7 +10719,7 @@ class WelfareCollectorGUI(tk.Tk):
                 "리서치 없음",
                 f"'{', '.join(keywords)}'로 아직 키워드 리서치를 실행하지 않았습니다.\n"
                 f"리서치 데이터 없이 복사할까요? (AI가 먼저 키워드 실측을 요청합니다)\n"
-                f"(STEP 1 '② 판정 읽고 자료 자동 준비'를 먼저 하시는 걸 권장합니다)"
+                f"(STEP 1 '② 빠른판정 저장(메모리값)'을 먼저 하시는 걸 권장합니다)"
             ):
                 return
 
@@ -10705,19 +10741,19 @@ class WelfareCollectorGUI(tk.Tk):
         n_blog = count_competitor_blogs(blogs)
         how = "이어서(원문 생략)" if same_chat else "새 대화창용 전체"
         self._log(f"📋 본 분석 프롬프트 복사 완료({how}): {row['servNm']} "
-                  f"(첨부 {len(attachments)}건, 경쟁 블로그 {n_blog}개)")
+                  f"(공식자료 {len(attachments)}건, 경쟁 블로그 {n_blog}개)")
 
         qj = parse_quick_judgment(quick) if quick else {}
         notes = []
         if qj.get("attach"):
-            notes.append(f"빠른 판정 — 첨부 서식자료: {qj['attach']}")
+            notes.append(f"빠른판정 — 공식자료 올리기: {qj['attach']}")
         if n_blog:
-            notes.append(f"경쟁 블로그 {n_blog}개는 복사본에 본문으로 들어갔습니다 — 따로 첨부하지 않아도 됩니다.")
+            notes.append(f"경쟁 블로그 {n_blog}개는 복사본에 본문으로 들어갔습니다 — 따로 올리지 않아도 됩니다.")
         else:
             notes.append("경쟁 블로그는 이번 복사본에 없습니다"
                          + (f"(빠른 판정 — 경쟁 블로그: {qj['blog']})" if qj.get("blog") else "")
                          + ". 필요하면 '🛠 수동 보조'에서 불러온 뒤 다시 복사하세요.")
-        notes.append("빠른 판정을 한 대화창에 붙여넣으세요." if same_chat else "Claude 새 대화창에 붙여넣으세요.")
+        notes.append("빠른판정을 한 대화창(현재창)에 붙여넣으세요." if same_chat else "Claude 새 대화창(새창)에 붙여넣으세요.")
         self._show_attachment_reminder_popup(row, attachments, note_extra="\n".join(notes))
 
         if advance_posting_status(row["servId"], "🔎 가치판단대기", row["servNm"], row["source"]):
@@ -10754,18 +10790,18 @@ class WelfareCollectorGUI(tk.Tk):
         lines = [f"'{row.get('servNm', '')}' 프롬프트를 클립보드에 복사했습니다."]
         lines.append("")
         if attach_list:
-            lines.append(f"첨부 서식자료 {len(attach_list)}건이 있습니다 — 대화창에 실제로 "
-                          f"첨부했는지 붙여넣기 전에 꼭 확인하세요:")
+            lines.append(f"공식자료 {len(attach_list)}건이 있습니다 — 붙여넣기 전에 필요한 파일을 "
+                          f"대화창에 올렸는지 확인하세요:")
             for fn in attach_list:
                 lines.append(f"  · {fn}")
         else:
-            lines.append("이 서비스는 attachments 폴더에 등록된 첨부 서식자료가 없습니다.")
+            lines.append("이 서비스는 받아 둔 공식자료가 없습니다.")
         if note_extra:
             lines.append("")
             lines.append(note_extra)
         lines.append("")
-        lines.append("지금 첨부파일 폴더를 열까요? (파일을 대화창에 끌어다 올린 뒤 프롬프트를 붙여넣으세요)")
-        if messagebox.askyesno("첨부파일 확인", "\n".join(lines)):
+        lines.append("지금 공식자료 폴더를 열까요? (파일을 대화창에 끌어다 올린 뒤 프롬프트를 붙여넣으세요)")
+        if messagebox.askyesno("공식자료 확인", "\n".join(lines)):
             attach_dir = os.path.join(row.get("folder", ""), "attachments")
             self._open_folder(attach_dir)
 
@@ -10813,7 +10849,7 @@ class WelfareCollectorGUI(tk.Tk):
         self.clipboard_append(package)
         has_vj = bool(get_stage_output(row["servId"], "value_judgment"))
         vj_note = "" if has_vj else " (⚠ 저장된 가치판단 결과 없음 — 원문만으로 진행)"
-        self._log(f"✍️ 초안 작성 프롬프트 복사 완료: {row['servNm']} (첨부 {len(attachments)}건){vj_note}")
+        self._log(f"✍️ 초안 작성 프롬프트 복사 완료: {row['servNm']} (공식자료 {len(attachments)}건){vj_note}")
 
         if advance_posting_status(row["servId"], "📝 초안작성중", row["servNm"], row["source"]):
             self._refresh_posting_tree()
@@ -10826,9 +10862,16 @@ class WelfareCollectorGUI(tk.Tk):
         except PromptFileMissingError as e:
             messagebox.showerror("프롬프트 파일 없음", str(e))
             return
+        row = self._get_selected_posting_row()
+        # [Ver10.08] 현재창용이라도 확정 제목은 이 프로그램에만 있으므로 함께 넣는다(나머지 자료는 앞 대화에 있음)
+        if row is not None and get_confirmed_title(row["servId"]):
+            block = f"\n\n## 확정된 제목 (그대로 사용 — 다시 짓지 않음)\n\n{get_confirmed_title(row['servId'])}\n"
+            intro = get_confirmed_title_intro(row["servId"])
+            if intro:
+                block += f"\n도입부 첫 문장 지시: {intro}\n"
+            prompt += block + "\n(서비스 원문·공식자료·본 분석 결과는 이 대화의 앞부분 것을 그대로 씁니다.)"
         self.clipboard_clear()
         self.clipboard_append(prompt)
-        row = self._get_selected_posting_row()
         if row is None:
             self._log("📋 초안 작성 프롬프트(문구만) 복사 완료")
             return
@@ -10924,8 +10967,8 @@ class WelfareCollectorGUI(tk.Tk):
                 f"'{row['servNm']}'에는 저장된 초안 결과가 없습니다.\n"
                 f"이 프롬프트는 1차 초안을 검증·각색만 하는 단계라, 초안 없이 "
                 f"복사하면 각색할 대상 자체가 없습니다.\n\n"
-                f"먼저 STEP 4 '📋 초안 프롬프트+자료 복사'로 초안을 만들고, "
-                f"'💾 초안 결과 저장'으로 붙여넣기 저장하는 걸 권장합니다.\n\n"
+                f"먼저 STEP 4에서 초안을 만들고, "
+                f"'💾 초안 저장(메모리값)'으로 저장하는 걸 권장합니다.\n\n"
                 f"그래도 계속할까요?"
             ):
                 return
@@ -10972,7 +11015,7 @@ class WelfareCollectorGUI(tk.Tk):
         if advance_posting_status(row["servId"], "✒️ 최종각색중", row["servNm"], row["source"]):
             self._refresh_posting_tree()
 
-    def _paste_and_save_stage_result(self, stage_key: str):
+    def _paste_and_save_stage_result(self, stage_key: str, prefill: str = ""):
         """이전 단계(가치판단/초안/최종각색) 실행 결과를 사람이 다른
         대화창/다른 AI에서 복사해와 여기 붙여넣으면, 다음 단계 프롬프트를
         만들 때 자동으로 포함되도록 저장한다."""
@@ -10992,7 +11035,7 @@ class WelfareCollectorGUI(tk.Tk):
 
         text_widget = scrolledtext.ScrolledText(dialog, wrap="word")
         text_widget.pack(fill="both", expand=True, padx=8, pady=(0, 8))
-        existing = get_stage_output(row["servId"], stage_key)
+        existing = prefill or get_stage_output(row["servId"], stage_key)   # [Ver10.08] 클립보드 내용 우선
         if existing:
             text_widget.insert("1.0", existing)
 
@@ -11217,9 +11260,9 @@ class WelfareCollectorGUI(tk.Tk):
         # ① 프롬프트 복사 → Claude
         r1 = ttk.Frame(body)
         r1.grid(row=0, column=0, sticky="ew")
-        ttk.Button(r1, text="① 카드용 ⑦ 프롬프트+자료 복사",
+        ttk.Button(r1, text="① 📋 카드 자료+프롬프트(새창)",
                    command=lambda: self._copy_card_prompt(False)).pack(side="left", padx=(0, 6))
-        ttk.Button(r1, text="① 프롬프트만 복사 (최종각색을 쓴 그 대화창에 이어서)",
+        ttk.Button(r1, text="① 📋 카드 프롬프트(현재창 — 최종각색을 쓴 대화창)",
                    command=lambda: self._copy_card_prompt(True)).pack(side="left", padx=(0, 6))
         ttk.Label(r1, text="→ Claude에 붙여넣기. 답변의 장면 프롬프트 블럭은 퍼플렉시티로, 맨 끝 JSON 블럭은 ②로", foreground="gray").pack(side="left")
         self.card_copy_status = ttk.Label(r1, text="", foreground="darkgreen")
@@ -12113,7 +12156,7 @@ class WelfareCollectorGUI(tk.Tk):
             return
         attach_dir = os.path.join(row["folder"], "attachments")
         if not list_attachment_files(row["folder"]):
-            messagebox.showinfo("첨부파일 없음", f"'{row['servNm']}'에는 첨부 서식자료가 없습니다.")
+            messagebox.showinfo("공식자료 없음", f"'{row['servNm']}'에는 받아 둔 공식자료가 없습니다.")
             return
         self._open_folder(attach_dir)
 
