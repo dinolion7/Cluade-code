@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-welfare_manager.py — 복지로 관리 프로그램 (Ver10.11, 2026-10-15)
+welfare_manager.py — 복지로 관리 프로그램 (Ver10.12, 2026-10-15)
 복지로(중앙부처·지자체) Open API로 복지서비스를 모으고, Claude 웹으로 블로그 글·인포그래픽을
 만드는 준비 프로그램(단일 파일 Tkinter). 실제 네이버 발행은 포스팅 프로그램(blog_poster.py)이 한다.
 
@@ -32,7 +32,8 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.11, 2026-10-15)
            → 💾 최종각색 저장(확인 창: 제목·출처 줄 점검, 문단 정리) → 포스팅 전 확인 → 인포그래픽으로 이동
   5)인포그래픽 작성 — 📋 프롬프트 복사 / 📋 최종원고 + 프롬프트 복사, 제목 목록, 코드 카드(선택)
                       → ✅ 인포그래픽 완료 → 6)키워드 등록으로 이동
-  6)키워드 등록 — final_posts 스캔(신규/이미등록) → 등록: 백업 이동·공용 폴더 복사·키워드 엑셀·🟢 포스팅대기
+  6)키워드 등록 — 날짜 선택(MD 저장한 날)·🔄 폴더 새로고침·상태 필터(정책뉴스와 같은 줄) → final_posts 스캔
+                 (신규/이미등록) → 등록(선택 없으면 화면에 보이는 신규만): 백업 이동·공용 폴더 복사·키워드 엑셀·🟢 포스팅대기
   7)포스팅 이력관리 — 🟢 포스팅대기 → ✅ 포스팅완료(실제 발행 뒤), 🗑 포스팅후삭제
   8)설정 — 인증키·프롬프트 파일명·경로·네이버 접속 IP·OpenAI 키(문단 정리)
 
@@ -69,8 +70,8 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.11, 2026-10-15)
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - API 일일 한도 초과 → QuotaExceededError로 멈춘다(재시도 안 함). 일일 사용량은 quota_state.json.
 
-[버전] Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색(📋 파랑·💾 초록·✅·⏭).
-       기능·버튼 글자·배치는 그대로.
+[버전] Ver10.12 — 6)키워드 등록 날짜 선택·상태 필터 줄, 폴더 열기를 절대 경로로(실패하면 안내 창).
+       Ver10.11 화면 디자인(ui_theme.py).
        이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
 
@@ -4799,7 +4800,7 @@ class WelfareCollectorGUI(tk.Tk):
         # 메인 창으로 바뀌는 현상(초기 렌더링 중간 상태 노출)이 사라진다.
         self.withdraw()
 
-        self.title("복지로 정책 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-15_Ver 10.11")
+        self.title("복지로 정책 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-15_Ver 10.12")
 
         self.log_queue = queue.Queue()
         self.stop_event = threading.Event()
@@ -5726,8 +5727,26 @@ class WelfareCollectorGUI(tk.Tk):
 
         kw_btn_f = ttk.Frame(keyword_reg_tab)
         kw_btn_f.grid(row=1, column=0, sticky="ew", padx=6, pady=(0, 6))
-        ttk.Button(kw_btn_f, text="🔄 새로고침 (신규/이미등록 분류)",
-                   command=self._refresh_keyword_reg_preview).pack(side="left")
+        # [Ver10.12] 정책뉴스 6)키워드 등록과 같은 줄: 날짜 선택 · 🔄 폴더 새로고침 · 상태 필터.
+        # 복지로 final_posts는 날짜 폴더가 없어서, 날짜 = 글 폴더 MD 파일을 저장한 날(_list_final_post_folders).
+        # 필터는 이미 읽어 둔 kw_reg_items를 걸러 보여 주기만 한다(폴더를 다시 읽지 않음).
+        ttk.Label(kw_btn_f, text="날짜 선택:").pack(side="left")
+        self.kw_reg_date_var = tk.StringVar(value="전체")
+        self.kw_reg_date_combo = ttk.Combobox(kw_btn_f, textvariable=self.kw_reg_date_var,
+                                              state="readonly", width=12, values=["전체"])
+        self.kw_reg_date_combo.pack(side="left", padx=(6, 6))
+        self.kw_reg_date_combo.bind("<<ComboboxSelected>>", lambda e: self._render_kw_reg_tree())
+        ttk.Button(kw_btn_f, text="🔄 폴더 새로고침",
+                   command=self._refresh_keyword_reg_preview).pack(side="left", padx=(0, 8))
+        ttk.Label(kw_btn_f, text="상태 필터:").pack(side="left", padx=(8, 4))
+        self.kw_reg_filter_var = tk.StringVar(value="전체")
+        kw_filter_combo = ttk.Combobox(kw_btn_f, textvariable=self.kw_reg_filter_var,
+                                       values=["전체", "신규", "이미 등록됨"], width=12, state="readonly")
+        kw_filter_combo.pack(side="left")
+        kw_filter_combo.bind("<<ComboboxSelected>>", lambda e: self._render_kw_reg_tree())
+        self.kw_reg_summary_var = tk.StringVar(value="")
+        ttk.Label(kw_btn_f, textvariable=self.kw_reg_summary_var,
+                  font=("맑은 고딕", 9, "bold")).pack(side="left", padx=(10, 0))
 
         # ✅ [2026-09-29] 게시판 설정 엑셀이 있으면 카테고리 입력란 대신 게시판
         # 콤보 + "선택 항목에 적용" 버튼을 쓴다(제목마다 게시판이 다르므로 일괄
@@ -5750,10 +5769,6 @@ class WelfareCollectorGUI(tk.Tk):
             ttk.Label(kw_btn_f, text="(비워두면 엑셀의 직전 카테고리를 그대로 씁니다)",
                       foreground="gray").pack(side="left", padx=(6, 0))
 
-        self.kw_reg_summary_var = tk.StringVar(value="")
-        ttk.Label(kw_btn_f, textvariable=self.kw_reg_summary_var,
-                  font=("맑은 고딕", 9, "bold")).pack(side="left", padx=(16, 0))
-
         kw_tree_f = ttk.Frame(keyword_reg_tab)
         kw_tree_f.grid(row=2, column=0, sticky="nsew", padx=6, pady=(0, 6))
         kw_tree_f.columnconfigure(0, weight=1)
@@ -5773,7 +5788,7 @@ class WelfareCollectorGUI(tk.Tk):
 
         kw_action_f = ttk.Frame(keyword_reg_tab)
         kw_action_f.grid(row=3, column=0, sticky="ew", padx=6, pady=(0, 8))
-        ttk.Button(kw_action_f, text="✅ 등록 (선택 시 선택 항목만 / 미선택 시 신규 전체)",
+        ttk.Button(kw_action_f, text="✅ 등록 (선택 시 선택 항목만 / 미선택 시 화면에 보이는 신규 전체)",
                    command=self._process_keyword_registration).pack(side="left")
         self.kw_reg_result_var = tk.StringVar(value="")
         ttk.Label(keyword_reg_tab, textvariable=self.kw_reg_result_var,
@@ -9253,10 +9268,17 @@ class WelfareCollectorGUI(tk.Tk):
             if not os.path.isdir(folder):
                 continue
             try:
-                file_count = len([f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))])
+                files = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
             except OSError:
-                file_count = 0
-            items.append({"title": name, "folder": folder, "file_count": file_count})
+                files = []
+            # 날짜 = MD를 저장한 날(카드·그림을 나중에 넣어도 바뀌지 않게 MD 기준, 없으면 폴더)
+            md = [f for f in files if f.lower().endswith(".md")]
+            try:
+                ts = max(os.path.getmtime(os.path.join(folder, f)) for f in md) if md else os.path.getmtime(folder)
+                date = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+            except (OSError, ValueError):
+                date = ""
+            items.append({"title": name, "folder": folder, "file_count": len(files), "date": date})
         return items
 
     _BOARD_SRC_LABEL = {"manual": "직접", "map": "매핑", "prompt": "A판정", "rule": "규칙", "etc": ""}
@@ -9313,9 +9335,33 @@ class WelfareCollectorGUI(tk.Tk):
 
         self.kw_reg_items = items
         self._decide_kw_reg_boards()   # [2026-09-29] 게시판 자동 판정
+        dates = sorted({it["date"] for it in items if it.get("date")}, reverse=True)
+        self.kw_reg_date_combo["values"] = ["전체"] + dates
+        if self.kw_reg_date_var.get() not in (["전체"] + dates):
+            self.kw_reg_date_var.set("전체")
+        self._render_kw_reg_tree()
+
+    def _kw_reg_visible_items(self) -> list:
+        """날짜 선택·상태 필터에 맞는 항목(화면에 보이는 것)."""
+        d = self.kw_reg_date_var.get()
+        st = self.kw_reg_filter_var.get()
+        out = []
+        for it in getattr(self, "kw_reg_items", []):
+            if d and d != "전체" and it.get("date") != d:
+                continue
+            if st == "신규" and it["registered"]:
+                continue
+            if st == "이미 등록됨" and not it["registered"]:
+                continue
+            out.append(it)
+        return out
+
+    def _render_kw_reg_tree(self):
+        items = getattr(self, "kw_reg_items", [])
+        shown = self._kw_reg_visible_items()
         for i in self.kw_reg_tree.get_children():
             self.kw_reg_tree.delete(i)
-        for it in items:
+        for it in shown:
             status_label = "이미 등록됨" if it["registered"] else "신규"
             tag = "registered" if it["registered"] else "new"
             bd = it.get("board")
@@ -9335,7 +9381,10 @@ class WelfareCollectorGUI(tk.Tk):
 
         new_count = sum(1 for it in items if not it["registered"])
         reg_count = sum(1 for it in items if it["registered"])
-        self.kw_reg_summary_var.set(f"총 {len(items)}건 (신규 {new_count} / 이미 등록됨 {reg_count})")
+        summary = f"총 {len(items)}건 (신규 {new_count} / 이미 등록됨 {reg_count})"
+        if len(shown) != len(items):
+            summary += f" · 표시 {len(shown)}건"
+        self.kw_reg_summary_var.set(summary)
 
     def _process_keyword_registration(self):
         """신규 항목을 등록한다: ① final_posts/{제목}/ 를 백업 폴더로
@@ -9367,8 +9416,10 @@ class WelfareCollectorGUI(tk.Tk):
             new_items = [it for it in items if it["title"] in selected_titles and not it["registered"]]
             scope_label = f"선택 {len(new_items)}건"
         else:
-            new_items = [it for it in items if not it["registered"]]
-            scope_label = f"신규 전체 {len(new_items)}건"
+            # [Ver10.12] 날짜·상태 필터로 걸러 보이는 신규만(필터가 "전체"면 예전과 같이 신규 전체)
+            new_items = [it for it in self._kw_reg_visible_items() if not it["registered"]]
+            scope_label = (f"신규 전체 {len(new_items)}건" if len(self._kw_reg_visible_items()) == len(items)
+                           else f"화면에 보이는 신규 {len(new_items)}건")
 
         if not new_items:
             messagebox.showinfo(
@@ -9951,9 +10002,13 @@ class WelfareCollectorGUI(tk.Tk):
         self._refresh_status()
 
     def _open_folder(self, path):
+        # [Ver10.12] 작업 폴더가 "./…" 상대 경로여도 탐색기가 열리게 절대 경로로, 실패하면 말없이 넘어가지 않고 안내
+        path = os.path.abspath(path)
         os.makedirs(path, exist_ok=True)
         try:
             os.startfile(path)  # Windows
+        except OSError as e:
+            messagebox.showerror("폴더 열기 실패", f"폴더를 열 수 없습니다:\n{path}\n\n{e}")
         except AttributeError:
             import subprocess
             import sys
