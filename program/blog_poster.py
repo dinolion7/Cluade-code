@@ -14250,7 +14250,7 @@ class NaverBlogGUI:
  
         os.makedirs(os.path.join(BASE_DIR, "Naver_User_thumbnail_MP4_folder"), exist_ok=True)                                # 사용자 수동 생성 썸네일과 동열상 파일  
 
-        self.root.title("Naver Blog Auto Posting Intergrated Program_Updated_2026-09-15_Ver 9.15")
+        self.root.title("Naver Blog Auto Posting Intergrated Program_Updated_2026-10-15_Ver 9.17")
         
         # 파비콘 설정 추가
         ico_path = str(BASE_DIR / "favicon.ico")
@@ -14401,6 +14401,14 @@ class NaverBlogGUI:
         self.auto_posting = False
         self.session_post_count = 0
         self.start_time_activated = False
+
+        # [Ver9.17] 화면 배치·디자인(poster_layout.py + ui_theme.py) — 칸을 기능별 메뉴로 다시 놓기만 한다.
+        # 파일이 없거나 오류가 나면 지금 화면 그대로 실행된다. 포스팅 엔진·버튼 동작은 건드리지 않는다.
+        try:
+            import poster_layout
+            poster_layout.apply(self)
+        except Exception as e:
+            logger.warning(f"[디자인] 적용 안 함(지금 화면으로 실행): {e}")
 
         #self.post_count = 1  # 포스팅 순서 카운터 , 예약발행 기능용
 

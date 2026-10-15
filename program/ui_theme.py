@@ -329,15 +329,18 @@ class _Theme:
             r.geometry(f"{new_w}x{h}+{x}+{max(0, r.winfo_y())}")
 
 
-def apply(root, notebook, title, subtitle="", accent="#1F3A5F", accent2="#2E9E5B", chips=None):
+def apply(root, notebook, title, subtitle="", accent="#1F3A5F", accent2="#2E9E5B", chips=None, frame=True):
     """화면을 다 만든 뒤 한 번 부른다. chips = [(이름, 함수)] — 함수는 (보일 글, 색 이름) 반환.
-    색 이름: red(필요) / orange(확인 전) / green(정상) / gray(안 씀). 실패해도 예외를 내지 않는다."""
+    색 이름: red(필요) / orange(확인 전) / green(정상) / gray(안 씀). 실패해도 예외를 내지 않는다.
+    frame=False면 색·카드만 입히고 머리줄·왼쪽 메뉴는 부르는 쪽이 만든다(포스팅 프로그램 poster_layout.py)."""
     th = _Theme(root, notebook, title, subtitle, accent, accent2, chips)
     if not _safe(th.setup_styles):
         return None
-    _safe(th.build_frame)
+    if frame:
+        _safe(th.build_frame)
     _safe(th.paint_all)
     _safe(lambda: root.bind_all("<Map>", th._on_map, add="+"))
-    _safe(th.refresh_chips)
-    root.after(300, lambda: _safe(th.widen))
+    if frame:
+        _safe(th.refresh_chips)
+        root.after(300, lambda: _safe(th.widen))
     return th
