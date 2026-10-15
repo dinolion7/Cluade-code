@@ -49,6 +49,8 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
     hard_match 필드는 팝업 호환용으로 늘 False.
   - A 결과를 붙여넣었는데 판정이 보류 → 채우지 않고 경고. 코드블럭이 없어도 전체 텍스트에서 읽는다.
   - 제목의 "1,200만 원" 같은 천 단위 쉼표는 구분 쉼표로 세지 않는다(_TITLE_COMMA_RE).
+  - 코드 카드 JSON이 "Expecting property name" 등으로 안 읽힘 → claude.ai에서 복사할 때 섞이는 안 보이는 공백(NBSP·
+    폭 없는 공백)·굽은 따옴표·끝 쉼표를 card_json_loads()가 고쳐 읽는다. 그래도 안 되면 오류 위치 앞뒤 글자를 보여 준다.
   - 작은따옴표 속마음 후킹 → 제목 점검은 앞 25자 안에서 끝나는지 보고, 앞구 검색은 후킹을 빼고 한다.
 
 [버전] Ver10.10 — 탭 번호 1)~7) 통일. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
@@ -3687,6 +3689,34 @@ CARD_WIN_CHROME_PATHS = [
 _CARD_FENCE_RE = re.compile(r"^[ \t]*```([^\n`]*)\n(.*?)^[ \t]*```[ \t]*$", re.M | re.S)
 
 
+_CARD_INVISIBLE_RE = re.compile("[\u200b\u200c\u200d\u2060\ufeff]")
+
+
+def card_json_loads(raw: str):
+    """설계도 JSON 읽기. claude.ai 화면에서 복사하면 눈에 안 보이는 글자가 섞일 때가 있다 —
+    줄바꿈 없는 공백(NBSP)·폭 없는 공백이 쉼표 뒤에 들어가면 "Expecting property name"이 난다.
+    그래서 ① 그런 글자를 보통 공백으로 바꿔 읽고, 안 되면 ② 굽은 따옴표(“”)를 곧은 따옴표로,
+    ③ 닫는 괄호 앞 쉼표를 지워 차례로 다시 읽는다. 끝내 안 되면 오류 위치 앞뒤 글자를 함께 알려 준다.
+    반환: (dict 또는 None, 오류 문구)"""
+    text = _CARD_INVISIBLE_RE.sub("", raw or "")
+    text = text.replace("\u00a0", " ").replace("\u202f", " ").replace("\u2007", " ").replace("\u3000", " ")
+    tries = [text,
+             text.replace("\u201c", '"').replace("\u201d", '"'),
+             re.sub(r",\s*([}\]])", r"\1", text.replace("\u201c", '"').replace("\u201d", '"'))]
+    first_err = None
+    for t in tries:
+        try:
+            return json.loads(t, strict=False), ""
+        except Exception as e:
+            if first_err is None:
+                first_err = e
+    pos = getattr(first_err, "pos", None)
+    where = ""
+    if isinstance(pos, int):
+        where = f" — 그 자리: {text[max(0, pos - 25):pos]!r} ▶ {text[pos:pos + 15]!r}"
+    return None, f"{first_err}{where}"
+
+
 def card_parse_answer(text: str):
     """AI 답변에서 (썸네일 장면 프롬프트, JSON 설계도 dict, 오류 문구)를 꺼낸다.
     - 설계도: 맨 마지막 ```json 코드블럭. 없으면 "{"로 시작하는 마지막 코드블럭,
@@ -3715,10 +3745,9 @@ def card_parse_answer(text: str):
             scene = before[-1][1].strip()
     if raw is None:
         return scene, None, "JSON 설계도 코드블럭이 없습니다"
-    try:
-        spec = json.loads(raw)
-    except Exception as e:
-        return scene, None, f"JSON 문법 오류: {e}"
+    spec, err = card_json_loads(raw)
+    if err:
+        return scene, None, f"JSON 문법 오류: {err}"
     if not isinstance(spec, dict) or not isinstance(spec.get("images"), list) or not spec["images"]:
         return scene, None, "JSON에 images 목록이 없습니다"
     for img in spec["images"]:
