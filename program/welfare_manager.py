@@ -1947,6 +1947,18 @@ v7.21 (2026-09-22): 🐛 parse_value_judgment_title_candidates() 헤더
                      목록 아래 "⏭ 이 글 패스"(패스·보류 글은 STEP 1 복사 때 다시 작업할지 물음), 포스팅 전 확인은
                      최종각색 아래 + "→ 인포그래픽으로 이동". 5)인포그래픽 작성: 최종원고 + 프롬프트 복사 / 프롬프트
                      복사, 맨 아래 "✅ 인포그래픽 완료 → 6)키워드 등록으로 이동"(🟢 포스팅대기는 등록 때).
+2026-10-15 Ver10.10: 화면 정리·이름 통일(사용자: 정책뉴스와 같은 기능은 같은 이름 — "키워드 리서치").
+                     (1) 정책뉴스와 같은 이름: 검색 키워드: · 🔍 키워드 리서치 실행 · 🔍 검색량·자동완성 조회 ·
+                     📋 AI에게 결과 전달(정책뉴스 "A에게") · 🔍 앞구/🔍 뒷구 · ✅ 최종 확정.
+                     (2) STEP 1: 결과 두 줄(판정 / 자동 수집)만 보이고, 키워드 리서치 줄은 리서치가 실패했거나
+                     API 키가 없을 때만, 경쟁 블로그 직접 고르기·본문 칸은 "보기"를 누르거나 0개일 때만 펼친다.
+                     자동 수집 때 검색 키워드 칸을 채운다(빈 칸으로 남던 것).
+                     (3) STEP 2 "가치판단 · 제목 후보": 복사 버튼 하나(새 대화창용 삭제 — 판정결과가 없으면
+                     원문까지 넣어 복사할지 묻는다). "AI가 키워드 리서치를 요청함" 줄은 요청이 왔을 때만 나타난다.
+                     (4) STEP 4 초안 "확정제목 + 프롬프트 복사" 하나(가치판단 결과가 없으면 원문까지 넣은 복사),
+                     최종각색 "초안 + 프롬프트 복사" 하나, 5)탭 "최종원고 + 프롬프트 복사" 하나.
+                     (5) 통합 V13의 재조사 요청 키워드(라벨 아래 작은 코드블럭)를 읽는다 — 예전 같은 줄 형식도 읽음.
+                     (6) 옛 표현(④·현재창·실측 결과·키워드 검색) 정리.
                      (13) 접힌 "수동 보조" 칸 삭제 — 자동 준비가 실패해도 어디로 가야 할지 안 보였다(사용자).
                      키워드 리서치 칸·경쟁 블로그 줄(블로그탭 열기·주소 스크랩·칸)을 STEP 1 안으로, "키워드
                      실측 결과(현재창)"은 STEP 2로. 자동 준비 결과 줄에 원인(검색 0건·쓸 글 없음·스크랩
@@ -5401,8 +5413,15 @@ def extract_research_request_keywords(text: str) -> str:
     등급 매기는 구조는 정책뉴스에서도 제목(STEP4)에만 있어, 그건
     parse_value_judgment_title_candidates()로 별도 유지한다."""
     parts = []
-    for m in re.finditer(r"재조사\s*요청\s*키워드\s*:\s*(.+)", text):
-        for p in re.split(r"[,/]", m.group(1)):
+    for m in re.finditer(r"재조사\s*요청\s*키워드\s*:[ \t]*([^\n]*)", text):
+        line = m.group(1).strip()
+        # [Ver10.10] 통합 V13: 라벨 아래 작은 코드블럭에 콤마 한 줄. 예전 같은 줄 형식도 읽는다.
+        if not line or line.startswith("```"):
+            b = re.match(r"\s*```[^\n]*\n(.*?)\n\s*```", text[m.end():], re.S)
+            if not b:
+                continue
+            line = " ".join(b.group(1).split("\n"))
+        for p in re.split(r"[,/]", line):
             p = p.strip().strip("`\"'").strip()
             p = re.sub(r"\s*\(재조사\s*필요\)\s*", "", p).strip()
             if p and p not in parts:
@@ -6656,7 +6675,7 @@ class WelfareCollectorGUI(tk.Tk):
         # 메인 창으로 바뀌는 현상(초기 렌더링 중간 상태 노출)이 사라진다.
         self.withdraw()
 
-        self.title("복지로 정책 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-14_Ver 10.09")
+        self.title("복지로 정책 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-15_Ver 10.10")
 
         self.log_queue = queue.Queue()
         self.stop_event = threading.Event()
@@ -7212,29 +7231,30 @@ class WelfareCollectorGUI(tk.Tk):
         ttk.Button(quick_save_row, text="💾 판정결과 저장(메모리값 자동저장)",
                    command=lambda: self._read_clipboard_result("quick_judgment")).pack(
             side="left", padx=(6, 6), pady=(2, 4))
-        _next_hint(quick_save_row, "Claude 답을 복사한 뒤 누르기 → 진행이면 키워드 검색·경쟁 블로그 수집이 자동으로 시작됩니다")
+        _next_hint(quick_save_row, "Claude 답을 복사한 뒤 누르기 → 진행이면 키워드 리서치·경쟁 블로그 수집이 자동으로 시작됩니다")
+        # [Ver10.10] 결과는 "결과:" 두 줄(판정·자동 수집)만 보이고, 다시 하는 줄은 실패했을 때만 나타난다.
+        # 경쟁 블로그 본문·주소 칸은 "보기"를 눌러야 펼친다(사용자: 결과 글이 버튼보다 많아 헷갈림).
         self.quick_status_var = tk.StringVar(value="")
         ttk.Label(quick_f, textvariable=self.quick_status_var, foreground="#1565C0",
                   font=("맑은 고딕", 9, "bold"), wraplength=1100, justify="left").grid(
             row=2, column=0, sticky="w", padx=6, pady=(0, 2))
-        # 자동 준비 결과와 다음에 할 일 — 성공 → STEP 2, 실패 → 아래 줄에서 고치기
         self.auto_prep_status_var = tk.StringVar(value="")
         ttk.Label(quick_f, textvariable=self.auto_prep_status_var, foreground="#0D6E0D",
                   font=("맑은 고딕", 9, "bold"), wraplength=1100, justify="left").grid(
             row=3, column=0, sticky="w", padx=6, pady=(0, 4))
 
-        # 자동 준비 결과 ① 키워드 리서치 — 실패했거나 키워드를 바꿀 때만 손댄다
-        research_f = ttk.Frame(quick_f)
+        # 키워드 리서치 다시 하기 — 리서치가 실패했을 때만 보인다(정책뉴스 STEP 1.5와 같은 이름)
+        self.prep_research_f = research_f = ttk.Frame(quick_f)
         research_f.grid(row=4, column=0, sticky="ew", padx=6, pady=(2, 0))
         research_f.columnconfigure(1, weight=1)
-        ttk.Label(research_f, text="자동 수집 키워드:").grid(row=0, column=0, sticky="w")
+        ttk.Label(research_f, text="검색 키워드:").grid(row=0, column=0, sticky="w")
         # [v6.9] 콤마(,)로 구분하면 여러 키워드를 한 번에 리서치한다.
         self.research_keyword_var = tk.StringVar(value="")
         ttk.Entry(research_f, textvariable=self.research_keyword_var).grid(
             row=0, column=1, sticky="ew", padx=(5, 4))
         ttk.Button(research_f, text="✖ 입력 지우기",
                    command=self._clear_research_keyword).grid(row=0, column=2, padx=(0, 8))
-        ttk.Button(research_f, text="🔍 키워드 검색 다시 실행",
+        ttk.Button(research_f, text="🔍 키워드 리서치 실행",
                    command=lambda: self._run_keyword_research("prep")).grid(row=0, column=3)
         # [v7.0, 정책뉴스 Ver8.22에서 이식] 캐시와 별도로 바로 조회해 팝업.
         ttk.Button(research_f, text="🔍 검색량·자동완성 조회",
@@ -7243,8 +7263,9 @@ class WelfareCollectorGUI(tk.Tk):
         ttk.Label(research_f, textvariable=self.research_status_var,
                   foreground="#1565C0", wraplength=1000, justify="left").grid(
             row=1, column=1, columnspan=4, sticky="w", pady=(2, 0))
+        research_f.grid_remove()
 
-        # 자동 준비 결과 ② 경쟁 블로그 — 0개면 여기서 직접 넣거나, 넣지 않고 STEP 2로 가도 된다
+        # 경쟁 블로그 — 한 줄 요약 + 보기. 0개(실패)면 직접 고르는 줄이 저절로 펼쳐진다.
         blog_f = ttk.Frame(quick_f)
         blog_f.grid(row=5, column=0, sticky="ew", padx=6, pady=(4, 6))
         blog_f.columnconfigure(0, weight=1)
@@ -7253,66 +7274,69 @@ class WelfareCollectorGUI(tk.Tk):
         ttk.Label(blog_bar, text="경쟁 블로그:").pack(side="left")
         self.competitor_blog_info_var = tk.StringVar(value="")
         ttk.Label(blog_bar, textvariable=self.competitor_blog_info_var,
-                  foreground="#1565C0").pack(side="left", padx=(4, 12))
+                  foreground="#1565C0").pack(side="left", padx=(4, 8))
+        self.blog_view_btn = ttk.Button(blog_bar, text="보기", width=6,
+                                        command=lambda: self._show_blog_panel(not self._blog_panel_open))
+        self.blog_view_btn.pack(side="left")
+        ttk.Label(blog_bar, text="(글 구성 참고용 — 없어도 STEP 2로 가도 됩니다)",
+                  foreground="gray").pack(side="left", padx=(8, 0))
+        # 펼치는 칸: 직접 고르기(블로그탭 열기 → 주소 → 스크랩) + 본문
+        self.blog_panel_f = blog_panel = ttk.Frame(blog_f)
+        blog_panel.grid(row=1, column=0, sticky="ew", pady=(4, 0))
+        blog_panel.columnconfigure(1, weight=1)
         # 직접 고를 때 — 검색 키워드 칸의 첫 키워드(메인)로 블로그탭을 연다.
-        ttk.Button(blog_bar, text="🔍 블로그탭 열기(메인 키워드)",
-                   command=self._open_blog_tab_with_main_keyword).pack(side="left", padx=(0, 4))
-        ttk.Button(blog_bar, text="지우기",
-                   command=self._clear_competitor_blogs).pack(side="left", padx=(0, 8))
-        ttk.Label(blog_bar, text="(블로그는 글 구성 참고용 — 없어도 STEP 2로 가도 됩니다)",
-                  foreground="gray").pack(side="left")
-        # 고른 글 주소(한 줄에 하나) → 스크랩해서 아래 칸 채우기(예전 5)블로그 스크랩 탭 대신)
-        url_f = ttk.Frame(blog_f)
-        url_f.grid(row=1, column=0, sticky="ew", pady=(4, 0))
-        url_f.columnconfigure(1, weight=1)
-        ttk.Label(url_f, text="직접 고른 글 주소\n(한 줄에 하나)", foreground="gray",
-                  justify="left").grid(row=0, column=0, sticky="nw", padx=(0, 6))
-        self.competitor_url_text = tk.Text(url_f, height=2, wrap="none", font=("맑은 고딕", 9))
+        ttk.Button(blog_panel, text="🔍 블로그탭 열기(메인 키워드)",
+                   command=self._open_blog_tab_with_main_keyword).grid(row=0, column=0, sticky="nw", padx=(0, 6))
+        self.competitor_url_text = tk.Text(blog_panel, height=2, wrap="none", font=("맑은 고딕", 9))
         self.competitor_url_text.grid(row=0, column=1, sticky="ew")
-        ttk.Button(url_f, text="🕸 주소 스크랩해서 채우기",
+        ttk.Button(blog_panel, text="🕸 주소 스크랩해서 채우기",
                    command=self._scrape_competitor_urls).grid(row=0, column=2, sticky="n", padx=(6, 0))
-        self.competitor_blog_text = scrolledtext.ScrolledText(blog_f, wrap="word", height=4,
+        ttk.Label(blog_panel, text="↑ 고른 글 주소를 한 줄에 하나씩", foreground="gray").grid(
+            row=1, column=1, sticky="w")
+        ttk.Button(blog_panel, text="지우기",
+                   command=self._clear_competitor_blogs).grid(row=2, column=0, sticky="nw", pady=(4, 0))
+        self.competitor_blog_text = scrolledtext.ScrolledText(blog_panel, wrap="word", height=6,
                                                               font=("맑은 고딕", 9))
-        self.competitor_blog_text.grid(row=2, column=0, sticky="ew", pady=(4, 0))
+        self.competitor_blog_text.grid(row=2, column=1, columnspan=2, sticky="ew", pady=(4, 0))
         self.competitor_blog_text.bind("<FocusOut>", lambda e: self._save_competitor_blogs())
         self._competitor_blog_serv = None   # 칸에 지금 들어 있는 글의 서비스(서비스별로 따로 저장)
+        self._blog_panel_open = True
+        self._show_blog_panel(False)
 
         # ---- STEP 2 본 분석 ----
-        main_f = ttk.LabelFrame(pt, text="STEP 2 — 본 분석: 공식자료 확인 · 가치판단 · 제목 후보")
+        main_f = ttk.LabelFrame(pt, text="STEP 2 — 가치판단 · 제목 후보 (공식자료 확인)")
         main_f.grid(row=6, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
         main_f.columnconfigure(0, weight=1)
         # 줄 1 — 본 분석 복사(+ 공식자료 올리기)
         main_row = ttk.Frame(main_f)
         main_row.grid(row=0, column=0, sticky="ew")
-        ttk.Button(main_row, text="📋 판정결과·키워드자료 + 프롬프트 복사",
+        ttk.Button(main_row, text="📋 판정결과·키워드 리서치 + 프롬프트 복사",
                    command=lambda: self._copy_main_analysis_prompt(same_chat=True)).pack(
             side="left", padx=(6, 4), pady=(6, 2))
-        ttk.Button(main_row, text="📋 원문자료·판정결과 + 프롬프트 복사",
-                   command=lambda: self._copy_main_analysis_prompt(same_chat=False)).pack(
-            side="left", padx=(0, 4), pady=(6, 2))
         ttk.Button(main_row, text="📂 공식자료 폴더 열기",
                    command=self._open_selected_attachments_folder).pack(side="left", padx=(0, 4), pady=(6, 2))
-        _next_hint(main_row, "앞 버튼 = 빠른 판단을 한 대화창에 이어서, 뒤 버튼 = 새 대화창 (공식자료가 필요하면 폴더가 열림 → 파일 올리기)")
+        _next_hint(main_row, "→ 빠른 판단을 한 대화창에 붙여넣고, 팝업이 말한 공식자료를 올리기")
 
-        # 줄 2 — AI가 키워드 실측을 요청했을 때만(정책뉴스 STEP 1.5와 같은 컨셉). ④가 요청을 알아보면
-        # 이 칸을 채우고 리서치해 결과를 클립보드에 넣는다 — 버튼은 손으로 다시 할 때만.
-        ai_kw_f = ttk.LabelFrame(main_f, text="AI가 키워드 검색을 요청했을 때만 — 보통은 아래 가치판단 저장이 알아서 검색하고 결과를 클립보드에 넣습니다", padding=4)
+        # 줄 2 — AI가 키워드 리서치를 요청했을 때만 나타난다(정책뉴스 STEP 1.5와 같은 이름). 가치판단 저장이
+        # 요청을 알아보면 이 칸을 채우고 리서치해 "AI에게 결과 전달" 내용을 클립보드에 넣는다.
+        self.ai_kw_f = ai_kw_f = ttk.LabelFrame(main_f, text="AI가 키워드 리서치를 요청함", padding=4)
         ai_kw_f.grid(row=1, column=0, sticky="ew", padx=6, pady=(4, 2))
         ai_kw_f.columnconfigure(1, weight=1)
-        ttk.Label(ai_kw_f, text="요청 키워드:").grid(row=0, column=0, sticky="w")
+        ttk.Label(ai_kw_f, text="검색 키워드:").grid(row=0, column=0, sticky="w")
         self.ai_kw_var = tk.StringVar(value="")
         ttk.Entry(ai_kw_f, textvariable=self.ai_kw_var).grid(row=0, column=1, sticky="ew", padx=(5, 4))
         ttk.Button(ai_kw_f, text="✖ 입력 지우기",
                    command=lambda: (self.ai_kw_var.set(""), self.ai_kw_status_var.set(""))).grid(row=0, column=2, padx=(0, 8))
-        ttk.Button(ai_kw_f, text="🔍 키워드 검색",
+        ttk.Button(ai_kw_f, text="🔍 키워드 리서치 실행",
                    command=lambda: self._run_keyword_research("ai")).grid(row=0, column=3)
         ttk.Button(ai_kw_f, text="🔍 검색량·자동완성 조회",
                    command=lambda: self._show_research_summary_popup("ai")).grid(row=0, column=4, padx=(8, 0))
-        ttk.Button(ai_kw_f, text="📋 검색결과 복사",
+        ttk.Button(ai_kw_f, text="📋 AI에게 결과 전달",
                    command=lambda: self._copy_research_reply_for_posting("ai")).grid(row=0, column=5, padx=(8, 0))
         self.ai_kw_status_var = tk.StringVar(value="")
         ttk.Label(ai_kw_f, textvariable=self.ai_kw_status_var, foreground="#1565C0",
                   wraplength=1000, justify="left").grid(row=1, column=1, columnspan=5, sticky="w", pady=(2, 0))
+        ai_kw_f.grid_remove()
 
         # 줄 3 — 결과 저장
         main_save_row = ttk.Frame(main_f)
@@ -7320,7 +7344,7 @@ class WelfareCollectorGUI(tk.Tk):
         ttk.Button(main_save_row, text="💾 가치판단 저장(메모리값 자동저장)",
                    command=lambda: self._read_clipboard_result("value_judgment")).pack(
             side="left", padx=(6, 6), pady=(4, 6))
-        _next_hint(main_save_row, "Claude 답을 복사한 뒤 누르기 — 결과면 저장 → STEP 3, 자료·키워드 요청이면 할 일을 알려 줌")
+        _next_hint(main_save_row, "Claude 답을 복사한 뒤 누르기 — 결과면 저장 → STEP 3, 자료·키워드 리서치 요청이면 할 일을 알려 줌")
 
         # [v7.17 신규, 정책뉴스 STEP4에서 이식 — 이번엔 제목에 올바르게
         # 적용] 지난 버전(v7.4)에서는 "후보추천"을 키워드 쪽에 잘못
@@ -7350,7 +7374,7 @@ class WelfareCollectorGUI(tk.Tk):
             row=0, column=0, columnspan=5, sticky="w", padx=6, pady=(6, 2))
         ttk.Label(titlecand_f,
                   text="가치판단을 저장한 뒤 누르면 후보가 채워집니다. 본문 적합도를 먼저 보고, "
-                       "필요하면 🔍 블로그·앞구(첫 쉼표 앞)·뒷구(첫 쉼표 뒤)로 직접 확인한 뒤 라디오버튼으로 "
+                       "필요하면 🔍 블로그·🔍 앞구(첫 쉼표 앞)·🔍 뒷구(첫 쉼표 뒤)로 직접 확인한 뒤 라디오버튼으로 "
                        "확정하면 STEP 4 초안 복사 때 이 제목이 자동으로 함께 실려서 초안이 이 제목을 그대로 씁니다.",
                   foreground="gray", wraplength=880, justify="left").grid(
             row=1, column=0, columnspan=5, sticky="w", padx=6, pady=(0, 6))
@@ -7383,10 +7407,10 @@ class WelfareCollectorGUI(tk.Tk):
             ttk.Button(titlecand_rows_f, text="📋 제목 복사",
                        command=lambda idx=i: self._copy_candidate_title(idx)
                        ).grid(row=i, column=3, padx=(0, 2))
-            ttk.Button(titlecand_rows_f, text="앞구",
+            ttk.Button(titlecand_rows_f, text="🔍 앞구",
                        command=lambda idx=i: self._open_naver_search_title_candidate(idx, front=True)
                        ).grid(row=i, column=4, padx=(0, 2))
-            ttk.Button(titlecand_rows_f, text="뒷구",
+            ttk.Button(titlecand_rows_f, text="🔍 뒷구",
                        command=lambda idx=i: self._open_naver_search_title_candidate(idx, back=True)
                        ).grid(row=i, column=5, padx=(0, 8))
 
@@ -7406,14 +7430,14 @@ class WelfareCollectorGUI(tk.Tk):
             side="left", padx=(0, 2))
         ttk.Button(titlecand_manual_f, text="📋 제목 복사",
                    command=self._copy_manual_title).pack(side="left", padx=(0, 2))
-        ttk.Button(titlecand_manual_f, text="앞구",
+        ttk.Button(titlecand_manual_f, text="🔍 앞구",
                    command=lambda: self._open_naver_search_title_manual(front=True)).pack(side="left", padx=(0, 2))
-        ttk.Button(titlecand_manual_f, text="뒷구",
+        ttk.Button(titlecand_manual_f, text="🔍 뒷구",
                    command=lambda: self._open_naver_search_title_manual(back=True)).pack(side="left", padx=(0, 8))
 
         titlecand_action_f = ttk.Frame(titlecand_f)
         titlecand_action_f.grid(row=5, column=0, columnspan=5, sticky="w", padx=6, pady=(8, 6))
-        ttk.Button(titlecand_action_f, text="✅ 이 제목으로 확정",
+        ttk.Button(titlecand_action_f, text="✅ 최종 확정",
                    command=self._confirm_title_candidate).pack(side="left", padx=(0, 8))
         ttk.Button(titlecand_action_f, text="🗑 확정 취소",
                    command=self._clear_confirmed_title).pack(side="left", padx=(0, 8))
@@ -7431,9 +7455,7 @@ class WelfareCollectorGUI(tk.Tk):
         ttk.Label(draft_row, text="초안", width=7).pack(side="left", padx=(6, 0))
         ttk.Button(draft_row, text="📋 확정제목 + 프롬프트 복사",
                    command=self._copy_draft_prompt_only).pack(side="left", padx=(0, 4), pady=(6, 2))
-        ttk.Button(draft_row, text="📋 원문자료·확정제목 + 프롬프트 복사",
-                   command=self._copy_draft_prompt).pack(side="left", padx=(0, 4), pady=(6, 2))
-        _next_hint(draft_row, "앞 버튼 = 본 분석을 한 대화창에 이어서, 뒤 버튼 = 새 대화창")
+        _next_hint(draft_row, "→ 가치판단을 한 대화창에 붙여넣기")
         draft_save_row = ttk.Frame(write_f)
         draft_save_row.pack(fill="x")
         ttk.Label(draft_save_row, text="", width=7).pack(side="left", padx=(6, 0))
@@ -7444,11 +7466,9 @@ class WelfareCollectorGUI(tk.Tk):
         final_row = ttk.Frame(write_f)
         final_row.pack(fill="x")
         ttk.Label(final_row, text="최종각색", width=7).pack(side="left", padx=(6, 0))
-        ttk.Button(final_row, text="📋 프롬프트 복사",
-                   command=self._copy_claude_second_stage_prompt_only).pack(side="left", padx=(0, 4), pady=(4, 2))
         ttk.Button(final_row, text="📋 초안 + 프롬프트 복사",
                    command=self._copy_claude_second_stage_prompt).pack(side="left", padx=(0, 4), pady=(4, 2))
-        _next_hint(final_row, "앞 버튼 = 초안을 쓴 대화창에 이어서, 뒤 버튼 = 새 대화창")
+        _next_hint(final_row, "→ 초안을 쓴 대화창에 붙여넣기 (새 대화창에 붙여도 됩니다)")
         final_save_row = ttk.Frame(write_f)
         final_save_row.pack(fill="x")
         ttk.Label(final_save_row, text="", width=7).pack(side="left", padx=(6, 0))
@@ -7504,10 +7524,8 @@ class WelfareCollectorGUI(tk.Tk):
         ig_prompt_f.grid(row=1, column=0, sticky="ew", padx=6, pady=(0, 6))
         ttk.Button(ig_prompt_f, text="📋 최종원고 + 프롬프트 복사",
                    command=self._copy_infographic_prompt).pack(side="left")
-        ttk.Button(ig_prompt_f, text="📋 프롬프트 복사",
-                   command=self._copy_infographic_prompt_only).pack(side="left", padx=(4, 0))
         ttk.Label(ig_prompt_f,
-                  text="앞 버튼 = 새 대화창, 뒤 버튼 = 최종각색을 쓴 대화창에 이어서. "
+                  text="최종각색을 쓴 대화창이나 새 대화창에 붙여넣기. "
                        "아래 목록은 선택한 서비스의 최종각색 결과에서 제목(썸네일)과 소제목을 자동으로 뽑습니다. "
                        "GPT에서 이미지를 만들 때 [복사] 버튼으로 정확한 텍스트를 파일명으로 바로 쓰세요. "
                        "왼쪽 체크박스는 '이미지 생성 완료' 표시용입니다.",
@@ -8356,9 +8374,9 @@ class WelfareCollectorGUI(tk.Tk):
                         if done:
                             self._copy_research_reply_for_posting("ai")
                             messagebox.showinfo(
-                                "키워드 실측 결과 복사됨",
-                                "AI가 요청한 키워드를 리서치해 실측 결과를 클립보드에 넣었습니다.\n\n"
-                                "1) 현재창(본 분석 대화창)에 Ctrl+V로 붙여넣기\n"
+                                "키워드 리서치 결과 복사됨",
+                                "AI가 요청한 키워드를 리서치해 결과를 클립보드에 넣었습니다.\n\n"
+                                "1) 가치판단을 하던 같은 대화창에 Ctrl+V로 붙여넣기\n"
                                 "2) Claude 새 답을 복사해 '💾 가치판단 저장(메모리값 자동저장)' 다시 누르기")
                         else:
                             self.ai_kw_status_var.set("❌ 요청 키워드 리서치 실패 — 이 줄의 '🔍 키워드 리서치 실행'을 다시 누르세요(설정 탭의 API 키 확인)")
@@ -9033,6 +9051,11 @@ class WelfareCollectorGUI(tk.Tk):
             self.ai_kw_var.set("")
             self.ai_kw_status_var.set("")
         self._load_competitor_blogs_for_row(row)   # [Ver10.08] 경쟁 블로그 칸(서비스별)
+        # [Ver10.10] 다시 하는 줄은 숨기고 시작 — 판정은 진행인데 리서치가 없을 때만 리서치 줄을 보인다.
+        self._show_ai_kw_row(False)
+        self._show_blog_panel(False)
+        if hasattr(self, "research_keyword_var"):
+            self._show_prep_research_fix(qj.get("verdict") == "진행" and not cached)
 
     def _pass_selected_posting(self):
         """[Ver10.09] 목록 아래 "⏭ 이 글 패스" — 검토하다 그만둘 글(여러 개 선택 가능)을 패스로 둔다.
@@ -9297,7 +9320,8 @@ class WelfareCollectorGUI(tk.Tk):
         content = f"아래는 요청하신 키워드의 실측 결과입니다.\n\n{body}"
         self.clipboard_clear()
         self.clipboard_append(content)
-        sv.set("✅ 키워드 실측 결과를 클립보드에 넣었습니다 — 현재창에 붙여넣고, 새 답을 복사해 ④")
+        sv.set("✅ 키워드 리서치 결과를 클립보드에 넣었습니다 → 같은 대화창에 붙여넣고, Claude 새 답을 복사해 "
+               "'💾 가치판단 저장(메모리값 자동저장)' 다시 누르기")
         self._log(f"📋 AI에게 리서치 결과 전달용 복사 완료: {', '.join(keywords)}")
 
     # ──────────────────────────────────────────────────────
@@ -9755,7 +9779,7 @@ class WelfareCollectorGUI(tk.Tk):
                 return
             set_stage_output(row["servId"], stage_key, text)
             self._log(f"📥 {label} 저장 완료(클립보드): {row['servNm']} ({len(text)}자)")
-            messagebox.showinfo("초안 저장", f"초안을 저장했습니다({len(text):,}자).\n다음: 최종각색 '📋 프롬프트 복사'(같은 대화창)")
+            messagebox.showinfo("초안 저장", f"초안을 저장했습니다({len(text):,}자).\n다음: 최종각색 '📋 초안 + 프롬프트 복사'")
             return
 
         # 본 분석 — 자료 요청
@@ -9777,7 +9801,7 @@ class WelfareCollectorGUI(tk.Tk):
             kws = extract_research_request_block_keywords(text)
             if not kws:
                 messagebox.showinfo("키워드 없음", "AI의 키워드 요청에서 키워드 줄을 찾지 못했습니다.\n"
-                                    "STEP 2 '요청 키워드' 칸에 직접 넣고 '🔍 키워드 검색' → '📋 검색결과 복사'를 쓰세요.")
+                                    "STEP 2 '검색 키워드' 칸에 직접 넣고 '🔍 키워드 리서치 실행' → '📋 AI에게 결과 전달'을 쓰세요.")
                 return
             self.ai_kw_var.set(kws)
             self._run_research_then_reply(kws)
@@ -9813,6 +9837,7 @@ class WelfareCollectorGUI(tk.Tk):
         if not self._check_research_api_keys():
             return
         self._research_then_reply = True
+        self._show_ai_kw_row(True)
         self.ai_kw_status_var.set(f"⏳ AI가 요청한 키워드 리서치 중: {keywords} — 끝나면 결과를 클립보드에 넣습니다")
         self._run_keyword_research("ai")
 
@@ -9822,8 +9847,12 @@ class WelfareCollectorGUI(tk.Tk):
         if getattr(self, "_auto_prep_running", False):
             messagebox.showinfo("실행 중", "자료 자동 준비가 이미 진행 중입니다.")
             return
+        if hasattr(self, "research_keyword_var"):
+            self.research_keyword_var.set(", ".join(keywords))   # [Ver10.10] 빈 칸으로 남던 것 고침
         if not self._check_research_api_keys():
-            self.auto_prep_status_var.set("⚠ API 설정이 없어 자동 준비를 못 했습니다 — 설정 후 '💾 판정결과 저장(메모리값 자동저장)'을 다시 누르세요")
+            self.auto_prep_status_var.set("⚠ API 설정이 없어 키워드 리서치를 못 했습니다 — 설정 탭에서 API 키를 넣고 "
+                                          "'💾 판정결과 저장(메모리값 자동저장)'을 다시 누르세요")
+            self._show_prep_research_fix(True)
             return
         want_blog = not (qj.get("blog") or "").strip().startswith("불필요")
         cfg = load_config()
@@ -9835,7 +9864,8 @@ class WelfareCollectorGUI(tk.Tk):
             want_blog = False
         exclude = [x.strip().lower() for x in str(cfg.get("my_blog_ids", "")).split(",") if x.strip()]
         self._auto_prep_running = True
-        self.auto_prep_status_var.set(f"⏳ 자료 자동 준비 중 — 키워드 리서치 {len(keywords)}개"
+        self._show_prep_research_fix(False)
+        self.auto_prep_status_var.set(f"⏳ 자동 수집 중 — 키워드 리서치 {len(keywords)}개"
                                       + (f" → 경쟁 블로그 {n_blog}개 스크랩" if want_blog and n_blog else "")
                                       + " (1~3분)")
         self._log(f"⏳ 자료 자동 준비 시작: {row['servNm']} — {', '.join(keywords)}")
@@ -9917,7 +9947,7 @@ class WelfareCollectorGUI(tk.Tk):
         if done:
             lines.append(f"✅ 키워드 리서치 {len(done)}/{len(p['keywords'])}개 완료")
         else:
-            lines.append("❌ 키워드 리서치 실패 → 아래 '🔍 키워드 검색 다시 실행'을 누르세요(설정 탭의 API 키 확인)")
+            lines.append("❌ 키워드 리서치 실패 → 아래 줄의 '🔍 키워드 리서치 실행'을 누르세요(설정 탭의 API 키 확인)")
         if not p["want_blog"]:
             lines.append("경쟁 블로그 건너뜀(" + ("selenium 없음" if not HAS_SELENIUM else "빠른판정: 불필요") + ")")
         elif files:
@@ -9933,11 +9963,13 @@ class WelfareCollectorGUI(tk.Tk):
                 why = f"{diag['links']}개 스크랩 실패(" + (p["errors"][0][:60] if p["errors"] else "원인 미상") + ")"
             lines.append(f"⚠ 경쟁 블로그 0개 — {why}. 넣고 싶으면 아래 '🔍 블로그탭 열기'로 글을 골라 주소 칸에 넣고 "
                          f"'🕸 주소 스크랩해서 채우기'. 넣지 않아도 됩니다")
-        nxt = "→ 다음: STEP 2 '📋 판정결과·키워드자료 + 프롬프트 복사'" if done else "→ 리서치를 다시 실행한 뒤 STEP 2"
+            self._show_blog_panel(True)
+        nxt = "→ 다음: STEP 2 '📋 판정결과·키워드 리서치 + 프롬프트 복사'" if done else "→ 리서치를 다시 실행한 뒤 STEP 2"
         if done and (p["qj"].get("attach") or "").strip().startswith("필요"):
             nxt += " — 공식자료를 대화창에 올려야 합니다(STEP 2 복사 때 폴더를 엽니다)"
-        msg = " · ".join(lines) + "\n" + nxt
+        msg = "자동 수집: " + " · ".join(lines) + "\n" + nxt
         self.auto_prep_status_var.set(msg)
+        self._show_prep_research_fix(not done)
         self._log(f"✅ 자료 자동 준비 끝: {row['servNm']}" + (f" (오류 {len(p['errors'])}건: {p['errors'][0][:80]})" if p["errors"] else ""))
 
     def _autofill_research_request_keywords(self, content):
@@ -9947,6 +9979,7 @@ class WelfareCollectorGUI(tk.Tk):
         if not keywords:
             return
         self.ai_kw_var.set(keywords)
+        self._show_ai_kw_row(True)
         self.ai_kw_status_var.set(f"📋 재조사 요청 키워드 채움: {keywords} — '🔍 키워드 리서치 실행' 후 "
                                      f"'📋 AI에게 결과 전달'로 돌려주세요")
         self._log(f"📋 가치판단 재조사 요청 키워드 자동 채우기: {keywords}")
@@ -9972,6 +10005,28 @@ class WelfareCollectorGUI(tk.Tk):
         except OSError as e:
             self._log(f"⚠ 경쟁 블로그 저장 실패: {e}")
         self._update_competitor_blog_info()
+
+    # ── [Ver10.10] 실패했을 때만 보이는 줄 / 경쟁 블로그 "보기" ──
+    def _show_blog_panel(self, show: bool):
+        """경쟁 블로그 직접 고르기 줄 + 본문 칸을 펼치거나 접는다."""
+        if not hasattr(self, "blog_panel_f"):
+            return
+        self._blog_panel_open = bool(show)
+        if show:
+            self.blog_panel_f.grid()
+        else:
+            self.blog_panel_f.grid_remove()
+        self.blog_view_btn.config(text="닫기" if show else "보기")
+
+    def _show_prep_research_fix(self, show: bool):
+        """STEP 1 키워드 리서치 줄 — 자동 리서치가 실패했을 때만 보인다."""
+        if hasattr(self, "prep_research_f"):
+            self.prep_research_f.grid() if show else self.prep_research_f.grid_remove()
+
+    def _show_ai_kw_row(self, show: bool):
+        """STEP 2 "AI가 키워드 리서치를 요청함" 줄 — 요청이 왔을 때만 보인다."""
+        if hasattr(self, "ai_kw_f"):
+            self.ai_kw_f.grid() if show else self.ai_kw_f.grid_remove()
 
     def _load_competitor_blogs_for_row(self, row):
         """서비스를 바꾸면 이전 서비스 칸을 저장하고 새 서비스 것을 채운다."""
@@ -10091,7 +10146,7 @@ class WelfareCollectorGUI(tk.Tk):
             if not messagebox.askyesno(
                     "빠른 판정 결과 없음",
                     "저장된 빠른 판정 결과가 없습니다 — 이어 붙일 대화창이 없을 수 있습니다.\n\n"
-                    "원문까지 넣은 '📋 원문자료·판정결과 + 프롬프트 복사'(새 대화창용)로 복사할까요?"):
+                    "서비스 원문까지 넣어 새 대화창용으로 복사할까요?"):
                 return
             same_chat = False
 
@@ -10138,7 +10193,7 @@ class WelfareCollectorGUI(tk.Tk):
             notes.append("경쟁 블로그는 이번 복사본에 없습니다"
                          + (f"(빠른 판정 — 경쟁 블로그: {qj['blog']})" if qj.get("blog") else "")
                          + ". 넣으려면 STEP 1 주소 칸에서 스크랩한 뒤 다시 복사하세요(없어도 됩니다).")
-        notes.append("빠른판정을 한 대화창(현재창)에 붙여넣으세요." if same_chat else "Claude 새 대화창(새창)에 붙여넣으세요.")
+        notes.append("빠른 판단을 한 같은 대화창에 붙여넣으세요." if same_chat else "Claude 새 대화창에 붙여넣으세요(원문 포함).")
         self._show_attachment_reminder_popup(row, attachments, note_extra="\n".join(notes))
 
         if advance_posting_status(row["servId"], "🔎 가치판단대기", row["servNm"], row["source"]):
@@ -10247,7 +10302,11 @@ class WelfareCollectorGUI(tk.Tk):
             messagebox.showerror("프롬프트 파일 없음", str(e))
             return
         row = self._get_selected_posting_row()
-        # [Ver10.08] 현재창용이라도 확정 제목은 이 프로그램에만 있으므로 함께 넣는다(나머지 자료는 앞 대화에 있음)
+        # [Ver10.10] 이어 쓸 가치판단 결과가 없으면 원문·공식자료까지 넣은 새 대화창용으로 복사한다
+        if row is not None and not get_stage_output(row["servId"], "value_judgment"):
+            self._copy_draft_prompt()
+            return
+        # [Ver10.08] 같은 대화창용이라도 확정 제목은 이 프로그램에만 있으므로 함께 넣는다(나머지 자료는 앞 대화에 있음)
         if row is not None and get_confirmed_title(row["servId"]):
             block = f"\n\n## 확정된 제목 (그대로 사용 — 다시 짓지 않음)\n\n{get_confirmed_title(row['servId'])}\n"
             intro = get_confirmed_title_intro(row["servId"])
