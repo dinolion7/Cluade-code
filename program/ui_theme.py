@@ -21,11 +21,11 @@ import tkinter as tk
 from tkinter import ttk
 
 FONT = "맑은 고딕"
-PAGE = "#F3F5F9"      # 바탕
+PAGE = "#E9EDF3"      # 바탕(카드와 구분되게 조금 진하게)
 CARD = "#FFFFFF"      # 카드
-LINE = "#DDE2EA"      # 테두리
-TEXT = "#1F2933"
-SUB = "#6B7684"
+LINE = "#C3CCD8"      # 테두리
+TEXT = "#111827"     # 본문 글자(거의 검정 — 흐리면 안 보임)
+SUB = "#46505C"      # 보조 글자(안내·설명)
 SIDE = "#1E2A44"      # 왼쪽 메뉴
 SIDE_SEL = "#2F6FB0"
 SIDE_TEXT = "#DCE3EE"
@@ -33,6 +33,9 @@ SIDE_DIM = "#8EA0BC"
 ROLE_COLORS = {"Copy": "#2F6FB0", "Save": "#1F8A5B", "Pass": "#8A94A3"}  # Ok는 대표색
 DOT = {"red": "#D64545", "orange": "#E08A1E", "green": "#1F9D55", "gray": "#9AA5B4"}
 SIDEBAR_W = 190
+# 밝은 바탕에서 흐리게 보이는 안내 글자색 → SUB로 바꾼다(글자만, 색 이름 그대로 비교)
+LIGHT_GRAYS = {"gray", "grey", "darkgray", "darkgrey", "#777777", "#777", "#808080", "#888888", "#888",
+               "#999999", "#999", "#8a8a8a", "#7f7f7f", "#a0a0a0", "#aaaaaa", "#666666", "#666", "#6b7684"}
 
 
 def _walk(w):
@@ -93,17 +96,17 @@ class _Theme:
             except tk.TclError:
                 pass
         s.theme_use("clam")
-        base = (FONT, 9)
+        base = (FONT, 10)
         s.configure(".", background=PAGE, foreground=TEXT, font=base, bordercolor=LINE,
                     lightcolor=PAGE, darkcolor=PAGE, troughcolor="#E6EAF0")
         s.configure("TFrame", background=PAGE)
         s.configure("TLabel", background=PAGE, foreground=TEXT)
         s.configure("TLabelframe", background=CARD, bordercolor=LINE, relief="solid", borderwidth=1)
-        s.configure("TLabelframe.Label", background=PAGE, foreground=self.accent, font=(FONT, 10, "bold"))
+        s.configure("TLabelframe.Label", background=PAGE, foreground=self.accent, font=(FONT, 11, "bold"))
         s.configure("TButton", background=CARD, foreground=TEXT, bordercolor=LINE, lightcolor=CARD,
-                    darkcolor=CARD, padding=(8, 4), relief="flat")
+                    darkcolor=CARD, padding=(6, 3), relief="flat")
         s.map("TButton", background=[("disabled", "#F1F3F6"), ("active", "#EAF0F7")],
-              foreground=[("disabled", "#A7AFBA")])
+              foreground=[("disabled", "#7C8794")])
         s.configure("TCheckbutton", background=PAGE)
         s.configure("TRadiobutton", background=PAGE)
         s.map("TCheckbutton", background=[("active", PAGE)])
@@ -115,8 +118,8 @@ class _Theme:
               selectbackground=[("readonly", "#FFFFFF")], selectforeground=[("readonly", TEXT)])
         s.configure("TSpinbox", fieldbackground="#FFFFFF", bordercolor=LINE)
         s.configure("Treeview", background="#FFFFFF", fieldbackground="#FFFFFF", foreground=TEXT,
-                    rowheight=24, bordercolor=LINE, font=base)
-        s.configure("Treeview.Heading", background="#EEF2F7", foreground=SUB, font=(FONT, 9, "bold"),
+                    rowheight=26, bordercolor=LINE, font=base)
+        s.configure("Treeview.Heading", background="#DFE5EE", foreground=TEXT, font=(FONT, 10, "bold"),
                     relief="flat", bordercolor=LINE)
         s.map("Treeview.Heading", background=[("active", "#E3E9F1")])
         s.map("Treeview", background=[("selected", "#D6E6F8")], foreground=[("selected", TEXT)])
@@ -141,7 +144,7 @@ class _Theme:
             except tk.TclError:
                 pass
         s.configure("Header.TLabel", background=PAGE)
-        s.configure("Info.TLabel", background=PAGE)
+        s.configure("Info.TLabel", background=PAGE, foreground=SUB)
         s.layout("UiHidden.TNotebook", [("Notebook.client", {"sticky": "nswe"})])
         self.root.configure(background=PAGE)
 
@@ -161,7 +164,7 @@ class _Theme:
                 kw = dict(background=col, foreground="#FFFFFF", bordercolor=col, lightcolor=col,
                           darkcolor=col)
                 if not cur:
-                    kw["font"] = (FONT, 9, "bold")
+                    kw["font"] = (FONT, 10, "bold")
                 s.configure(name, **kw)
                 s.map(name, background=[("disabled", "#C9D2DE"), ("active", col)],
                       foreground=[("disabled", "#F4F6F9")])
@@ -182,8 +185,19 @@ class _Theme:
             p = p.master
         return False
 
+    def _darken_fg(self, w):
+        """프로그램이 안내 글에 쓴 연한 회색(gray·#777 등)은 밝은 바탕에서 잘 안 보여 진한 회색으로."""
+        try:
+            fg = str(w.cget("foreground")).strip().lower()
+        except tk.TclError:
+            return
+        if fg in LIGHT_GRAYS:
+            w.configure(foreground=SUB)
+
     def _paint(self, w):
         cls = w.winfo_class()
+        if cls in ("TLabel", "Label", "TCheckbutton", "Checkbutton", "Radiobutton", "TRadiobutton"):
+            self._darken_fg(w)
         if cls in ("TFrame", "TLabel", "TCheckbutton", "TRadiobutton"):
             cur = str(w.cget("style"))
             if self._in_card(w) and not cur.startswith("Card."):
