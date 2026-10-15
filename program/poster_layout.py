@@ -404,15 +404,17 @@ class _Layout:
         s.configure("UiPlain.TLabelframe", background=PAGE, borderwidth=0, relief="flat")
         s.configure("UiPlain.TLabelframe.Label", background=PAGE)
 
-    def widen(self):
+    def size_window(self):
+        """창이 처음 뜨기 전에 크기를 정한다(뜬 뒤에 바꾸면 화면이 한 번 깜빡인다).
+        아직 안 뜬 창은 winfo_width가 1이라, 각 칸이 원하는 크기(reqwidth)로 계산한다."""
         r = self.root
         r.update_idletasks()
         r.resizable(True, True)
-        w, h = r.winfo_width(), r.winfo_height()
         sw, sh = r.winfo_screenwidth(), r.winfo_screenheight()
-        # 메뉴 폭만큼 넓히되, 가장 넓은 페이지가 잘리지 않을 만큼(화면 안에서)
-        new_w = min(max(w + SIDEBAR_W, r.winfo_reqwidth() + 10), sw - 10)
-        new_h = min(max(h, r.winfo_reqheight()) + 10, sh - 80)
+        page_w = max([p.winfo_reqwidth() for p in self.pages.values()] + [0])
+        need_w = max(r.winfo_reqwidth(), SIDEBAR_W + page_w + 60, 1100 + SIDEBAR_W) + 10
+        need_h = max(r.winfo_reqheight() + 10, 990)
+        new_w, new_h = min(need_w, sw - 10), min(need_h, sh - 80)
         r.geometry(f"{new_w}x{new_h}+{max(0, (sw - new_w) // 2)}+{max(0, (sh - 80 - new_h) // 2)}")
 
 
@@ -437,5 +439,5 @@ def apply(gui):
     lay.build_frame()
     _safe(lay.th.refresh_chips)
     lay.show("tab1", "run")
-    gui.root.after(300, lambda: _safe(lay.widen))
+    _safe(lay.size_window)          # 창이 뜨기 전에 — 뜬 뒤 크기를 바꾸면 깜빡인다
     return lay

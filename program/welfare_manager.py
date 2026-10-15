@@ -4859,7 +4859,9 @@ class WelfareCollectorGUI(tk.Tk):
             ui_theme.apply(self, self.notebook, "복지로 관리", "복지 서비스 → 블로그 원고",
                            accent="#0F766E", accent2="#C9A227",
                            chips=[("공공데이터 키", key_chip), ("프롬프트 파일", prompt_chip),
-                                  ("OpenAI 키(문단 정리)", openai_chip)])
+                                  ("OpenAI 키(문단 정리)", openai_chip)], widen=False)
+            # 창이 뜨기 전에 왼쪽 메뉴 폭만큼 넓혀 둔다(뜬 뒤에 넓히면 한 번 깜빡인다)
+            self._center_window(1440 + ui_theme.SIDEBAR_W, 980)
         except Exception as e:
             print(f"[디자인] 적용 안 함(지금 모습으로 실행): {e}")
 
