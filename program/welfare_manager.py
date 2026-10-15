@@ -8793,6 +8793,9 @@ class WelfareCollectorGUI(tk.Tk):
                                         command=lambda: self._card_make(None))
         self.card_make_btn.pack(side="left", padx=(0, 6))
         ttk.Button(r5, text="썸네일만 다시 만들기", command=lambda: self._card_make(["00_thumbnail"])).pack(side="left")
+        # 만든 카드를 바로 확인하도록 같은 줄에도 둔다(위 "대상 서비스" 줄의 버튼과 같은 동작 — 사용자 요청)
+        ttk.Button(r5, text="📁 최종각색된 MD파일이 저장된 폴더 열기",
+                   command=self._open_ig_service_folder).pack(side="left", padx=(6, 0))
         self.card_status_var = tk.StringVar(value="")
         ttk.Label(body, textvariable=self.card_status_var, foreground="#1F3A5F",
                   wraplength=1000, justify="left").grid(row=6, column=0, sticky="w", pady=(6, 0))
