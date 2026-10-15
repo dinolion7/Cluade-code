@@ -585,16 +585,42 @@ function fitW(el){
   while (el.scrollWidth > Math.min(max, el.clientWidth || max) + 1 && fs > 18 && n++ < 80) { fs -= 2; el.style.fontSize = fs + 'px'; }
 }
 document.querySelectorAll('.fit, .mid, .chip, .kv-label, .kv-sub, .kvv, .head, .body, .note2').forEach(fitW);
-// 2) 세로: 카드·열 안 내용이 넘치면 글자와 아이콘을 함께 조금씩 줄임
-function fitH(el){
-  let n = 0;
+// 2) 세로: 카드·열 안 내용이 넘치면 글자와 번호 원을 함께 조금씩 줄임
+//    (2026-10-15) 예전엔 글자만 줄여서, 번호 원(116px)처럼 글자가 아닌 것 때문에 넘치면 글자가 최소
+//    크기까지 줄었다. 이제 번호 원도 같이 줄이고, 한 번 줄여도 넘침이 줄지 않으면 멈춘다.
+function shrink(scope, sel){
+  scope.querySelectorAll(sel).forEach(t => { const f = parseFloat(getComputedStyle(t).fontSize); if (f > 20) t.style.fontSize = (f * .94) + 'px'; });
+}
+function shrinkNum(scope){
+  scope.querySelectorAll('.num').forEach(nm => { const w = nm.offsetWidth; if (w > 56) {
+    nm.style.width = nm.style.height = (w * .94) + 'px';
+    nm.style.fontSize = (parseFloat(getComputedStyle(nm).fontSize) * .94) + 'px'; } });
+}
+function fitH(el, extra){
+  let n = 0, prev = Infinity;
   while (el.scrollHeight > el.clientHeight + 1 && n++ < 40) {
-    el.querySelectorAll(TXT).forEach(t => { const f = parseFloat(getComputedStyle(t).fontSize); if (f > 20) t.style.fontSize = (f * .94) + 'px'; });
+    const over = el.scrollHeight - el.clientHeight;
+    if (over >= prev) break;          // 줄여도 안 줄어듦 = 글자 탓이 아님 → 그만
+    prev = over;
+    shrink(el, TXT); shrinkNum(el);
+    if (extra) extra.forEach(x => shrink(x, TXT));
   }
 }
-document.querySelectorAll('.card:not(.tablecard), .col').forEach(fitH);
+// 아래 안내 카드(.foot)는 높이가 고정이라 클수록 본문 칸이 좁아진다. 본문 칸이 넘치면 안내 카드 글자부터
+// 줄인다(큰 글 44px·작은 줄 30px까지) — 안내 카드만 크고 본문이 작아지던 문제(2026-10-15)
+const bodyCards = [...document.querySelectorAll('.main .card:not(.tablecard), .main .col')];
+const bodyOver = () => bodyCards.some(c => c.scrollHeight > c.clientHeight + 1);
+for (let k = 0; k < 30 && bodyOver(); k++) {
+  let changed = false;
+  document.querySelectorAll('.foot .mid, .foot .note2').forEach(t => {
+    const f = parseFloat(getComputedStyle(t).fontSize), floor = t.classList.contains('note2') ? 30 : 44;
+    if (f > floor) { t.style.fontSize = Math.max(floor, f * .94) + 'px'; changed = true; } });
+  if (!changed) break;
+}
+document.querySelectorAll('.card:not(.tablecard), .col').forEach(c => fitH(c));
 const main = document.querySelector('.main');
-if (main && !main.querySelector('.tablecard')) { main.style.overflow = 'hidden'; fitH(main); }
+// 본문이 넘치면 아래 안내 카드(.foot) 글자도 같은 비율로 줄인다 — 안내 카드만 크고 본문이 작아지지 않게
+if (main && !main.querySelector('.tablecard')) { main.style.overflow = 'hidden'; fitH(main, [...document.querySelectorAll('.foot')]); }
 """
 
 
