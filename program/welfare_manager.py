@@ -1961,6 +1961,8 @@ v7.21 (2026-09-22): 🐛 parse_value_judgment_title_candidates() 헤더
                      (6) 옛 표현(④·현재창·실측 결과·키워드 검색) 정리.
                      (7) 같은 날(사용자: 키워드 조사를 어디서 하냐) 키워드 리서치 줄을 STEP 2 한 곳에 늘 보이게 —
                      STEP 1 리서치 줄·AI 요청 칸을 합침(옛 ai_kw_var는 같은 칸). 복사에는 STEP 1 키워드 + 칸 키워드.
+                     (8) 같은 날(사용자) 최종각색·5)인포그래픽의 같은 대화창용 "📋 프롬프트 복사"를 되살림 — 앞 대화의
+                     자료를 다시 보내지 않아 한도를 아끼는 버튼(정책뉴스 B·C의 "간소화 복사"와 같음). 새 대화창용과 둘 다 둔다.
                      (13) 접힌 "수동 보조" 칸 삭제 — 자동 준비가 실패해도 어디로 가야 할지 안 보였다(사용자).
                      키워드 리서치 칸·경쟁 블로그 줄(블로그탭 열기·주소 스크랩·칸)을 STEP 1 안으로, "키워드
                      실측 결과(현재창)"은 STEP 2로. 자동 준비 결과 줄에 원인(검색 0건·쓸 글 없음·스크랩
@@ -7453,9 +7455,12 @@ class WelfareCollectorGUI(tk.Tk):
         final_row = ttk.Frame(write_f)
         final_row.pack(fill="x")
         ttk.Label(final_row, text="최종각색", width=7).pack(side="left", padx=(6, 0))
+        # [Ver10.10] 같은 대화창용(자료를 다시 보내지 않아 한도 절약 — 정책뉴스 "간소화 복사")을 되살림
+        ttk.Button(final_row, text="📋 프롬프트 복사",
+                   command=self._copy_claude_second_stage_prompt_only).pack(side="left", padx=(0, 4), pady=(4, 2))
         ttk.Button(final_row, text="📋 초안 + 프롬프트 복사",
                    command=self._copy_claude_second_stage_prompt).pack(side="left", padx=(0, 4), pady=(4, 2))
-        _next_hint(final_row, "→ 초안을 쓴 대화창에 붙여넣기 (새 대화창에 붙여도 됩니다)")
+        _next_hint(final_row, "프롬프트 복사 = 초안을 쓴 같은 대화창에 이어서(자료 중복 없이 한도 절약) / 초안 + = 새 대화창")
         final_save_row = ttk.Frame(write_f)
         final_save_row.pack(fill="x")
         ttk.Label(final_save_row, text="", width=7).pack(side="left", padx=(6, 0))
@@ -7509,10 +7514,12 @@ class WelfareCollectorGUI(tk.Tk):
         # 인포그래픽은 이 탭에서). 위 "대상 서비스"를 기준으로 복사한다.
         ig_prompt_f = ttk.Frame(infographic_tab)
         ig_prompt_f.grid(row=1, column=0, sticky="ew", padx=6, pady=(0, 6))
+        ttk.Button(ig_prompt_f, text="📋 프롬프트 복사",
+                   command=self._copy_infographic_prompt_only).pack(side="left")
         ttk.Button(ig_prompt_f, text="📋 최종원고 + 프롬프트 복사",
-                   command=self._copy_infographic_prompt).pack(side="left")
+                   command=self._copy_infographic_prompt).pack(side="left", padx=(4, 0))
         ttk.Label(ig_prompt_f,
-                  text="최종각색을 쓴 대화창이나 새 대화창에 붙여넣기. "
+                  text="프롬프트 복사 = 최종각색을 쓴 같은 대화창에 이어서(한도 절약) / 최종원고 + = 새 대화창. "
                        "아래 목록은 선택한 서비스의 최종각색 결과에서 제목(썸네일)과 소제목을 자동으로 뽑습니다. "
                        "GPT에서 이미지를 만들 때 [복사] 버튼으로 정확한 텍스트를 파일명으로 바로 쓰세요. "
                        "왼쪽 체크박스는 '이미지 생성 완료' 표시용입니다.",
