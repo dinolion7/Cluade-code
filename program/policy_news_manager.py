@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-policy_news_manager.py — 정책뉴스 관리 프로그램 (Ver10.10, 2026-10-14)
+policy_news_manager.py — 정책뉴스 관리 프로그램 (Ver10.11, 2026-10-15)
 korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽을 만드는 준비 프로그램(단일 파일 Tkinter).
 실제 네이버 발행은 포스팅 프로그램(blog_poster.py)이 한다. (정책뉴스 RSS는 2026-07-01 서비스 중단 —
 목록 페이지를 직접 읽는다.)
@@ -12,6 +12,7 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
   Naver_blog_config_정책뉴스.json             설정(키워드·프롬프트 파일명·폴더·API·Base IP)
   Naver_blog_정책뉴스_markdown_work_folder/   작업 폴더(날짜별 MD·이미지, 키워드 엑셀, 핵심DB)
   Naver_blog_keyword_perplexity_gpt_manual_markdown_for_posting/  포스팅 프로그램이 읽는 공용 폴더
+  ui_theme.py                              화면 디자인(왼쪽 메뉴·카드·버튼 색, 복지로와 공용) — 없거나 오류면 예전 모습으로 실행
   준비: pip install feedparser openpyxl selenium (코드 카드는 playwright)
 
 [탭과 흐름] (화면 탭 번호 = 코드 TABn = _build_tabN_*)
@@ -56,7 +57,7 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - 작은따옴표 속마음 후킹 → 제목 점검은 앞 25자 안에서 끝나는지 보고, 앞구 검색은 후킹을 빼고 한다.
 
-[버전] Ver10.10 — 탭 번호 1)~7) 통일. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
+[버전] Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
 
 import os
@@ -4074,6 +4075,7 @@ class App(tk.Tk):
         # 이동이 어긋나지 않게. 위 생성 순서와 같은 순서의 이름이다.
         self._tab_ids = dict(zip(["collect", "analyze", "write", "infographic",
                                   "history", "register", "settings"], self.nb.tabs()))
+        self._apply_ui_theme()
 
         # 로딩 후 IP 자동 조회 (팝업 없이 라벨만 갱신)
         self.after(1500, self._refresh_ip_label_sub)
@@ -4106,6 +4108,18 @@ class App(tk.Tk):
 
         # 창을 닫을 때 자동 수집 타이머를 정리한다
         self.protocol("WM_DELETE_WINDOW", self._on_app_close)
+
+    def _apply_ui_theme(self):
+        """화면 디자인(ui_theme.py, 복지로와 공용) — 겉모습만 바꾼다. 파일이 없거나 오류가 나면 지금 모습 그대로."""
+        def openai_chip():
+            return ("설정됨", "green") if self.settings_openai_key_var.get().strip() else ("안 씀", "gray")
+        try:
+            import ui_theme
+            ui_theme.apply(self, self.nb, "정책뉴스 관리", "정책브리핑 → 블로그 원고",
+                           accent="#1F3A5F", accent2="#2E9E5B",
+                           chips=[("OpenAI 키(문단 정리)", openai_chip)])
+        except Exception as e:
+            print(f"[디자인] 적용 안 함(지금 모습으로 실행): {e}")
 
     def _on_app_close(self):
         if getattr(self, "_auto_collect_running", False):
@@ -10464,7 +10478,7 @@ class App(tk.Tk):
             var.set(path)
 
     def _update_window_title(self):
-        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-14_Ver 10.10")
+        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-15_Ver 10.11")
 
     def _browse_prompt_file(self, var: tk.StringVar):
         cfg      = load_config()

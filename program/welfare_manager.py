@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-welfare_manager.py — 복지로 관리 프로그램 (Ver10.10, 2026-10-15)
+welfare_manager.py — 복지로 관리 프로그램 (Ver10.11, 2026-10-15)
 복지로(중앙부처·지자체) Open API로 복지서비스를 모으고, Claude 웹으로 블로그 글·인포그래픽을
 만드는 준비 프로그램(단일 파일 Tkinter). 실제 네이버 발행은 포스팅 프로그램(blog_poster.py)이 한다.
 
@@ -15,6 +15,7 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.10, 2026-10-15)
     final_posts/     최종각색 MD(제목별 폴더) → 6)키워드 등록 때 final_posts_backup/으로 이동
     Naver_blog_복지로_keyword.xlsx / _posting_history.xlsx
   Naver_blog_keyword_perplexity_gpt_manual_markdown_for_posting/  포스팅 프로그램이 읽는 공용 폴더
+  ui_theme.py                              화면 디자인(왼쪽 메뉴·카드·버튼 색, 정책뉴스와 공용) — 없거나 오류면 예전 모습으로 실행
   준비: pip install requests openpyxl selenium (코드 카드는 playwright)
 
 [탭과 흐름]
@@ -68,7 +69,8 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.10, 2026-10-15)
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - API 일일 한도 초과 → QuotaExceededError로 멈춘다(재시도 안 함). 일일 사용량은 quota_state.json.
 
-[버전] Ver10.10 — 화면 정리(키워드 리서치 STEP 2 한 줄, 정책뉴스와 같은 이름, 실패할 때만 다시 하는 줄).
+[버전] Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색(📋 파랑·💾 초록·✅·⏭).
+       기능·버튼 글자·배치는 그대로.
        이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
 
@@ -4797,7 +4799,7 @@ class WelfareCollectorGUI(tk.Tk):
         # 메인 창으로 바뀌는 현상(초기 렌더링 중간 상태 노출)이 사라진다.
         self.withdraw()
 
-        self.title("복지로 정책 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-15_Ver 10.10")
+        self.title("복지로 정책 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-15_Ver 10.11")
 
         self.log_queue = queue.Queue()
         self.stop_event = threading.Event()
@@ -4836,8 +4838,29 @@ class WelfareCollectorGUI(tk.Tk):
         # PanedWindow 분할 비율(로그 영역 확대)도 창이 실제로 그려진 뒤에만
         # 정확히 계산되므로 deiconify 이후로 예약한다.
         self._center_window(1440, 980)
+        self._apply_ui_theme()
         self.deiconify()
         self.after(50, self._apply_initial_sash_position)
+
+    def _apply_ui_theme(self):
+        """화면 디자인(ui_theme.py, 정책뉴스와 공용) — 겉모습만 바꾼다. 파일이 없거나 오류가 나면 지금 모습 그대로."""
+        def key_chip():
+            return ("설정됨", "green") if self.key_var.get().strip() else ("필요", "red")
+
+        def openai_chip():
+            return ("설정됨", "green") if self.settings_openai_key_var.get().strip() else ("안 씀", "gray")
+
+        def prompt_chip():
+            missing = self._missing_prompt_files_at_startup
+            return (f"{len(missing)}개 없음", "red") if missing else ("정상", "green")
+        try:
+            import ui_theme
+            ui_theme.apply(self, self.notebook, "복지로 관리", "복지 서비스 → 블로그 원고",
+                           accent="#0F766E", accent2="#C9A227",
+                           chips=[("공공데이터 키", key_chip), ("프롬프트 파일", prompt_chip),
+                                  ("OpenAI 키(문단 정리)", openai_chip)])
+        except Exception as e:
+            print(f"[디자인] 적용 안 함(지금 모습으로 실행): {e}")
 
     def _apply_initial_sash_position(self):
         """분할창(main_paned)의 경계선 초기 위치를 위쪽 65% 지점으로 잡는다.
