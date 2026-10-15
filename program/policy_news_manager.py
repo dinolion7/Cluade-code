@@ -52,6 +52,8 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
   - 코드 카드 JSON 오류 → Claude가 낸 JSON 자체가 틀린 경우가 있다(예: compare의 "right": 이름표 빠짐). ④가 오류 자리
     앞뒤 글자와 함께 고쳐 달라는 문구를 클립보드에 넣고, Claude가 고친 답을 복사한 뒤 ④를 다시 누르면 ② 칸의 옛 답 대신
     클립보드의 고친 답을 읽는다. 안 보이는 공백·굽은 따옴표·끝 쉼표는 card_json_loads()가 고쳐 읽는다.
+  - ④를 눌렀는데 ② 칸이 비었음(프로그램을 다시 켠 뒤 등) → 클립보드에 읽을 수 있는 설계도가 있으면 그걸 쓴다.
+    없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - 작은따옴표 속마음 후킹 → 제목 점검은 앞 25자 안에서 끝나는지 보고, 앞구 검색은 후킹을 빼고 한다.
 
 [버전] Ver10.10 — 탭 번호 1)~7) 통일. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
@@ -8400,14 +8402,34 @@ class App(tk.Tk):
             with open(os.path.join(work, CARD_ANSWER_FILENAME), "w", encoding="utf-8") as f:
                 f.write(answer)
         else:
-            ans_path = card_find_answer_file(work)
-            if not ans_path:
-                messagebox.showwarning("답변 없음", "② 칸에 Claude 답변의 JSON 블럭을 붙여넣어 주세요.\n"
-                                       "(또는 글 폴더의 _카드작업 폴더에 답변 파일 .txt/.md/.json을 넣어 두세요)")
-                return
-            with open(ans_path, "r", encoding="utf-8") as f:
-                answer = f.read()
-            source = os.path.basename(ans_path)
+            # [2026-10-15] ② 칸이 비었을 때(프로그램을 다시 켠 뒤 등) 예전에는 _카드작업의 지난 답변 파일을
+            # 말없이 읽어 새 답이 반영되지 않았다. 이제 ① 클립보드에 읽을 수 있는 설계도가 있으면 그걸 쓰고,
+            # ② 없을 때만 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다.
+            try:
+                clip = self.clipboard_get()
+            except tk.TclError:
+                clip = ""
+            if clip.strip() and not card_parse_answer(clip)[2]:
+                answer, source = clip.strip(), "클립보드의 답변"
+                self.card_answer_text.insert("1.0", answer)
+                with open(os.path.join(work, CARD_ANSWER_FILENAME), "w", encoding="utf-8") as f:
+                    f.write(answer)
+            else:
+                ans_path = card_find_answer_file(work)
+                if not ans_path:
+                    messagebox.showwarning("답변 없음", "② 칸에 Claude 답변의 JSON 블럭을 붙여넣어 주세요.\n"
+                                           "(Claude 답을 복사한 뒤 '② 클립보드 내용 붙여넣기')")
+                    return
+                when = time.strftime("%Y-%m-%d %H:%M", time.localtime(os.path.getmtime(ans_path)))
+                if not messagebox.askyesno("지난 답변을 쓸까요?",
+                        f"② 칸이 비어 있습니다. 이 글의 지난 답변 파일이 있습니다:\n"
+                        f"{os.path.basename(ans_path)} ({when} 저장)\n\n"
+                        "이 지난 답변으로 카드를 만들까요?\n"
+                        "새 답이면 '아니요'를 누르고, Claude 답을 복사해 '② 클립보드 내용 붙여넣기' 후 ④를 누르세요."):
+                    return
+                with open(ans_path, "r", encoding="utf-8") as f:
+                    answer = f.read()
+                source = f"지난 답변 파일 {os.path.basename(ans_path)} ({when})"
         scene, spec, err = card_parse_answer(answer)
         if err:
             # [2026-10-15] Claude에게 고친 답을 받아 복사만 하고 ④를 누르면 ② 칸의 옛 답을 계속 읽었다
