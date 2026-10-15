@@ -1959,6 +1959,8 @@ v7.21 (2026-09-22): 🐛 parse_value_judgment_title_candidates() 헤더
                      최종각색 "초안 + 프롬프트 복사" 하나, 5)탭 "최종원고 + 프롬프트 복사" 하나.
                      (5) 통합 V13의 재조사 요청 키워드(라벨 아래 작은 코드블럭)를 읽는다 — 예전 같은 줄 형식도 읽음.
                      (6) 옛 표현(④·현재창·실측 결과·키워드 검색) 정리.
+                     (7) 같은 날(사용자: 키워드 조사를 어디서 하냐) 키워드 리서치 줄을 STEP 2 한 곳에 늘 보이게 —
+                     STEP 1 리서치 줄·AI 요청 칸을 합침(옛 ai_kw_var는 같은 칸). 복사에는 STEP 1 키워드 + 칸 키워드.
                      (13) 접힌 "수동 보조" 칸 삭제 — 자동 준비가 실패해도 어디로 가야 할지 안 보였다(사용자).
                      키워드 리서치 칸·경쟁 블로그 줄(블로그탭 열기·주소 스크랩·칸)을 STEP 1 안으로, "키워드
                      실측 결과(현재창)"은 STEP 2로. 자동 준비 결과 줄에 원인(검색 0건·쓸 글 없음·스크랩
@@ -7243,27 +7245,6 @@ class WelfareCollectorGUI(tk.Tk):
                   font=("맑은 고딕", 9, "bold"), wraplength=1100, justify="left").grid(
             row=3, column=0, sticky="w", padx=6, pady=(0, 4))
 
-        # 키워드 리서치 다시 하기 — 리서치가 실패했을 때만 보인다(정책뉴스 STEP 1.5와 같은 이름)
-        self.prep_research_f = research_f = ttk.Frame(quick_f)
-        research_f.grid(row=4, column=0, sticky="ew", padx=6, pady=(2, 0))
-        research_f.columnconfigure(1, weight=1)
-        ttk.Label(research_f, text="검색 키워드:").grid(row=0, column=0, sticky="w")
-        # [v6.9] 콤마(,)로 구분하면 여러 키워드를 한 번에 리서치한다.
-        self.research_keyword_var = tk.StringVar(value="")
-        ttk.Entry(research_f, textvariable=self.research_keyword_var).grid(
-            row=0, column=1, sticky="ew", padx=(5, 4))
-        ttk.Button(research_f, text="✖ 입력 지우기",
-                   command=self._clear_research_keyword).grid(row=0, column=2, padx=(0, 8))
-        ttk.Button(research_f, text="🔍 키워드 리서치 실행",
-                   command=lambda: self._run_keyword_research("prep")).grid(row=0, column=3)
-        # [v7.0, 정책뉴스 Ver8.22에서 이식] 캐시와 별도로 바로 조회해 팝업.
-        ttk.Button(research_f, text="🔍 검색량·자동완성 조회",
-                   command=lambda: self._show_research_summary_popup("prep")).grid(row=0, column=4, padx=(8, 0))
-        self.research_status_var = tk.StringVar(value="")
-        ttk.Label(research_f, textvariable=self.research_status_var,
-                  foreground="#1565C0", wraplength=1000, justify="left").grid(
-            row=1, column=1, columnspan=4, sticky="w", pady=(2, 0))
-        research_f.grid_remove()
 
         # 경쟁 블로그 — 한 줄 요약 + 보기. 0개(실패)면 직접 고르는 줄이 저절로 펼쳐진다.
         blog_f = ttk.Frame(quick_f)
@@ -7317,26 +7298,32 @@ class WelfareCollectorGUI(tk.Tk):
                    command=self._open_selected_attachments_folder).pack(side="left", padx=(0, 4), pady=(6, 2))
         _next_hint(main_row, "→ 빠른 판단을 한 대화창에 붙여넣고, 팝업이 말한 공식자료를 올리기")
 
-        # 줄 2 — AI가 키워드 리서치를 요청했을 때만 나타난다(정책뉴스 STEP 1.5와 같은 이름). 가치판단 저장이
-        # 요청을 알아보면 이 칸을 채우고 리서치해 "AI에게 결과 전달" 내용을 클립보드에 넣는다.
-        self.ai_kw_f = ai_kw_f = ttk.LabelFrame(main_f, text="AI가 키워드 리서치를 요청함", padding=4)
-        ai_kw_f.grid(row=1, column=0, sticky="ew", padx=6, pady=(4, 2))
-        ai_kw_f.columnconfigure(1, weight=1)
-        ttk.Label(ai_kw_f, text="검색 키워드:").grid(row=0, column=0, sticky="w")
-        self.ai_kw_var = tk.StringVar(value="")
-        ttk.Entry(ai_kw_f, textvariable=self.ai_kw_var).grid(row=0, column=1, sticky="ew", padx=(5, 4))
-        ttk.Button(ai_kw_f, text="✖ 입력 지우기",
-                   command=lambda: (self.ai_kw_var.set(""), self.ai_kw_status_var.set(""))).grid(row=0, column=2, padx=(0, 8))
-        ttk.Button(ai_kw_f, text="🔍 키워드 리서치 실행",
-                   command=lambda: self._run_keyword_research("ai")).grid(row=0, column=3)
-        ttk.Button(ai_kw_f, text="🔍 검색량·자동완성 조회",
-                   command=lambda: self._show_research_summary_popup("ai")).grid(row=0, column=4, padx=(8, 0))
-        ttk.Button(ai_kw_f, text="📋 AI에게 결과 전달",
-                   command=lambda: self._copy_research_reply_for_posting("ai")).grid(row=0, column=5, padx=(8, 0))
-        self.ai_kw_status_var = tk.StringVar(value="")
-        ttk.Label(ai_kw_f, textvariable=self.ai_kw_status_var, foreground="#1565C0",
+        # 줄 2 — 키워드 리서치(정책뉴스 STEP 1.5와 같은 줄, 늘 보임). [Ver10.10] 리서치하는 곳은 여기 한 곳:
+        # STEP 1 판정결과 저장 때 이 칸의 키워드로 자동 리서치, Claude가 다시 요청하면 가치판단 저장이 그 키워드로
+        # 바꿔 리서치하고 "AI에게 결과 전달" 내용을 클립보드에 넣는다. 직접 고쳐 실행해도 된다.
+        kw_f = ttk.LabelFrame(main_f, text="키워드 리서치 — STEP 1 저장 때 자동 실행 · Claude가 다시 요청하면 그 키워드로 자동 실행 · 직접 고쳐 실행해도 됨", padding=4)
+        kw_f.grid(row=1, column=0, sticky="ew", padx=6, pady=(4, 2))
+        kw_f.columnconfigure(1, weight=1)
+        ttk.Label(kw_f, text="검색 키워드:").grid(row=0, column=0, sticky="w")
+        # [v6.9] 콤마(,)로 구분하면 여러 키워드를 한 번에 리서치한다.
+        self.research_keyword_var = tk.StringVar(value="")
+        ttk.Entry(kw_f, textvariable=self.research_keyword_var).grid(row=0, column=1, sticky="ew", padx=(5, 4))
+        ttk.Button(kw_f, text="✖ 입력 지우기",
+                   command=self._clear_research_keyword).grid(row=0, column=2, padx=(0, 8))
+        ttk.Button(kw_f, text="🔍 키워드 리서치 실행",
+                   command=lambda: self._run_keyword_research("prep")).grid(row=0, column=3)
+        # [v7.0, 정책뉴스 Ver8.22에서 이식] 캐시와 별도로 바로 조회해 팝업.
+        ttk.Button(kw_f, text="🔍 검색량·자동완성 조회",
+                   command=lambda: self._show_research_summary_popup("prep")).grid(row=0, column=4, padx=(8, 0))
+        ttk.Button(kw_f, text="📋 AI에게 결과 전달",
+                   command=lambda: self._copy_research_reply_for_posting("prep")).grid(row=0, column=5, padx=(8, 0))
+        self.research_status_var = tk.StringVar(value="")
+        ttk.Label(kw_f, textvariable=self.research_status_var, foreground="#1565C0",
                   wraplength=1000, justify="left").grid(row=1, column=1, columnspan=5, sticky="w", pady=(2, 0))
-        ai_kw_f.grid_remove()
+        # 예전 "AI 요청 키워드" 칸은 이 칸으로 합쳤다 — 옛 이름으로 부르는 코드도 같은 칸을 쓴다.
+        self.ai_kw_var = self.research_keyword_var
+        self.ai_kw_status_var = self.research_status_var
+        self._auto_keywords = ""   # STEP 1 자동 리서치 키워드(본 분석·초안 복사에 함께 넣음)
 
         # 줄 3 — 결과 저장
         main_save_row = ttk.Frame(main_f)
@@ -9039,6 +9026,7 @@ class WelfareCollectorGUI(tk.Tk):
             qj = parse_quick_judgment(quick) if quick else {}
             kw = qj.get("keywords") or row["servNm"]
             self.research_keyword_var.set(kw)
+            self._auto_keywords = kw
             cached = get_cached_research((split_keyword_line(kw) or [""])[0])
             if cached:
                 self.research_status_var.set(f"✓ 리서치 완료 ({cached['researched_at']})")
@@ -9047,15 +9035,8 @@ class WelfareCollectorGUI(tk.Tk):
             self._show_quick_judgment_status(qj)
         if hasattr(self, "auto_prep_status_var"):
             self.auto_prep_status_var.set("")
-        if hasattr(self, "ai_kw_var"):
-            self.ai_kw_var.set("")
-            self.ai_kw_status_var.set("")
         self._load_competitor_blogs_for_row(row)   # [Ver10.08] 경쟁 블로그 칸(서비스별)
-        # [Ver10.10] 다시 하는 줄은 숨기고 시작 — 판정은 진행인데 리서치가 없을 때만 리서치 줄을 보인다.
-        self._show_ai_kw_row(False)
-        self._show_blog_panel(False)
-        if hasattr(self, "research_keyword_var"):
-            self._show_prep_research_fix(qj.get("verdict") == "진행" and not cached)
+        self._show_blog_panel(False)   # [Ver10.10] 경쟁 블로그 칸은 접고 시작
 
     def _pass_selected_posting(self):
         """[Ver10.09] 목록 아래 "⏭ 이 글 패스" — 검토하다 그만둘 글(여러 개 선택 가능)을 패스로 둔다.
@@ -9236,9 +9217,9 @@ class WelfareCollectorGUI(tk.Tk):
 
     def _all_research_keywords(self, row) -> list:
         """본 분석·초안·최종각색 복사에 넣을 리서치 키워드 — 자동준비 키워드 + AI 요청 키워드(중복 제외)."""
-        kws = split_keyword_line(self.research_keyword_var.get())
-        if hasattr(self, "ai_kw_var"):
-            kws += [k for k in split_keyword_line(self.ai_kw_var.get()) if k not in kws]
+        # [Ver10.10] 칸이 하나로 합쳐졌으므로 STEP 1 자동 리서치 키워드 + 지금 칸의 키워드(Claude 재요청 등)
+        kws = split_keyword_line(getattr(self, "_auto_keywords", ""))
+        kws += [k for k in split_keyword_line(self.research_keyword_var.get()) if k not in kws]
         return kws or [row["servNm"]]
 
     def _run_keyword_research(self, which: str = "prep"):
@@ -9837,7 +9818,6 @@ class WelfareCollectorGUI(tk.Tk):
         if not self._check_research_api_keys():
             return
         self._research_then_reply = True
-        self._show_ai_kw_row(True)
         self.ai_kw_status_var.set(f"⏳ AI가 요청한 키워드 리서치 중: {keywords} — 끝나면 결과를 클립보드에 넣습니다")
         self._run_keyword_research("ai")
 
@@ -9849,10 +9829,10 @@ class WelfareCollectorGUI(tk.Tk):
             return
         if hasattr(self, "research_keyword_var"):
             self.research_keyword_var.set(", ".join(keywords))   # [Ver10.10] 빈 칸으로 남던 것 고침
+            self._auto_keywords = ", ".join(keywords)
         if not self._check_research_api_keys():
             self.auto_prep_status_var.set("⚠ API 설정이 없어 키워드 리서치를 못 했습니다 — 설정 탭에서 API 키를 넣고 "
                                           "'💾 판정결과 저장(메모리값 자동저장)'을 다시 누르세요")
-            self._show_prep_research_fix(True)
             return
         want_blog = not (qj.get("blog") or "").strip().startswith("불필요")
         cfg = load_config()
@@ -9864,7 +9844,6 @@ class WelfareCollectorGUI(tk.Tk):
             want_blog = False
         exclude = [x.strip().lower() for x in str(cfg.get("my_blog_ids", "")).split(",") if x.strip()]
         self._auto_prep_running = True
-        self._show_prep_research_fix(False)
         self.auto_prep_status_var.set(f"⏳ 자동 수집 중 — 키워드 리서치 {len(keywords)}개"
                                       + (f" → 경쟁 블로그 {n_blog}개 스크랩" if want_blog and n_blog else "")
                                       + " (1~3분)")
@@ -9947,7 +9926,7 @@ class WelfareCollectorGUI(tk.Tk):
         if done:
             lines.append(f"✅ 키워드 리서치 {len(done)}/{len(p['keywords'])}개 완료")
         else:
-            lines.append("❌ 키워드 리서치 실패 → 아래 줄의 '🔍 키워드 리서치 실행'을 누르세요(설정 탭의 API 키 확인)")
+            lines.append("❌ 키워드 리서치 실패 → STEP 2 키워드 리서치 줄의 '🔍 키워드 리서치 실행'을 누르세요(설정 탭의 API 키 확인)")
         if not p["want_blog"]:
             lines.append("경쟁 블로그 건너뜀(" + ("selenium 없음" if not HAS_SELENIUM else "빠른판정: 불필요") + ")")
         elif files:
@@ -9969,7 +9948,6 @@ class WelfareCollectorGUI(tk.Tk):
             nxt += " — 공식자료를 대화창에 올려야 합니다(STEP 2 복사 때 폴더를 엽니다)"
         msg = "자동 수집: " + " · ".join(lines) + "\n" + nxt
         self.auto_prep_status_var.set(msg)
-        self._show_prep_research_fix(not done)
         self._log(f"✅ 자료 자동 준비 끝: {row['servNm']}" + (f" (오류 {len(p['errors'])}건: {p['errors'][0][:80]})" if p["errors"] else ""))
 
     def _autofill_research_request_keywords(self, content):
@@ -9979,7 +9957,6 @@ class WelfareCollectorGUI(tk.Tk):
         if not keywords:
             return
         self.ai_kw_var.set(keywords)
-        self._show_ai_kw_row(True)
         self.ai_kw_status_var.set(f"📋 재조사 요청 키워드 채움: {keywords} — '🔍 키워드 리서치 실행' 후 "
                                      f"'📋 AI에게 결과 전달'로 돌려주세요")
         self._log(f"📋 가치판단 재조사 요청 키워드 자동 채우기: {keywords}")
@@ -10017,16 +9994,6 @@ class WelfareCollectorGUI(tk.Tk):
         else:
             self.blog_panel_f.grid_remove()
         self.blog_view_btn.config(text="닫기" if show else "보기")
-
-    def _show_prep_research_fix(self, show: bool):
-        """STEP 1 키워드 리서치 줄 — 자동 리서치가 실패했을 때만 보인다."""
-        if hasattr(self, "prep_research_f"):
-            self.prep_research_f.grid() if show else self.prep_research_f.grid_remove()
-
-    def _show_ai_kw_row(self, show: bool):
-        """STEP 2 "AI가 키워드 리서치를 요청함" 줄 — 요청이 왔을 때만 보인다."""
-        if hasattr(self, "ai_kw_f"):
-            self.ai_kw_f.grid() if show else self.ai_kw_f.grid_remove()
 
     def _load_competitor_blogs_for_row(self, row):
         """서비스를 바꾸면 이전 서비스 칸을 저장하고 새 서비스 것을 채운다."""
