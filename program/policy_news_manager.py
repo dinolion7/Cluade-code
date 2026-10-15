@@ -49,8 +49,9 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
     hard_match 필드는 팝업 호환용으로 늘 False.
   - A 결과를 붙여넣었는데 판정이 보류 → 채우지 않고 경고. 코드블럭이 없어도 전체 텍스트에서 읽는다.
   - 제목의 "1,200만 원" 같은 천 단위 쉼표는 구분 쉼표로 세지 않는다(_TITLE_COMMA_RE).
-  - 코드 카드 JSON이 "Expecting property name" 등으로 안 읽힘 → claude.ai에서 복사할 때 섞이는 안 보이는 공백(NBSP·
-    폭 없는 공백)·굽은 따옴표·끝 쉼표를 card_json_loads()가 고쳐 읽는다. 그래도 안 되면 오류 위치 앞뒤 글자를 보여 준다.
+  - 코드 카드 JSON 오류 → Claude가 낸 JSON 자체가 틀린 경우가 있다(예: compare의 "right": 이름표 빠짐). ④가 오류 자리
+    앞뒤 글자와 함께 고쳐 달라는 문구를 클립보드에 넣고, Claude가 고친 답을 복사한 뒤 ④를 다시 누르면 ② 칸의 옛 답 대신
+    클립보드의 고친 답을 읽는다. 안 보이는 공백·굽은 따옴표·끝 쉼표는 card_json_loads()가 고쳐 읽는다.
   - 작은따옴표 속마음 후킹 → 제목 점검은 앞 25자 안에서 끝나는지 보고, 앞구 검색은 후킹을 빼고 한다.
 
 [버전] Ver10.10 — 탭 번호 1)~7) 통일. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
@@ -8409,11 +8410,27 @@ class App(tk.Tk):
             source = os.path.basename(ans_path)
         scene, spec, err = card_parse_answer(answer)
         if err:
+            # [2026-10-15] Claude에게 고친 답을 받아 복사만 하고 ④를 누르면 ② 칸의 옛 답을 계속 읽었다
+            # (같은 오류 반복). 칸의 답이 틀렸고 클립보드에 읽을 수 있는 설계도가 있으면 그걸 쓴다.
+            try:
+                clip = self.clipboard_get()
+            except tk.TclError:
+                clip = ""
+            c_scene, c_spec, c_err = card_parse_answer(clip) if clip.strip() else ("", None, "빈 클립보드")
+            if not c_err:
+                self.card_answer_text.delete("1.0", "end")
+                self.card_answer_text.insert("1.0", clip)
+                with open(os.path.join(work, CARD_ANSWER_FILENAME), "w", encoding="utf-8") as f:
+                    f.write(clip.strip())
+                scene, spec, err, source = c_scene or scene, c_spec, "", "클립보드의 고친 답변"
+        if err:
             req = ("JSON 설계도를 코드블럭 하나로 다시 출력해줘" if "코드블럭이 없" in err
                    else f"JSON 문법만 고쳐서 코드블럭 하나로 다시 출력해줘 (오류: {err})")
             self.clipboard_clear()
             self.clipboard_append(req)
-            messagebox.showwarning("설계도 오류", f"{source}: {err}\n\n다시 요청할 문구를 클립보드에 복사했습니다:\n{req}")
+            messagebox.showwarning("설계도 오류", f"{source}: {err}\n\n다시 요청할 문구를 클립보드에 복사했습니다:\n{req}\n\n"
+                                   "→ Claude 대화창에 붙여넣기 → 고친 답을 복사한 뒤 '④ 카드 만들기'를 다시 누르면 "
+                                   "클립보드의 고친 답을 읽습니다.")
             return
         spec.setdefault("series", "policy")
 
