@@ -23,9 +23,9 @@ from tkinter import ttk
 FONT = "맑은 고딕"
 PAGE = "#E9EDF3"      # 바탕(카드와 구분되게 조금 진하게)
 CARD = "#FFFFFF"      # 카드
-LINE = "#C3CCD8"      # 테두리
+LINE = "#8D9AAE"      # 테두리(칸·입력칸·카드 — 선이 또렷하게 보이게)
 TEXT = "#111827"     # 본문 글자(거의 검정 — 흐리면 안 보임)
-SUB = "#46505C"      # 보조 글자(안내·설명)
+SUB = "#1E4E8C"      # 안내·설명 글자(회색 대신 진한 파랑 — 흐린 글자 없음)
 SIDE = "#1E2A44"      # 왼쪽 메뉴
 SIDE_SEL = "#2F6FB0"
 SIDE_TEXT = "#DCE3EE"
@@ -33,6 +33,9 @@ SIDE_DIM = "#8EA0BC"
 ROLE_COLORS = {"Copy": "#2F6FB0", "Save": "#1F8A5B", "Pass": "#8A94A3"}  # Ok는 대표색
 DOT = {"red": "#D64545", "orange": "#E08A1E", "green": "#1F9D55", "gray": "#9AA5B4"}
 SIDEBAR_W = 190
+BTN_BG = "#DCE7F7"    # 색이 없던 일반 버튼: 연한 파랑 바탕 + 진한 남색 글자 + 테두리
+BTN_FG = "#12306B"
+BTN_LINE = "#5B7BB5"
 # 밝은 바탕에서 흐리게 보이는 안내 글자색 → SUB로 바꾼다(글자만, 색 이름 그대로 비교)
 LIGHT_GRAYS = {"gray", "grey", "darkgray", "darkgrey", "#777777", "#777", "#808080", "#888888", "#888",
                "#999999", "#999", "#8a8a8a", "#7f7f7f", "#a0a0a0", "#aaaaaa", "#666666", "#666", "#6b7684"}
@@ -101,26 +104,28 @@ class _Theme:
                     lightcolor=PAGE, darkcolor=PAGE, troughcolor="#E6EAF0")
         s.configure("TFrame", background=PAGE)
         s.configure("TLabel", background=PAGE, foreground=TEXT)
-        s.configure("TLabelframe", background=CARD, bordercolor=LINE, relief="solid", borderwidth=1)
+        s.configure("TLabelframe", background=CARD, bordercolor=LINE, relief="solid", borderwidth=1,
+                    lightcolor=LINE, darkcolor=LINE)
         s.configure("TLabelframe.Label", background=PAGE, foreground=self.accent, font=(FONT, 11, "bold"))
-        s.configure("TButton", background=CARD, foreground=TEXT, bordercolor=LINE, lightcolor=CARD,
-                    darkcolor=CARD, padding=(6, 3), relief="flat")
-        s.map("TButton", background=[("disabled", "#F1F3F6"), ("active", "#EAF0F7")],
-              foreground=[("disabled", "#7C8794")])
+        s.configure("TButton", background=BTN_BG, foreground=BTN_FG, bordercolor=BTN_LINE, lightcolor=BTN_BG,
+                    darkcolor=BTN_BG, padding=(6, 3), relief="solid", borderwidth=1, font=(FONT, 10, "bold"))
+        s.map("TButton", background=[("disabled", "#E4E7EC"), ("pressed", "#B9CDEE"), ("active", "#C8DAF4")],
+              foreground=[("disabled", "#5B6573")], bordercolor=[("disabled", "#A3ACB9")])
         s.configure("TCheckbutton", background=PAGE)
         s.configure("TRadiobutton", background=PAGE)
         s.map("TCheckbutton", background=[("active", PAGE)])
         s.map("TRadiobutton", background=[("active", PAGE)])
         s.configure("TEntry", fieldbackground="#FFFFFF", bordercolor=LINE, lightcolor="#FFFFFF", padding=3)
+        s.map("TEntry", bordercolor=[("focus", self.accent)], lightcolor=[("focus", self.accent)])
         s.configure("TCombobox", fieldbackground="#FFFFFF", bordercolor=LINE, lightcolor="#FFFFFF",
                     arrowsize=13, padding=2)
-        s.map("TCombobox", fieldbackground=[("readonly", "#FFFFFF")],
+        s.map("TCombobox", fieldbackground=[("readonly", "#FFFFFF")], bordercolor=[("focus", self.accent)],
               selectbackground=[("readonly", "#FFFFFF")], selectforeground=[("readonly", TEXT)])
         s.configure("TSpinbox", fieldbackground="#FFFFFF", bordercolor=LINE)
         s.configure("Treeview", background="#FFFFFF", fieldbackground="#FFFFFF", foreground=TEXT,
                     rowheight=26, bordercolor=LINE, font=base)
-        s.configure("Treeview.Heading", background="#DFE5EE", foreground=TEXT, font=(FONT, 10, "bold"),
-                    relief="flat", bordercolor=LINE)
+        s.configure("Treeview.Heading", background="#D5DEEB", foreground="#12306B", font=(FONT, 10, "bold"),
+                    relief="solid", bordercolor=LINE)
         s.map("Treeview.Heading", background=[("active", "#E3E9F1")])
         s.map("Treeview", background=[("selected", "#D6E6F8")], foreground=[("selected", TEXT)])
         s.configure("TProgressbar", background=self.accent, troughcolor="#E6EAF0", bordercolor=LINE)
@@ -216,6 +221,13 @@ class _Theme:
                 w.configure(background=bg)
                 if cls in ("Checkbutton", "Radiobutton"):
                     w.configure(activebackground=bg, highlightbackground=bg)
+        elif cls == "Button":
+            # 색을 따로 정하지 않은 옛 tk 버튼도 ttk 버튼과 같은 모양(색 있는 버튼은 그대로)
+            if str(w.cget("background")) == self.tk_default_bg:
+                w.configure(background=BTN_BG, foreground=BTN_FG, activebackground="#C8DAF4",
+                            relief="solid", borderwidth=1, highlightthickness=0)
+        elif cls == "Entry":
+            w.configure(relief="solid", borderwidth=1, highlightthickness=0)
         elif cls == "Text":
             w.configure(relief="flat", borderwidth=0, highlightthickness=1,
                         highlightbackground=LINE, highlightcolor=self.accent)
