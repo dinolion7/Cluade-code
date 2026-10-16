@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-ui_theme.py — 복지로·정책뉴스 관리 프로그램 공용 화면 디자인 (2026-10-15)
+Naver_blog_ui_theme.py — 복지로·정책뉴스 관리 프로그램 공용 화면 디자인 (2026-10-15)
 
 [하는 일] 프로그램이 화면을 다 만든 뒤 apply()를 한 번 부르면 겉모습만 바꾼다.
   - 위쪽 탭 줄을 숨기고 왼쪽 메뉴로 보여 준다(탭은 그대로 있어 기존 탭 이동 코드가 그대로 동작).
@@ -63,7 +63,8 @@ def _safe(fn):
 
 
 class _Theme:
-    def __init__(self, root, notebook, title, subtitle, accent, accent2, chips):
+    def __init__(self, root, notebook, title, subtitle, accent, accent2, chips, menu_extra=None):
+        self.menu_extra = list(menu_extra or [])
         self.root = root
         self.nb = notebook
         self.title = title
@@ -306,6 +307,18 @@ class _Theme:
             b.bind("<Enter>", lambda e, b=b: self._hover(b, True))
             b.bind("<Leave>", lambda e, b=b: self._hover(b, False))
             self.menu.append((tab, b))
+        # 탭이 아닌 창을 여는 메뉴(🔗 블로그 글 관리 등) — 탭 목록 아래 "관리" 칸. 누르면 창만 열고 탭은 그대로.
+        if self.menu_extra:
+            tk.Frame(side, bg=SIDE_DIM, height=1).pack(fill="x", padx=16, pady=(14, 0))
+            tk.Label(side, text="관리", font=(FONT, 9), bg=SIDE, fg=SIDE_DIM).pack(
+                anchor="w", padx=18, pady=(8, 6))
+            for label, fn in self.menu_extra:
+                b = tk.Label(side, text=label, anchor="w", font=(FONT, 10), bg=SIDE, fg=SIDE_TEXT,
+                             padx=12, pady=8, cursor="hand2")
+                b.pack(fill="x", padx=8, pady=1)
+                b.bind("<Button-1>", lambda e, f=fn: f())
+                b.bind("<Enter>", lambda e, b=b: b.configure(bg="#2A3A5C"))
+                b.bind("<Leave>", lambda e, b=b: b.configure(bg=SIDE))
         ver = re.search(r"Ver\s*([0-9.]+)", str(root.title()))
         foot = f"{self.title} Ver{ver.group(1)}" if ver else self.title
         tk.Label(side, text=foot, font=(FONT, 8), bg=SIDE, fg=SIDE_DIM).pack(
@@ -356,12 +369,13 @@ class _Theme:
 
 
 def apply(root, notebook, title, subtitle="", accent="#1F3A5F", accent2="#2E9E5B", chips=None, frame=True,
-          widen=True):
+          widen=True, menu_extra=None):
     """화면을 다 만든 뒤 한 번 부른다. chips = [(이름, 함수)] — 함수는 (보일 글, 색 이름) 반환.
     색 이름: red(필요) / orange(확인 전) / green(정상) / gray(안 씀). 실패해도 예외를 내지 않는다.
-    frame=False면 색·카드만 입히고 머리줄·왼쪽 메뉴는 부르는 쪽이 만든다(포스팅 프로그램 poster_layout.py).
+    frame=False면 색·카드만 입히고 머리줄·왼쪽 메뉴는 부르는 쪽이 만든다(포스팅 프로그램 Naver_blog_poster_layout.py).
+    menu_extra = [(이름, 함수)] — 탭 목록 아래 "관리" 칸에 창을 여는 메뉴를 붙인다.
     widen=False면 창 넓히기를 부르는 쪽이 창이 뜨기 전에 한다(뜬 뒤 넓히면 한 번 깜빡인다 — SIDEBAR_W만큼 넓힐 것)."""
-    th = _Theme(root, notebook, title, subtitle, accent, accent2, chips)
+    th = _Theme(root, notebook, title, subtitle, accent, accent2, chips, menu_extra)
     if not _safe(th.setup_styles):
         return None
     if frame:

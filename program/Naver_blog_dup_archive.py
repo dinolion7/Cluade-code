@@ -1,8 +1,8 @@
-"""dup_archive.py — 과거에 올린 글(보관소 MD)과 새 글을 본문 전체로 비교한다. 정책뉴스·복지로 공용.
+"""Naver_blog_dup_archive.py — 과거에 올린 글(보관소 MD)과 새 글을 본문 전체로 비교한다. 정책뉴스·복지로 공용.
 
 [파일·폴더]
   보관소: 정책뉴스 작업폴더/final_posts_backup/{제목}/{MD}, 복지로 작업폴더/final_posts_backup/{제목}/{제목}.md
-  색인: 각 보관소 폴더 안 _dup_index.json(글마다 파일 수정시각·제목·단어·글자묶음·소제목). 바뀐 글만 다시 계산.
+  색인: 각 보관소 폴더 안 Naver_blog_dup_index.json(글마다 파일 수정시각·제목·단어·글자묶음·소제목). 바뀐 글만 다시 계산.
 
 [반드시 지킬 규칙]
   - API를 쓰지 않는다(PC 안에서만 계산). 판정("중복이다")은 하지 않고, 겹친 과거 글과 겹친 내용을 보여 준다
@@ -11,14 +11,14 @@
     문장 겹침(4글자 묶음). 소제목 단위로 어디가 겹쳤는지도 돌려준다.
   - 보관소가 없거나 읽기 실패해도 예외를 내지 않는다(빈 결과).
 
-[버전] V1 (2026-10-16) — 비교·색인·팝업(check_and_ask)·기존 글 업데이트(공통_업데이트작성.md, 결과는 보관 폴더에 업데이트_날짜_*.txt)
+[버전] V1 (2026-10-16) — 비교·색인·팝업(check_and_ask)·기존 글 업데이트(공통_업데이트작성.md, 결과는 보관 폴더에 Naver_blog_업데이트_날짜_*.txt)
 """
 import json
 import math
 import os
 import re
 
-INDEX_NAME = "_dup_index.json"
+INDEX_NAME = "Naver_blog_dup_index.json"
 INDEX_VER = 1
 GRAM = 4
 SHORT_CHARS = 300        # 이보다 짧으면(뉴스 제목 등) "말이 얼마나 들어 있나"로 본다
@@ -94,8 +94,8 @@ def _iter_md(root: str):
     if not root or not os.path.isdir(root):
         return
     for dirpath, _dirs, files in os.walk(root):
-        # 이름이 _로 시작하는 폴더(_블로그에서삭제 등)는 보관소에서 뺀다 — blog_sync.py가 지운 글을 옮기는 곳
-        _dirs[:] = [d for d in _dirs if not d.startswith("_")]
+        # 이름이 _ 또는 Naver_blog_로 시작하는 폴더(Naver_blog_블로그에서삭제 등)는 보관소에서 뺀다 — 블로그 글 관리가 지운 글을 옮기는 곳
+        _dirs[:] = [d for d in _dirs if not d.startswith(("_", "Naver_blog_"))]
         for fn in files:
             if fn.lower().endswith(".md"):
                 yield os.path.join(dirpath, fn)
@@ -107,6 +107,10 @@ def load_archive(series: str, root: str) -> list:
     if not root or not os.path.isdir(root):
         return docs
     idx_path = os.path.join(root, INDEX_NAME)
+    try:   # 예전 이름 색인(_dup_index.json)은 지운다 — 새 이름으로 다시 만든다
+        os.remove(os.path.join(root, "_dup_index.json"))
+    except OSError:
+        pass
     try:
         with open(idx_path, "r", encoding="utf-8") as f:
             cache = json.load(f)
@@ -338,14 +342,14 @@ def open_update_window(parent, old: dict, package: str, note: str = ""):
         day = _dt.datetime.now().strftime("%Y-%m-%d")
         summary = f"[업데이트 이력]\n{ans.get('업데이트 이력', '')}\n\n[수정 목록]\n{ans['수정 목록']}\n"
         try:
-            with open(os.path.join(folder, f"업데이트_{day}_수정원고.txt"), "w", encoding="utf-8") as f:
+            with open(os.path.join(folder, f"Naver_blog_업데이트_{day}_수정원고.txt"), "w", encoding="utf-8") as f:
                 f.write(ans["수정 원고"].strip() + "\n")
-            with open(os.path.join(folder, f"업데이트_{day}_수정목록.txt"), "w", encoding="utf-8") as f:
+            with open(os.path.join(folder, f"Naver_blog_업데이트_{day}_수정목록.txt"), "w", encoding="utf-8") as f:
                 f.write(summary)
         except Exception as e:
             status.set(f"❌ 저장 실패: {e}")
             return
-        status.set(f"✅ 저장했습니다 — {folder} 안 업데이트_{day}_수정원고.txt · 수정목록.txt")
+        status.set(f"✅ 저장했습니다 — {folder} 안 Naver_blog_업데이트_{day}_수정원고.txt · 수정목록.txt")
         show = tk.Toplevel(win)
         show.title("업데이트 — 네이버에서 고칠 곳")
         ttk.Label(show, text="아래 기존 문구를 네이버 편집 화면에서 Ctrl+F로 찾아 새 문구로 바꾸세요.",

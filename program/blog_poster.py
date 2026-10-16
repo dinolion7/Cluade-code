@@ -14435,10 +14435,10 @@ class NaverBlogGUI:
         self.session_post_count = 0
         self.start_time_activated = False
 
-        # [Ver9.17] 화면 배치·디자인(poster_layout.py + ui_theme.py) — 칸을 기능별 메뉴로 다시 놓기만 한다.
+        # [Ver9.17] 화면 배치·디자인(Naver_blog_poster_layout.py + Naver_blog_ui_theme.py) — 칸을 기능별 메뉴로 다시 놓기만 한다.
         # 파일이 없거나 오류가 나면 지금 화면 그대로 실행된다. 포스팅 엔진·버튼 동작은 건드리지 않는다.
         try:
-            import poster_layout
+            import Naver_blog_poster_layout as poster_layout
             poster_layout.apply(self)
         except Exception as e:
             logger.warning(f"[디자인] 적용 안 함(지금 화면으로 실행): {e}")

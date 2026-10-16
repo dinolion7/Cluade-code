@@ -7,13 +7,13 @@
   · 한꺼번에: 블로그 관리 > 글 목록 표(글 제목·조회수·작성일)를 복사해
     "📋 블로그 글 목록 붙여넣기" → 바뀔 내용 확인 → "✅ 반영"
 [반드시 지킬 규칙]
-  · 반영 전에 바뀔 파일을 작업폴더/_블로그글관리_백업/날짜시각/ 에 복사한다.
+  · 반영 전에 바뀔 파일을 작업폴더/Naver_blog_블로그글관리_백업/날짜시각/ 에 복사한다.
   · 대상 글 = 키워드 엑셀에서 상태가 O(포스팅 완료)인 줄. 아직 안 올린 글은 건드리지 않는다.
   · 블로그 목록은 두 시리즈가 섞여 있다 — 이 프로그램 글과 같은 제목만 짝짓고 나머지는 무시.
   · 목록의 가장 오래된 날짜보다 예전에 올린 글은 "목록에 없음"으로 치지 않는다(일부만 복사한 경우 보호).
   · 제목 짝짓기: 같은 제목 → 그대로, 공백·문장부호만 다르면 블로그 글자로 바꿈, 아니면 가장 비슷한 블로그 제목
     (비슷함 75% 이상이면 "제목 바꾸기", 50~75%는 "그대로"로 두고 사람이 고름, 그 아래는 "지움").
-  · 보관 폴더에서 지운 글은 final_posts_backup/_블로그에서삭제/ 로 옮긴다(중복 확인에서 빠짐).
+  · 보관 폴더에서 지운 글은 final_posts_backup/Naver_blog_블로그에서삭제/ 로 옮긴다(중복 확인에서 빠짐).
 [파일별로 무엇을 바꾸는지는 각 프로그램의 _blog_sync_apply 에 있다.]
 """
 import datetime
@@ -22,8 +22,8 @@ import os
 import re
 import shutil
 
-DELETED_DIR = "_블로그에서삭제"
-BACKUP_DIR_NAME = "_블로그글관리_백업"
+DELETED_DIR = "Naver_blog_블로그에서삭제"
+BACKUP_DIR_NAME = "Naver_blog_블로그글관리_백업"
 RENAME_AUTO = 0.75     # 이 이상 비슷하면 "제목 바꾸기"를 기본으로
 RENAME_ASK = 0.50      # 이 이상이면 후보로 보여 주되 "그대로"를 기본으로
 
@@ -181,7 +181,7 @@ def match(posts: list, blog: list) -> tuple:
 # 파일 바꾸기 도우미
 # ------------------------------------------------------------------
 def backup_files(paths: list, work_dir: str) -> str:
-    """바뀔 파일을 work_dir/_블로그글관리_백업/YYYYmmdd_HHMMSS/ 에 복사하고 그 폴더를 돌려준다."""
+    """바뀔 파일을 work_dir/Naver_blog_블로그글관리_백업/YYYYmmdd_HHMMSS/ 에 복사하고 그 폴더를 돌려준다."""
     dest = os.path.join(work_dir, BACKUP_DIR_NAME, datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
     os.makedirs(dest, exist_ok=True)
     for p in paths:
@@ -248,7 +248,7 @@ def archive_rename(root: str, old: str, new: str, safe) -> str:
 
 
 def archive_delete(root: str, title: str, safe) -> str:
-    """보관 폴더 root/{safe(title)}/ 를 root/_블로그에서삭제/ 로 옮긴다(지우지 않음)."""
+    """보관 폴더 root/{safe(title)}/ 를 root/Naver_blog_블로그에서삭제/ 로 옮긴다(지우지 않음)."""
     src = os.path.join(root, safe(title))
     if not root or not os.path.isdir(src):
         return ""
@@ -264,6 +264,25 @@ def archive_delete(root: str, title: str, safe) -> str:
 # ------------------------------------------------------------------
 # 창
 # ------------------------------------------------------------------
+def center_window(w, width: int, height: int, over=None):
+    """창 w를 width×height로, over가 없으면 화면 가운데, 있으면 over 창 가운데에 놓는다(화면 밖으로 안 나가게).
+    경쟁 블로그 관리(Naver_blog_competitor.py)도 이 함수를 쓴다."""
+    try:
+        sw, sh = w.winfo_screenwidth(), w.winfo_screenheight()
+        width, height = min(width, sw - 20), min(height, sh - 60)
+        if over is not None and over.winfo_viewable():
+            over.update_idletasks()
+            x = over.winfo_rootx() + (over.winfo_width() - width) // 2
+            y = over.winfo_rooty() + (over.winfo_height() - height) // 2
+        else:
+            x, y = (sw - width) // 2, (sh - height) // 2 - 20
+        x = max(0, min(x, sw - width))
+        y = max(0, min(y, sh - height - 40))
+        w.geometry(f"{width}x{height}+{x}+{y}")
+    except Exception:
+        w.geometry(f"{width}x{height}")
+
+
 def open_window(parent, adapter):
     """adapter 속성:
       name                      시리즈 이름(정책뉴스/복지로)
@@ -278,8 +297,9 @@ def open_window(parent, adapter):
     from tkinter import ttk, messagebox, filedialog
 
     win = tk.Toplevel(parent)
+    win.withdraw()   # 다 만든 뒤 화면 가운데에 띄운다(만드는 중 다른 자리에 보였다 옮겨지지 않게)
     win.title(f"🔗 블로그 글 관리 — {adapter.name}")
-    win.geometry("1000x760")
+    center_window(win, 1000, 760)
     try:
         if parent.winfo_viewable():
             win.transient(parent)
@@ -382,7 +402,7 @@ def open_window(parent, adapter):
         log += [f"제목 바꾸기: {o}  →  {n}" for o, n in renames if o != n]
         log += [f"블로그에서 지운 글: {t}" for t in deletes]
         try:
-            with open(os.path.join(bdir, "변경내역.txt"), "w", encoding="utf-8") as f:
+            with open(os.path.join(bdir, "Naver_blog_변경내역.txt"), "w", encoding="utf-8") as f:
                 f.write("\n".join(log))
         except Exception:
             pass
@@ -393,7 +413,8 @@ def open_window(parent, adapter):
     def show_log(text):
         w = tk.Toplevel(win)
         w.title("반영 결과")
-        w.geometry("820x480")
+        center_window(w, 820, 480, over=win)
+        w.transient(win)
         t = tk.Text(w, wrap="word")
         t.pack(fill="both", expand=True, padx=8, pady=8)
         t.insert("1.0", text)
@@ -406,7 +427,7 @@ def open_window(parent, adapter):
             return
         d = tk.Toplevel(win)
         d.title("✏️ 제목 바꾸기")
-        d.geometry("820x170")
+        center_window(d, 820, 170, over=win)
         d.transient(win)
         tk.Label(d, text="지금 제목:", anchor="w").pack(fill="x", padx=10, pady=(10, 0))
         tk.Label(d, text=old, anchor="w", fg="#555").pack(fill="x", padx=10)
@@ -516,4 +537,6 @@ def open_window(parent, adapter):
     tree.bind("<space>", toggle)
 
     reload_posts()
+    win.deiconify()
+    win.lift()
     return win

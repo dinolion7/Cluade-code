@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-poster_layout.py — 포스팅 프로그램(blog_poster.py) 화면 배치·디자인 (2026-10-15)
+Naver_blog_poster_layout.py — 포스팅 프로그램(blog_poster.py) 화면 배치·디자인 (2026-10-15)
 
 [하는 일] 프로그램이 화면을 다 만든 뒤 apply(gui)를 한 번 부르면 겉모습과 자리만 바꾼다.
   - 위쪽 탭 줄 → 왼쪽 메뉴(기능별 묶음). 흩어져 있던 칸을 기능별 화면(페이지)으로 다시 놓는다.
-  - 색·카드는 ui_theme.py(복지로·정책뉴스와 같은 디자인).
+  - 색·카드는 Naver_blog_ui_theme.py(복지로·정책뉴스와 같은 디자인).
 
 [반드시 지킬 규칙]
   - 위젯을 새로 만들거나 지우지 않는다. 이미 있는 칸을 다른 자리에 "놓기만" 한다(grid in_).
@@ -19,8 +19,8 @@ poster_layout.py — 포스팅 프로그램(blog_poster.py) 화면 배치·디�
 import tkinter as tk
 from tkinter import ttk
 
-import ui_theme
-from ui_theme import CARD, PAGE, LINE, SIDE, SIDE_SEL, SIDE_TEXT, SIDE_DIM, SUB, TEXT, DOT, FONT, _safe
+import Naver_blog_ui_theme as ui_theme
+from Naver_blog_ui_theme import CARD, PAGE, LINE, SIDE, SIDE_SEL, SIDE_TEXT, SIDE_DIM, SUB, TEXT, DOT, FONT, _safe
 
 ACCENT = "#3B4BA8"      # 포스팅 프로그램 대표색(정책뉴스 네이비·복지로 틸과 구분)
 ACCENT2 = "#F2A93B"
