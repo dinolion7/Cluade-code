@@ -589,6 +589,10 @@
 #        (단어 절반 이상이 #)로 좁힘. "###"~"######" 제목은 기호를 떼고 일반 문단으로
 #        입력함(소제목 인식은 기존대로 "## "만 - 인용구·소제목 이미지 대상 아님).
 
+# - Ver9.18 (2026-10-16): 내부링크를 카테고리와 상관없이 이력 엑셀 전체에서 고름(태그 점수 기준은
+#     그대로). 시리즈는 이력 엑셀을 따로 쓰는 것으로 나뉜다 — 자동 포스팅 시작 때 키워드 파일과
+#     포스팅 결과 파일 이름의 시리즈(정책뉴스·복지로·지식인)가 다르면 물어본다.
+
 # ✅ 1. 표준 라이브러리 - 시스템 및 파일
 import os  # 운영체제 기능 (파일, 경로 등)
 import time  # 시간 제어
@@ -12063,12 +12067,11 @@ Sub: ___
                 except:
                     return False
     
-            # 1단계: 같은 카테고리 글 찾기 & 유사도 계산 ( 카테고리별 비교 )
+            # 1단계: 이력 엑셀 전체 글 찾기 & 유사도 계산
+            # [Ver9.18] 카테고리 번호로 거르지 않는다 — 시리즈(정책뉴스·복지로)는 이력 엑셀을
+            # 따로 쓰는 것으로 나뉘고, 카테고리는 돈 갈래별이라 관련 글을 막았다(category_no는 안 씀).
             matched_posts = []
             for row in list(ws.rows)[1:]:  # 헤더 제외
-                # 같은 카테고리 확인
-                if str(row[headers['카테고리']-1].value) != str(category_no):
-                    continue
                     
                 # 현재 포스팅과 동일한 URL이면 제외
                 post_url = row[headers['게시글URL']-1].value
@@ -14250,7 +14253,7 @@ class NaverBlogGUI:
  
         os.makedirs(os.path.join(BASE_DIR, "Naver_User_thumbnail_MP4_folder"), exist_ok=True)                                # 사용자 수동 생성 썸네일과 동열상 파일  
 
-        self.root.title("Naver Blog Auto Posting Intergrated Program_Updated_2026-10-15_Ver 9.17")
+        self.root.title("Naver Blog Auto Posting Intergrated Program_Updated_2026-10-16_Ver 9.18")
         
         # 파비콘 설정 추가
         ico_path = str(BASE_DIR / "favicon.ico")
@@ -18421,6 +18424,21 @@ class NaverBlogGUI:
             if not os.path.exists(self.keyword_file_path.get()):
                 messagebox.showerror("오류", "선택된 키워드 파일이 존재하지 않습니다.")
                 return
+
+            # [Ver9.18] 내부링크는 포스팅 결과 파일(이력 엑셀) 안에서만 고른다 — 다른 시리즈의
+            # 이력 파일을 고르면 그 시리즈 글이 링크로 붙으므로, 파일 이름의 시리즈가 다르면 묻는다.
+            def _series_of(path):
+                name = os.path.basename(path or "")
+                return next((s for s in ("정책뉴스", "복지로", "지식인") if s in name), "")
+            _kw_series = _series_of(self.keyword_file_path.get())
+            _post_series = _series_of(self.posting_result_path.get())
+            if _kw_series and _post_series and _kw_series != _post_series:
+                if not messagebox.askyesno(
+                        "포스팅 결과 파일 확인",
+                        f"키워드 파일은 [{_kw_series}]인데 포스팅 결과 파일은 [{_post_series}]입니다.\n\n"
+                        f"이대로 하면 내부링크에 {_post_series} 글이 붙고, 이력도 {_post_series} 파일에 적힙니다.\n"
+                        "그래도 시작할까요?\n\n(아니요 → ▶ 포스팅 실행 메뉴에서 포스팅 결과 파일을 다시 고르세요)"):
+                    return
                 
             try:
                 # 작업할 키워드 유무 체크 / 키워드 없을때 자동포스팅 시작시 팝업
