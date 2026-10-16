@@ -261,6 +261,7 @@ def open_folder(path: str):
 
 
 UPDATE_PROMPT_FILE = "공통_업데이트작성.md"
+last_message = ""   # 마지막 확인 결과 한 줄(프로그램이 로그·안내에 씀) — 겹친 글이 없어도 확인이 돌았는지 보이게
 
 
 def _day(ts) -> str:
@@ -374,12 +375,22 @@ def check_and_ask(parent, md: str, archives: list, stage: str, stop_label: str,
     돌려주는 값: "go"(겹친 글 없음·계속 작성) / "stop"(stop_label 버튼) / "update"(기존 글 업데이트로 감 —
     프롬프트를 복사하고 업데이트 창을 띄움, 지금 작업은 멈춤). 오류가 나면 "go"(작업을 막지 않음).
     update_prompt: 업데이트 프롬프트 본문(None이면 업데이트 버튼을 안 보임, ""이면 파일 없음 안내)."""
+    global last_message
     try:
+        counts = archive_counts(archives)
+        total = sum(1 for _s, root in archives if root and os.path.isdir(root) for _ in _iter_md(root))
         res = notable(compare(md, archives, exclude_title=exclude_title))
-    except Exception:
+    except Exception as e:
+        last_message = f"⚠ 중복 확인 오류 — 확인 없이 진행: {e}"
+        return "go"
+    if not total:
+        last_message = ("⚠ 중복 확인: 보관소가 비어 있음(비교한 글 0개) — 보관소 경로를 확인하세요: "
+                        + " / ".join(f"{s_}={r}" for s_, r in archives))
         return "go"
     if not res:
+        last_message = f"🔍 중복 확인({stage}): 겹치는 글 없음 (비교: {counts})"
         return "go"
+    last_message = f"🔍 중복 확인({stage}): 겹치는 글 {len(res)}개 (비교: {counts})"
     import tkinter as tk
     from tkinter import messagebox, ttk
     ans = {"v": "go"}

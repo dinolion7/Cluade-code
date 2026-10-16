@@ -3851,13 +3851,20 @@ def _dup_archives() -> list:
 def _dup_check(parent, md: str, stage: str, stop_label: str, exclude_title: str = "",
                new_material: str = "") -> str:
     """dup_archive.py가 없거나 오류면 "go"(작업을 막지 않음). "update"면 업데이트 창으로 넘어갔으니 지금 작업은 멈춘다."""
+    global _DUP_MSG
     try:
         import dup_archive
     except Exception:
+        _DUP_MSG = "⚠ 중복 확인 건너뜀: dup_archive.py 없음(프로그램 폴더에 넣으세요)"
         return "go"
     prompt = load_prompt_file(load_config().get("update_prompt_file") or dup_archive.UPDATE_PROMPT_FILE, PROMPT_DIR)
-    return dup_archive.check_and_ask(parent, md, _dup_archives(), stage, stop_label, exclude_title,
-                                     update_prompt=prompt, new_material=new_material)
+    r = dup_archive.check_and_ask(parent, md, _dup_archives(), stage, stop_label, exclude_title,
+                                  update_prompt=prompt, new_material=new_material)
+    _DUP_MSG = dup_archive.last_message
+    return r
+
+
+_DUP_MSG = ""   # 마지막 중복 확인 결과 한 줄(로그·STEP 1 복사 안내에 보임)
 
 
 def _flatten_text(obj) -> str:
@@ -7879,6 +7886,8 @@ class WelfareCollectorGUI(tk.Tk):
         _src = f"{row['servNm']}\n{_flatten_text(detail)}"
         _dup = _dup_check(self, _src, "STEP 1 복사 전(원문자료)", "⏭ 이 글 패스",
                           new_material="복지로 새 원문자료:\n" + _src)
+        if _DUP_MSG:
+            self._log(_DUP_MSG)
         if _dup == "update":
             return
         if _dup == "stop":
@@ -7897,7 +7906,8 @@ class WelfareCollectorGUI(tk.Tk):
             "빠른 판정 복사 완료",
             f"'{row['servNm']}' 빠른 판정 프롬프트를 복사했습니다.\n\n"
             "Claude 새 대화창에 붙여넣기만 하세요 — 이 단계에서는 공식자료를 올리지 않습니다.\n"
-            "답 코드블럭을 복사한 뒤 STEP 1 '💾 판정결과 저장(메모리값 자동저장)'을 누르세요.")
+            "답 코드블럭을 복사한 뒤 STEP 1 '💾 판정결과 저장(메모리값 자동저장)'을 누르세요."
+            + (f"\n\n{_DUP_MSG}" if _DUP_MSG else ""))
         if advance_posting_status(row["servId"], "🔎 가치판단대기", row["servNm"], row["source"]):
             self._refresh_posting_tree()
 
@@ -8807,6 +8817,8 @@ class WelfareCollectorGUI(tk.Tk):
                     exclude_title=extract_title_from_final_text(content) or "",
                     new_material="새로 쓴 원고(새 정보가 들어 있음):\n" + content) in ("stop", "update"):
                 return
+            if stage_key == "final_adaptation" and _DUP_MSG:
+                self._log(_DUP_MSG)
 
             if stage_key == "final_adaptation":
                 # [Ver10.13] 주소의 https://·www. 를 떼어 본문칸에도 반영한다(네이버 자동 링크 방지).

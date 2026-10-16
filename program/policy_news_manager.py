@@ -4009,15 +4009,22 @@ def _dup_archives() -> list:
 def _dup_check(parent, md: str, stage: str, stop_label: str, exclude_title: str = "",
                new_material: str = "", update_note: str = "") -> str:
     """dup_archive.py가 없거나 오류면 "go"(작업을 막지 않음). "update"면 업데이트 창으로 넘어갔으니 지금 작업은 멈춘다."""
+    global _DUP_MSG
     try:
         import dup_archive
     except Exception:
+        _DUP_MSG = "⚠ 중복 확인 건너뜀: dup_archive.py 없음(프로그램 폴더에 넣으세요)"
         return "go"
     cfg = load_config()
     prompt = load_prompt_file(cfg.get("update_prompt_file") or dup_archive.UPDATE_PROMPT_FILE,
                               cfg.get("prompt_dir", PROMPT_DIR))
-    return dup_archive.check_and_ask(parent, md, _dup_archives(), stage, stop_label, exclude_title,
-                                     update_prompt=prompt, new_material=new_material, update_note=update_note)
+    r = dup_archive.check_and_ask(parent, md, _dup_archives(), stage, stop_label, exclude_title,
+                                  update_prompt=prompt, new_material=new_material, update_note=update_note)
+    _DUP_MSG = dup_archive.last_message
+    return r
+
+
+_DUP_MSG = ""   # 마지막 중복 확인 결과 한 줄(A 복사 팝업·3)탭 중복 칸·1)탭 로그에 보임)
 
 
 def save_md_file(title: str, content: str, domain: str, output_dir: str) -> str:
@@ -6563,6 +6570,8 @@ class App(tk.Tk):
                                         f"발행일: {art.get('published', '')}\n링크: {art.get('link', '')}\n"
                                         "(새 기사 원문 PDF를 이 대화창에 함께 올립니다)"),
                           update_note="새 기사 원문 PDF도 함께 올리세요.")
+        if _DUP_MSG:
+            self._log_collect(_DUP_MSG)
         if _dup == "update":
             return
         if _dup == "stop":
@@ -6639,7 +6648,8 @@ class App(tk.Tk):
         if hasattr(self, "copy_a_status"):
             self.copy_a_status.config(text="✅ 복사 완료! claude.ai를 직접 열고 Ctrl+V 하세요.")
             self.after(5000, lambda: self.copy_a_status.config(text=""))
-            self._copied_popup("프롬프트A", "Claude 새 대화창에 붙여넣으세요(Ctrl+V). 원문 PDF도 함께 올리세요.")  # [Ver10.12] 복사했는지 알 수 있게 팝업
+            self._copied_popup("프롬프트A", "Claude 새 대화창에 붙여넣으세요(Ctrl+V). 원문 PDF도 함께 올리세요."
+                               + (f"\n\n{_DUP_MSG}" if _DUP_MSG else ""))  # [Ver10.12] 복사했는지 알 수 있게 팝업
         else:
             messagebox.showinfo("복사 완료", "프롬프트A 복사 완료.\nclaude.ai를 직접 열고 Ctrl+V 하세요.")
 
@@ -7996,6 +8006,10 @@ class App(tk.Tk):
         if _dup_check(self, content, "MD 저장 전(완성 본문)", "저장하지 않음", exclude_title=title,
                       new_material="새로 쓴 원고(새 정보가 들어 있음):\n" + content) in ("stop", "update"):
             return
+        if _DUP_MSG:
+            self._log_collect(_DUP_MSG)
+            if hasattr(self, "post_dup_result_var"):
+                self.post_dup_result_var.set(_DUP_MSG)
 
         # [버그 재발방지] TAB1에서 선택한 원본 기사와 지금 작성한 글의
         # 주제가 완전히 동떨어져 있으면 저장 전에 경고한다. 원인은 다른
