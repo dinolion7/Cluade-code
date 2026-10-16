@@ -596,6 +596,8 @@
 # - Ver9.19 (2026-10-16): 번호 목록("1. " 줄이 이어질 때) "2. 2."로 겹치던 것 - 네이버 에디터가
 #     "1. "을 자동 번호 목록으로 바꾸고 번호를 스스로 붙이므로, 앞 줄도 번호 항목이면 MD 번호를 빼고
 #     치고, 목록 끝 줄은 Enter를 한 번 더 쳐 빈 줄을 살린다(일반 문단 처리만, 볼드 줄은 그대로).
+#     내부링크 후보에서 실제 글 주소가 아닌 것(?Redirect=Write 등)·같은 주소를 뺀다 - 카드가 안 생겨
+#     "함께 보면 좋은 글" 제목만 남던 것. 남는 글이 없으면 제목도 안 친다.
 
 # ✅ 1. 표준 라이브러리 - 시스템 및 파일
 import os  # 운영체제 기능 (파일, 경로 등)
@@ -12085,12 +12087,23 @@ Sub: ___
             # [Ver9.18] 카테고리 번호로 거르지 않는다 — 시리즈(정책뉴스·복지로)는 이력 엑셀을
             # 따로 쓰는 것으로 나뉘고, 카테고리는 돈 갈래별이라 관련 글을 막았다(category_no는 안 씀).
             matched_posts = []
+            _seen_urls = set()  # [Ver9.19] 같은 주소 중복 방지
             for row in list(ws.rows)[1:]:  # 헤더 제외
                     
                 # 현재 포스팅과 동일한 URL이면 제외
                 post_url = row[headers['게시글URL']-1].value
                 if current_post_url and post_url == current_post_url:
                     continue
+
+                # [Ver9.19] 실제 글 주소가 아니면 건너뜀 - 이력에 글쓰기 화면 주소(?Redirect=Write)가
+                # 저장된 글이 뽑히면 카드가 안 생겨 "함께 보면 좋은 글" 제목만 남았다.
+                # 남는 글이 없으면 아래에서 제목도 치지 않는다. 같은 주소는 한 번만.
+                _u = str(post_url or "").strip()
+                if ('Redirect=Write' in _u
+                        or not re.search(r'blog\.naver\.com/[^/?#\s]+/\d+|logNo=\d+', _u)
+                        or _u in _seen_urls):
+                    continue
+                _seen_urls.add(_u)
     
                 post_tags = row[headers['연관검색어']-1].value.split(', ') if row[headers['연관검색어']-1].value else []
                 post_title = row[headers['생성된 제목']-1].value if '생성된 제목' in headers else ""
