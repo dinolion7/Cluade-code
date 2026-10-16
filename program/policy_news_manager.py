@@ -59,7 +59,7 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - 작은따옴표 속마음 후킹 → 제목 점검은 앞 25자 안에서 끝나는지 보고, 앞구 검색은 후킹을 빼고 한다.
 
-[버전] Ver10.12 — MD 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지). Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
+[버전] Ver10.12 — MD 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지). 키워드 등록 때 핵심DB에 이력의 핵심·분산 키워드를 씀(예전엔 제목이 들어감), MD를 보관소(작업폴더/final_posts_backup/{제목}/)에 한 부(중복 체크용). Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
 
 import os
@@ -1198,6 +1198,9 @@ DEFAULT_KEYWORD_EXCEL_PATH = os.path.join(MAIN_WORK_FOLDER, "Naver_blog_정책�
 # "작업 폴더/{날짜}/" 안에 만든다. 어차피 포스팅에 안 쓰고 확인 후
 # 지울 물건이라, 날짜 폴더 하나만 지우면 같이 정리되는 쪽이 낫다.
 DUP_SUBFOLDER_NAME = "Naver_blog_정책뉴스_markdown_duplicated"
+# [Ver10.12] 중복 체크 보관소 — 키워드 등록 때 MD를 글마다 폴더로 모은다(복지로 final_posts_backup과 같은 모양).
+# 작업폴더 안 final_posts_backup/{제목}/{MD}. dup_archive.py가 이 폴더를 읽어 과거 글과 비교한다.
+ARCHIVE_SUBFOLDER_NAME = "final_posts_backup"
 
 
 def _get_keyword_excel_path() -> str:
@@ -9661,7 +9664,12 @@ class App(tk.Tk):
                 md_content = ""
             hist_rec = _find_history_record_by_title(it["title"])
             dup_action = hist_rec.get("dup_action", "")
-            core = extract_core(md_content, keyword="", title=it["title"], dup_action=dup_action)
+            # [Ver10.12] 3)탭에서 정한 핵심·분산 키워드를 이력에서 꺼내 쓴다 — 예전엔 keyword=""로 넘겨
+            # 핵심DB에 핵심키워드 대신 제목 전체가, 분산키워드는 빈 값으로 쌓였다.
+            core = extract_core(md_content, keyword=hist_rec.get("core_keyword", "") or "",
+                                title=it["title"],
+                                sub_keywords=[k for k in (hist_rec.get("sub_keywords") or []) if k],
+                                dup_action=dup_action)
             dup_results = check_duplicate(core)
             it["dup_results"] = dup_results
             if not dup_results:
@@ -9988,6 +9996,13 @@ class App(tk.Tk):
                     shutil.copy2(it["md_path"], os.path.join(dest_folder, os.path.basename(it["md_path"])))
                     self._copy_matched_assets(it, dest_folder, shutil.copy2)
                     copied += 1
+                    # [Ver10.12] 보관소에 MD 한 부 — 실패해도 등록은 계속한다
+                    try:
+                        _arc = os.path.join(_get_work_folder(), ARCHIVE_SUBFOLDER_NAME, safe_filename(it["title"]))
+                        os.makedirs(_arc, exist_ok=True)
+                        shutil.copy2(it["md_path"], os.path.join(_arc, os.path.basename(it["md_path"])))
+                    except Exception as _arc_err:
+                        print(f"[보관소] 복사 실패(등록은 계속): {_arc_err}")
 
                     # [Ver7.13 추가] 실제 포스팅 확정 지점 — 이력에서 링크를
                     # 역으로 찾아 핵심DB 등록 + 상태를 "📤 포스팅완료"로
