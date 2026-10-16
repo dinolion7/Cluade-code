@@ -5731,6 +5731,23 @@ class WelfareCollectorGUI(tk.Tk):
         ig_canvas.grid(row=0, column=0, sticky="nsew", padx=(6, 0), pady=6)
         ig_scrollbar.grid(row=0, column=1, sticky="ns", pady=6)
 
+        # [Ver10.13] 마우스 휠로 제목 목록 스크롤(스크롤바만 있고 휠이 안 먹었다). 목록 줄 위에 있어도
+        # 캔버스 안이면 휠을 유지하고, 캔버스 밖으로 나가면 푼다(다른 칸의 휠 스크롤과 겹치지 않게).
+        def _ig_on_wheel(event):
+            if ig_canvas.yview() != (0.0, 1.0):
+                ig_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        def _ig_inside(event):
+            w = ig_canvas.winfo_containing(event.x_root, event.y_root)
+            while w is not None:
+                if w == ig_canvas:
+                    return True
+                w = w.master
+            return False
+
+        ig_canvas.bind("<Enter>", lambda e: ig_canvas.bind_all("<MouseWheel>", _ig_on_wheel))
+        ig_canvas.bind("<Leave>", lambda e: None if _ig_inside(e) else ig_canvas.unbind_all("<MouseWheel>"))
+
         ig_bottom_f = ttk.Frame(infographic_tab)
         ig_bottom_f.grid(row=3, column=0, sticky="ew", padx=6, pady=(0, 8))
         ttk.Button(ig_bottom_f, text="🔄 제목 목록 새로고침 (본문에서 자동 추출)",
