@@ -61,7 +61,7 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - 작은따옴표 속마음 후킹 → 제목 점검은 앞 25자 안에서 끝나는지 보고, 앞구 검색은 후킹을 빼고 한다.
 
-[버전] Ver10.12 — MD 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지). 키워드 등록 때 핵심DB에 이력의 핵심·분산 키워드를 씀(예전엔 제목이 들어감), MD를 보관소(작업폴더/final_posts_backup/{제목}/)에 한 부, A 복사 전·MD 저장 전 과거 글 중복 확인(dup_archive.py), 프롬프트 복사하면 "복사 완료" 팝업. Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
+[버전] Ver10.12 — MD 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지). 키워드 등록 때 핵심DB에 이력의 핵심·분산 키워드를 씀(예전엔 제목이 들어감), MD·이미지를 보관 폴더(작업폴더/final_posts_backup/{제목}/, 복지로와 같은 모양)에 한 부, A 복사 전·MD 저장 전 과거 글 중복 확인(dup_archive.py), 프롬프트 복사하면 "복사 완료" 팝업. Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
 
 import os
@@ -10041,7 +10041,7 @@ class App(tk.Tk):
         if not messagebox.askyesno("확인",
                 f"{date_str} 폴더 처리:\n"
                 f"  · 신규 {len(pure_new_items)}건 + 업데이트(의도된 후속글) {len(update_items)}건{dup_extra_note}\n"
-                f"    → 키워드 엑셀 추가 + 포스팅 폴더 복사\n"
+                f"    → 키워드 엑셀 추가 + 포스팅 폴더 복사 + 보관 폴더(final_posts_backup/제목)에 MD·이미지 한 부\n"
                 f"    (핵심DB 등록 + 이력 상태 '📤 포스팅완료'로 확정, 이후 되돌리기 불가)\n"
                 f"  · 카테고리: {category_display}\n"
                 f"  · 중복의심(격리) {len(dup_items)}건 → {dup_dest_base} 로 이동 (포스팅 안 함)\n\n"
@@ -10071,11 +10071,13 @@ class App(tk.Tk):
                     shutil.copy2(it["md_path"], os.path.join(dest_folder, os.path.basename(it["md_path"])))
                     self._copy_matched_assets(it, dest_folder, shutil.copy2)
                     copied += 1
-                    # [Ver10.12] 보관소에 MD 한 부 — 실패해도 등록은 계속한다
+                    # [Ver10.12] 보관 폴더에 글마다 폴더(MD + 같은 이름 이미지) — 복지로 final_posts_backup과 같은 모양.
+                    # 실패해도 등록은 계속한다
                     try:
                         _arc = os.path.join(_get_work_folder(), ARCHIVE_SUBFOLDER_NAME, safe_filename(it["title"]))
                         os.makedirs(_arc, exist_ok=True)
                         shutil.copy2(it["md_path"], os.path.join(_arc, os.path.basename(it["md_path"])))
+                        self._copy_matched_assets(it, _arc, shutil.copy2)
                     except Exception as _arc_err:
                         print(f"[보관소] 복사 실패(등록은 계속): {_arc_err}")
 
