@@ -8009,7 +8009,9 @@ class App(tk.Tk):
         if _DUP_MSG:
             self._log_collect(_DUP_MSG)
             if hasattr(self, "post_dup_result_var"):
-                self.post_dup_result_var.set(_DUP_MSG)
+                # 핵심DB(JSON) 확인 결과(붙여넣을 때 자동)는 지우지 않고 뒤에 보관소 확인 결과를 붙인다
+                _old = self.post_dup_result_var.get().split("  │  보관소:")[0].replace("핵심DB: ", "", 1).strip()
+                self.post_dup_result_var.set((f"핵심DB: {_old}  │  보관소: " if _old else "보관소: ") + _DUP_MSG)
 
         # [버그 재발방지] TAB1에서 선택한 원본 기사와 지금 작성한 글의
         # 주제가 완전히 동떨어져 있으면 저장 전에 경고한다. 원인은 다른
