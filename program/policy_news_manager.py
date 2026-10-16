@@ -61,7 +61,7 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - 작은따옴표 속마음 후킹 → 제목 점검은 앞 25자 안에서 끝나는지 보고, 앞구 검색은 후킹을 빼고 한다.
 
-[버전] Ver10.12 — MD 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지). 키워드 등록 때 핵심DB에 이력의 핵심·분산 키워드를 씀(예전엔 제목이 들어감), MD를 보관소(작업폴더/final_posts_backup/{제목}/)에 한 부, A 복사 전·MD 저장 전 과거 글 중복 확인(dup_archive.py). Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
+[버전] Ver10.12 — MD 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지). 키워드 등록 때 핵심DB에 이력의 핵심·분산 키워드를 씀(예전엔 제목이 들어감), MD를 보관소(작업폴더/final_posts_backup/{제목}/)에 한 부, A 복사 전·MD 저장 전 과거 글 중복 확인(dup_archive.py), 프롬프트 복사하면 "복사 완료" 팝업. Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
 
 import os
@@ -6471,6 +6471,7 @@ class App(tk.Tk):
         )
         self.clipboard_clear()
         self.clipboard_append(content)
+        self._copied_popup("키워드 리서치 결과(AI에게 결과 전달)", "프롬프트A를 실행했던 그 대화창에 붙여넣으세요(Ctrl+V).")  # [Ver10.12] 복사했는지 알 수 있게 팝업
         self.tab2_research_status_var.set(
             "✅ 결과가 복사됐습니다 — 프롬프트A를 실행했던 그 대화창에 붙여넣어 이어서 진행하세요."
         )
@@ -6538,6 +6539,10 @@ class App(tk.Tk):
                    command=lambda: self._copy_text(summary),
                    style="Copy.TButton").pack(side="left")
         ttk.Button(btn_f, text="닫기", command=top.destroy).pack(side="right")
+
+    def _copied_popup(self, what: str, where: str):
+        """[Ver10.12] 프롬프트를 복사하면 팝업으로 알린다(사용자: 반응이 없어 복사됐는지 헷갈림)."""
+        messagebox.showinfo("복사 완료", f"{what}를 클립보드에 복사했습니다.\n\n{where}")
 
     def _copy_prompt_a(self):
         art = self.selected_article
@@ -6634,6 +6639,7 @@ class App(tk.Tk):
         if hasattr(self, "copy_a_status"):
             self.copy_a_status.config(text="✅ 복사 완료! claude.ai를 직접 열고 Ctrl+V 하세요.")
             self.after(5000, lambda: self.copy_a_status.config(text=""))
+            self._copied_popup("프롬프트A", "Claude 새 대화창에 붙여넣으세요(Ctrl+V). 원문 PDF도 함께 올리세요.")  # [Ver10.12] 복사했는지 알 수 있게 팝업
         else:
             messagebox.showinfo("복사 완료", "프롬프트A 복사 완료.\nclaude.ai를 직접 열고 Ctrl+V 하세요.")
 
@@ -7799,6 +7805,7 @@ class App(tk.Tk):
         if hasattr(self, "copy_b_status"):
             self.copy_b_status.config(text="✅ 복사 완료! claude.ai를 직접 열고 Ctrl+V 하세요.")
             self.after(5000, lambda: self.copy_b_status.config(text=""))
+            self._copied_popup("프롬프트B", "Claude 대화창에 붙여넣으세요(Ctrl+V).")  # [Ver10.12] 복사했는지 알 수 있게 팝업
         else:
             messagebox.showinfo("복사 완료", "프롬프트B 복사 완료.\nclaude.ai를 직접 열고 Ctrl+V 하세요.")
 
@@ -7895,6 +7902,7 @@ class App(tk.Tk):
         )
         self.clipboard_clear()
         self.clipboard_append(content)
+        self._copied_popup("프롬프트B(간소화)", "프롬프트A를 실행한 그 대화창에 이어서 붙여넣으세요(Ctrl+V).")  # [Ver10.12] 복사했는지 알 수 있게 팝업
         self.copy_b_simplified_status.config(
             text="✅ 간소화 복사 완료! (프롬프트A를 실행한 그 대화창에) Ctrl+V 하세요.")
         self.after(5000, lambda: self.copy_b_simplified_status.config(text=""))
@@ -8468,6 +8476,7 @@ class App(tk.Tk):
         )
         self.clipboard_clear()
         self.clipboard_append(content)
+        self._copied_popup("카드용 프롬프트", "Claude 대화창에 붙여넣고, 답이 나오면 ② JSON 블럭 칸으로(Ctrl+V).")  # [Ver10.12] 복사했는지 알 수 있게 팝업
         self.card_copy_status.config(text="✅ 복사 완료 — Claude에 Ctrl+V, 답변이 나오면 ②")
         self.after(5000, lambda: self.card_copy_status.config(text=""))
 
@@ -8673,6 +8682,7 @@ class App(tk.Tk):
         if hasattr(self, "copy_c_status"):
             self.copy_c_status.config(text="✅ 복사 완료! claude.ai를 직접 열고 Ctrl+V 하세요.")
             self.after(5000, lambda: self.copy_c_status.config(text=""))
+            self._copied_popup("프롬프트C", "Claude 대화창에 붙여넣으세요(Ctrl+V).")  # [Ver10.12] 복사했는지 알 수 있게 팝업
         else:
             messagebox.showinfo("복사 완료", "프롬프트C 복사 완료.\nclaude.ai를 직접 열고 Ctrl+V 하세요.")
 
@@ -8733,6 +8743,7 @@ class App(tk.Tk):
         )
         self.clipboard_clear()
         self.clipboard_append(content)
+        self._copied_popup("프롬프트C(간소화)", "프롬프트B를 작성한 그 대화창에 이어서 붙여넣으세요(Ctrl+V).")  # [Ver10.12] 복사했는지 알 수 있게 팝업
         self.copy_c_simplified_status.config(
             text="✅ 간소화 복사 완료! (프롬프트B를 작성한 그 대화창에) Ctrl+V 하세요.")
         self.after(5000, lambda: self.copy_c_simplified_status.config(text=""))
