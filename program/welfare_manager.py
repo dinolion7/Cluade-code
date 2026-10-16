@@ -3848,13 +3848,16 @@ def _dup_archives() -> list:
     return [("복지로", FINAL_POSTS_BACKUP_DIR), ("정책뉴스", policy)]
 
 
-def _dup_check(parent, md: str, stage: str, stop_label: str, exclude_title: str = "") -> str:
-    """dup_archive.py가 없거나 오류면 "go"(작업을 막지 않음)."""
+def _dup_check(parent, md: str, stage: str, stop_label: str, exclude_title: str = "",
+               new_material: str = "") -> str:
+    """dup_archive.py가 없거나 오류면 "go"(작업을 막지 않음). "update"면 업데이트 창으로 넘어갔으니 지금 작업은 멈춘다."""
     try:
         import dup_archive
     except Exception:
         return "go"
-    return dup_archive.check_and_ask(parent, md, _dup_archives(), stage, stop_label, exclude_title)
+    prompt = load_prompt_file(load_config().get("update_prompt_file") or dup_archive.UPDATE_PROMPT_FILE, PROMPT_DIR)
+    return dup_archive.check_and_ask(parent, md, _dup_archives(), stage, stop_label, exclude_title,
+                                     update_prompt=prompt, new_material=new_material)
 
 
 def _flatten_text(obj) -> str:
@@ -7854,8 +7857,12 @@ class WelfareCollectorGUI(tk.Tk):
         if detail is None:
             return
         # [Ver10.13] 처음 체크 — 원문자료로 내가 전에 올린 글과 겹치는지
-        if _dup_check(self, f"{row['servNm']}\n{_flatten_text(detail)}", "STEP 1 복사 전(원문자료)",
-                      "⏭ 이 글 패스") == "stop":
+        _src = f"{row['servNm']}\n{_flatten_text(detail)}"
+        _dup = _dup_check(self, _src, "STEP 1 복사 전(원문자료)", "⏭ 이 글 패스",
+                          new_material="복지로 새 원문자료:\n" + _src)
+        if _dup == "update":
+            return
+        if _dup == "stop":
             self._apply_posting_status_change("⏭ 패스")
             return
         attachments = list_attachment_files(row["folder"])
@@ -8767,7 +8774,8 @@ class WelfareCollectorGUI(tk.Tk):
             # [Ver10.13] 저장 전 체크 — 완성 본문 전체로 내가 전에 올린 글과 비교
             if stage_key == "final_adaptation" and _dup_check(
                     dialog, content, "최종각색 저장 전(완성 본문)", "저장하지 않음",
-                    exclude_title=extract_title_from_final_text(content) or "") == "stop":
+                    exclude_title=extract_title_from_final_text(content) or "",
+                    new_material="새로 쓴 원고(새 정보가 들어 있음):\n" + content) in ("stop", "update"):
                 return
 
             if stage_key == "final_adaptation":

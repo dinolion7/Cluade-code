@@ -4006,13 +4006,18 @@ def _dup_archives() -> list:
     return [("정책뉴스", os.path.join(_get_work_folder(), ARCHIVE_SUBFOLDER_NAME)), ("복지로", welfare)]
 
 
-def _dup_check(parent, md: str, stage: str, stop_label: str, exclude_title: str = "") -> str:
-    """dup_archive.py가 없거나 오류면 "go"(작업을 막지 않음)."""
+def _dup_check(parent, md: str, stage: str, stop_label: str, exclude_title: str = "",
+               new_material: str = "", update_note: str = "") -> str:
+    """dup_archive.py가 없거나 오류면 "go"(작업을 막지 않음). "update"면 업데이트 창으로 넘어갔으니 지금 작업은 멈춘다."""
     try:
         import dup_archive
     except Exception:
         return "go"
-    return dup_archive.check_and_ask(parent, md, _dup_archives(), stage, stop_label, exclude_title)
+    cfg = load_config()
+    prompt = load_prompt_file(cfg.get("update_prompt_file") or dup_archive.UPDATE_PROMPT_FILE,
+                              cfg.get("prompt_dir", PROMPT_DIR))
+    return dup_archive.check_and_ask(parent, md, _dup_archives(), stage, stop_label, exclude_title,
+                                     update_prompt=prompt, new_material=new_material, update_note=update_note)
 
 
 def save_md_file(title: str, content: str, domain: str, output_dir: str) -> str:
@@ -6547,8 +6552,15 @@ class App(tk.Tk):
             return
 
         # [Ver10.12] 처음 체크 — 이 기사 제목으로 내가 전에 올린 글과 겹치는지(본문은 PDF라 제목으로 본다)
-        if _dup_check(self, f"{art.get('title', '')}\n{art.get('dept', '')}", "A 복사 전(기사 제목)",
-                      "⏭ 이 기사 패스") == "stop":
+        _dup = _dup_check(self, f"{art.get('title', '')}\n{art.get('dept', '')}", "A 복사 전(기사 제목)",
+                          "⏭ 이 기사 패스",
+                          new_material=(f"새 기사: {art.get('title', '')}\n부처: {art.get('dept', '')}\n"
+                                        f"발행일: {art.get('published', '')}\n링크: {art.get('link', '')}\n"
+                                        "(새 기사 원문 PDF를 이 대화창에 함께 올립니다)"),
+                          update_note="새 기사 원문 PDF도 함께 올리세요.")
+        if _dup == "update":
+            return
+        if _dup == "stop":
             add_history_record({"title": art["title"], "link": art["link"], "dept": art["dept"],
                                 "published": art["published"], "body_type": art["body_type"], "status": "⏭ 패스"})
             update_history_status(art["link"], "⏭ 패스")
@@ -7973,7 +7985,8 @@ class App(tk.Tk):
         if not self._para_reflow_gate(content):
             return
         # [Ver10.12] 저장 전 체크 — 완성 본문 전체로 내가 전에 올린 글과 비교
-        if _dup_check(self, content, "MD 저장 전(완성 본문)", "저장하지 않음", exclude_title=title) == "stop":
+        if _dup_check(self, content, "MD 저장 전(완성 본문)", "저장하지 않음", exclude_title=title,
+                      new_material="새로 쓴 원고(새 정보가 들어 있음):\n" + content) in ("stop", "update"):
             return
 
         # [버그 재발방지] TAB1에서 선택한 원본 기사와 지금 작성한 글의
