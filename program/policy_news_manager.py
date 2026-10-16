@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-policy_news_manager.py — 정책뉴스 관리 프로그램 (Ver10.12, 2026-10-16)
+policy_news_manager.py — 정책뉴스 관리 프로그램 (Ver10.13, 2026-10-16)
 korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽을 만드는 준비 프로그램(단일 파일 Tkinter).
 실제 네이버 발행은 포스팅 프로그램(blog_poster.py)이 한다. (정책뉴스 RSS는 2026-07-01 서비스 중단 —
 목록 페이지를 직접 읽는다.)
@@ -13,6 +13,8 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
   Naver_blog_정책뉴스_markdown_work_folder/   작업 폴더(날짜별 MD·이미지, 키워드 엑셀, 핵심DB)
   Naver_blog_keyword_perplexity_gpt_manual_markdown_for_posting/  포스팅 프로그램이 읽는 공용 폴더
   ui_theme.py                              화면 디자인(왼쪽 메뉴·카드·버튼 색, 복지로와 공용) — 없거나 오류면 예전 모습으로 실행
+  dup_archive.py · blog_sync.py            과거 글 중복 확인 · 🔗 블로그 글 관리(둘 다 복지로와 공용, 같은 폴더)
+  Naver_blog_정책뉴스_posting_history.xlsx  포스팅 프로그램 발행 기록(내부링크용, 키워드 엑셀 옆 — 설정 "poster_history_path")
   준비: pip install feedparser openpyxl selenium (코드 카드는 playwright)
 
 [탭과 흐름] (화면 탭 번호 = 코드 TABn = _build_tabN_*)
@@ -26,6 +28,7 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
                       → 🟡 발행준비완료로 이력 업데이트 후 이력관리탭으로 이동
   5)포스팅 이력관리 — 상태 관리·엑셀 저장
   6)키워드 등록 — 작업 폴더 MD를 신규/업데이트/중복의심/이미등록됨으로 분류 → "엑셀에 추가"
+                · 🔗 블로그 글 관리: 블로그에서 지우거나 제목을 고친 글을 한 글씩 / 블로그 글 목록 붙여넣기로 한꺼번에 반영
   7)설정
 
 [반드시 지킬 규칙]
@@ -38,6 +41,9 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
   - 중복의심 글은 포스팅 폴더로 보내지 않고 작업폴더/{날짜}/..._duplicated 로 격리한다. 사람이
     "✅ 중복 허용"으로 고른 것만 포스팅한다.
   - 이미지는 제목·소제목과 같은 파일명만 짝지어 복사한다(다른 기사 이미지 섞임 방지).
+  - 모든 값은 블로그 기준(사용자). 블로그에서 글을 지우거나 제목을 고쳤으면 🔗 블로그 글 관리로 처리한다 — 키워드 엑셀·
+    포스팅 이력 엑셀(줄 삭제·제목)·이력 DB(⏭ 패스 + blog_deleted)·핵심DB·제목색인·후보군 상태·보관 폴더(_블로그에서삭제/로
+    이동)가 함께 바뀌고, 반영 전 작업폴더/_블로그글관리_백업/에 백업한다.
   - 업데이트 작성 프롬프트: 첨부에 없는 세부사항은 지어내지 말고, 정보가 부족하면 쓰지 않게 한다.
   - 버튼 이름은 지금 이름 그대로(주고받는 흐름대로 쓰면 충분 — 사용자). 복지로와 같은 기능은 이 이름이 기준.
   - 네이버 검색 창은 매번 새 임시 프로필(비로그인)로 연다. 블로그 계정은 같은 공인 IP(Base IP)로만.
@@ -61,7 +67,7 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - 작은따옴표 속마음 후킹 → 제목 점검은 앞 25자 안에서 끝나는지 보고, 앞구 검색은 후킹을 빼고 한다.
 
-[버전] Ver10.12 — MD 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지). 키워드 등록 때 핵심DB에 이력의 핵심·분산 키워드를 씀(예전엔 제목이 들어감), MD·이미지를 보관 폴더(작업폴더/final_posts_backup/{제목}/, 복지로와 같은 모양)에 한 부, A 복사 전·MD 저장 전 과거 글 중복 확인(dup_archive.py), 프롬프트 복사하면 "복사 완료" 팝업. Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
+[버전] Ver10.13 — 6)키워드 등록에 🔗 블로그 글 관리(blog_sync.py). Ver10.12 — MD 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지). 키워드 등록 때 핵심DB에 이력의 핵심·분산 키워드를 씀(예전엔 제목이 들어감), MD·이미지를 보관 폴더(작업폴더/final_posts_backup/{제목}/, 복지로와 같은 모양)에 한 부, A 복사 전·MD 저장 전 과거 글 중복 확인(dup_archive.py), 프롬프트 복사하면 "복사 완료" 팝업. Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
 
 import os
@@ -4025,6 +4031,145 @@ def _dup_check(parent, md: str, stage: str, stop_label: str, exclude_title: str 
 
 
 _DUP_MSG = ""   # 마지막 중복 확인 결과 한 줄(A 복사 팝업·3)탭 중복 칸·1)탭 로그에 보임)
+
+
+# [Ver10.13] 🔗 블로그 글 관리(blog_sync.py) — 블로그에서 지우거나 제목을 고친 글을 엑셀·DB·보관 폴더에 함께 반영.
+POSTER_HISTORY_FILE_NAME = "Naver_blog_정책뉴스_posting_history.xlsx"   # 포스팅 프로그램 발행 기록(내부링크용)
+
+
+def _get_poster_history_path() -> str:
+    """포스팅 프로그램이 쓰는 발행 기록 엑셀. 설정 "poster_history_path", 비우면 키워드 엑셀 옆."""
+    p = (load_config().get("poster_history_path") or "").strip()
+    return p or os.path.join(os.path.dirname(_get_keyword_excel_path()), POSTER_HISTORY_FILE_NAME)
+
+
+class _BlogSyncAdapter:
+    name = "정책뉴스"
+
+    def __init__(self, app):
+        self.app = app
+        self.work_dir = _get_work_folder()
+
+    def posts(self):
+        import blog_sync
+        return blog_sync.read_posts(_get_keyword_excel_path(), _get_poster_history_path())
+
+    def files(self):
+        return [("키워드 엑셀", _get_keyword_excel_path(), None),
+                ("포스팅 이력 엑셀", _get_poster_history_path(), "poster_history_path"),
+                ("포스팅이력 DB", _get_history_path(), None),
+                ("핵심DB", _get_dup_db_path(), None),
+                ("제목색인", _get_title_index_path(), None),
+                ("후보군 엑셀", _get_xlsx_candidate_path(), None)]
+
+    def set_file(self, key, path):
+        cfg = load_config()
+        cfg[key] = path
+        save_config(cfg)
+
+    def apply(self, renames, deletes):
+        import blog_sync as bs
+        N = bs.norm
+        ren = {N(o): n for o, n in renames}
+        dl = {N(t) for t in deletes}
+        today = datetime.now().strftime("%Y-%m-%d")
+        now = datetime.now().strftime("%Y-%m-%d %H:%M")
+        done = []
+        r, d = bs.xlsx_update(_get_keyword_excel_path(), [0], ren, dl, sheet="Keywords")
+        done.append(f"키워드 엑셀: 제목 {r}곳 바꿈, {d}줄 지움")
+        r, d = bs.xlsx_update(_get_poster_history_path(), [1, 2], ren, dl)
+        done.append(f"포스팅 이력 엑셀: 제목 {r}곳 바꿈, {d}줄 지움")
+
+        # 제목 → 기사 링크(이력 DB의 최종 제목이 A 단계 제목으로 남은 글도 있어 제목색인·핵심DB 링크로도 찾는다)
+        index = load_title_index()
+        core = load_dup_db()
+        hist = load_history()
+        link_of = {}
+        for v in index.values():
+            if v.get("link"):
+                link_of.setdefault(N(v.get("title")), set()).add(v["link"])
+        for c in core:
+            if c.get("link"):
+                link_of.setdefault(N(c.get("title")), set()).add(c["link"])
+        for h in hist:
+            for f_ in ("final_title", "saved_title"):
+                if h.get(f_) and h.get("link"):
+                    link_of.setdefault(N(h[f_]), set()).add(h["link"])
+        del_links = set().union(*[link_of.get(k, set()) for k in dl]) if dl else set()
+        ren_links = {lk: n for k, n in ren.items() for lk in link_of.get(k, set())}
+
+        n_del = n_ren = 0
+        for h in hist:
+            lk = h.get("link", "")
+            if lk in del_links and not h.get("blog_deleted"):   # 블로그에 있던 글 — 지금 상태와 상관없이 정리
+                h["status"] = "⏭ 패스"
+                h["blog_deleted"] = today
+                h["updated_at"] = now
+                n_del += 1
+            elif lk in ren_links:
+                new = ren_links[lk]
+                before = (h.get("final_title"), h.get("saved_title"), h.get("saved_content"))
+                for f_ in ("final_title", "saved_title"):
+                    if h.get(f_) and h[f_] != new:
+                        h[f_] = new
+                if h.get("saved_content"):
+                    h["saved_content"] = bs.set_h1(h["saved_content"], new)
+                if before != (h.get("final_title"), h.get("saved_title"), h.get("saved_content")):
+                    h["updated_at"] = now
+                    n_ren += 1
+        if n_del or n_ren:
+            save_history(hist)
+        done.append(f"포스팅이력 DB: ⏭ 패스 + 블로그에서 지움 표시 {n_del}개, 제목 바꿈 {n_ren}개")
+
+        new_core, cd, cr = [], 0, 0
+        for c in core:
+            if c.get("link") in del_links or N(c.get("title")) in dl:
+                cd += 1
+                continue
+            new = ren_links.get(c.get("link")) or ren.get(N(c.get("title")))
+            if new and c.get("title") != new:
+                if N(c.get("keyword")) == N(c.get("title")):
+                    c["keyword"] = new
+                c["title"] = new
+                cr += 1
+            new_core.append(c)
+        if cd or cr:
+            save_dup_db(new_core)
+        done.append(f"핵심DB: {cd}개 지움, 제목 {cr}개 바꿈")
+
+        new_idx, td, tr = {}, 0, 0
+        for k, v in index.items():
+            if v.get("link") in del_links or N(v.get("title")) in dl:
+                td += 1
+                continue
+            new = ren.get(N(v.get("title"))) or ren_links.get(v.get("link"))
+            if new and v.get("title") != new:
+                v = dict(v, title=new)
+                k = _normalize_title_for_match(new)
+                tr += 1
+            new_idx[k] = v
+        if td or tr:
+            save_title_index(new_idx)
+        done.append(f"제목색인: {td}개 지움, 제목 {tr}개 바꿈")
+
+        root = os.path.join(_get_work_folder(), ARCHIVE_SUBFOLDER_NAME)
+        for o, n in renames:
+            if o == n:
+                continue
+            x = bs.archive_rename(root, o, n, safe_filename)
+            if x:
+                done.append(x)
+        for t in deletes:
+            x = bs.archive_delete(root, t, safe_filename)
+            if x:
+                done.append(x)
+        if n_del:
+            try:
+                self.app._update_xlsx_status()
+                done.append("후보군 엑셀: 상태 칸 다시 씀(백그라운드)")
+            except Exception as e:
+                done.append(f"후보군 엑셀: 상태 갱신 못 함({e})")
+        return done
 
 
 def save_md_file(title: str, content: str, domain: str, output_dir: str) -> str:
@@ -9671,11 +9816,24 @@ class App(tk.Tk):
         # 폴더만 지운다(다른 날짜 작업물이 실수로 같이 삭제되지 않도록).
         ttk.Button(btn_f, text="🗑️ 선택 날짜 원본 폴더 삭제",
                    command=self._delete_main_register_date_folder).pack(side="left", padx=(8,0))
+        # [Ver10.13] 블로그에서 지우거나 제목을 고친 글을 엑셀·DB·보관 폴더에 함께 반영(blog_sync.py)
+        ttk.Button(btn_f, text="🔗 블로그 글 관리",
+                   command=self._open_blog_sync).pack(side="right")
         self.main_reg_result_var = tk.StringVar(value="")
         ttk.Label(f, textvariable=self.main_reg_result_var,
                   foreground="darkgreen").grid(row=4, column=0, sticky="w", pady=(6,0))
 
         self._refresh_main_register_dates()
+
+    def _open_blog_sync(self):
+        """[Ver10.13] 🔗 블로그 글 관리 창(blog_sync.py). 반영한 뒤 키워드 등록 표를 다시 그린다."""
+        try:
+            import blog_sync
+        except Exception:
+            messagebox.showerror("🔗 블로그 글 관리", "blog_sync.py가 없습니다 — 이 프로그램과 같은 폴더에 넣으세요.")
+            return
+        win = blog_sync.open_window(self, _BlogSyncAdapter(self))
+        win.bind("<Destroy>", lambda e: e.widget is win and self._refresh_main_register_preview())
 
     def _refresh_main_register_dates(self):
         """작업 폴더(_get_work_folder) 안의 날짜 폴더 목록을 다시 읽어 콤보박스에 채운다."""
@@ -10596,7 +10754,7 @@ class App(tk.Tk):
             var.set(path)
 
     def _update_window_title(self):
-        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-16_Ver 10.12")
+        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-16_Ver 10.13")
 
     def _browse_prompt_file(self, var: tk.StringVar):
         cfg      = load_config()

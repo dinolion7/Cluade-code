@@ -94,6 +94,8 @@ def _iter_md(root: str):
     if not root or not os.path.isdir(root):
         return
     for dirpath, _dirs, files in os.walk(root):
+        # 이름이 _로 시작하는 폴더(_블로그에서삭제 등)는 보관소에서 뺀다 — blog_sync.py가 지운 글을 옮기는 곳
+        _dirs[:] = [d for d in _dirs if not d.startswith("_")]
         for fn in files:
             if fn.lower().endswith(".md"):
                 yield os.path.join(dirpath, fn)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-welfare_manager.py — 복지로 관리 프로그램 (Ver10.13, 2026-10-16)
+welfare_manager.py — 복지로 관리 프로그램 (Ver10.14, 2026-10-16)
 복지로(중앙부처·지자체) Open API로 복지서비스를 모으고, Claude 웹으로 블로그 글·인포그래픽을
 만드는 준비 프로그램(단일 파일 Tkinter). 실제 네이버 발행은 포스팅 프로그램(blog_poster.py)이 한다.
 
@@ -18,6 +18,7 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.13, 2026-10-16)
     복지로_포스팅이력.xlsx                    상태 목록("📊 상태 목록 엑셀 저장")
   Naver_blog_keyword_perplexity_gpt_manual_markdown_for_posting/  포스팅 프로그램이 읽는 공용 폴더
   ui_theme.py                              화면 디자인(왼쪽 메뉴·카드·버튼 색, 정책뉴스와 공용) — 없거나 오류면 예전 모습으로 실행
+  dup_archive.py · blog_sync.py            과거 글 중복 확인 · 🔗 블로그 글 관리(둘 다 정책뉴스와 공용, 같은 폴더)
   준비: pip install requests openpyxl selenium (코드 카드는 playwright)
 
 [탭과 흐름]
@@ -36,6 +37,7 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.13, 2026-10-16)
                       → ✅ 인포그래픽 완료 → 6)키워드 등록으로 이동
   6)키워드 등록 — 날짜 선택(MD 저장한 날)·🔄 폴더 새로고침·상태 필터(정책뉴스와 같은 줄) → final_posts 스캔
                  (신규/이미등록) → 등록(선택 없으면 화면에 보이는 신규만): 백업 이동·공용 폴더 복사·키워드 엑셀·🟢 포스팅대기
+                 · 🔗 블로그 글 관리: 블로그에서 지우거나 제목을 고친 글을 한 글씩 / 블로그 글 목록 붙여넣기로 한꺼번에 반영
   7)포스팅 이력관리 — 🟢 포스팅대기 → ✅ 포스팅완료(실제 발행 뒤), 🗑 포스팅후삭제
   8)설정 — 인증키·프롬프트 파일명·경로·네이버 접속 IP·OpenAI 키(문단 정리)
 
@@ -51,7 +53,11 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.13, 2026-10-16)
   - 본문 주소에는 https://·http://·www. 를 붙이지 않는다(하이퍼링크 안 씀 — 네이버가 링크·미리보기 카드로
     바꿔 줄이 깨짐). 최종각색 저장 때 strip_url_prefixes()가 떼고 알려 준다.
   - 📤 포스팅완료는 되돌리지 않는다(set_posting_status가 거부). 🗑 포스팅후삭제로는
-    mark_post_deleted_from_blog() 한 통로로만(이중 확인).
+    mark_post_deleted_from_blog() 한 통로로만(이중 확인 — 7)탭 버튼, 또는 🔗 블로그 글 관리).
+  - 모든 값은 블로그 기준(사용자). 블로그에서 글을 지우거나 제목을 고쳤으면 🔗 블로그 글 관리로 처리한다 — 키워드 엑셀·
+    포스팅 이력 엑셀(키워드 엑셀 옆, 설정 "poster_history_path")·상태 DB·상태 목록 엑셀·최종각색 # 제목 줄·확정 제목·
+    최종원고 색인·final_posts(_backup) 폴더(지운 글은 _블로그에서삭제/로 이동)가 함께 바뀌고, 반영 전
+    작업폴더/_블로그글관리_백업/에 백업한다.
   - 중앙부처를 포스팅완료로 바꿀 때 이름이 비슷한 지자체 정책이 미처리면 막고 연관 정책 팝업으로 안내.
   - 버튼 이름·배치는 CLAUDE.md 작업 원칙대로: 칸 제목이 단계, 버튼 "(넘기는 것) + 프롬프트 복사",
     "(무엇) 저장(메모리값 자동저장)". 정책뉴스와 같은 기능은 정책뉴스 이름(키워드 리서치 실행·검색량·
@@ -78,7 +84,7 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.13, 2026-10-16)
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - API 일일 한도 초과 → QuotaExceededError로 멈춘다(재시도 안 함). 일일 사용량은 quota_state.json.
 
-[버전] Ver10.13 — 최종각색 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지), STEP 1 복사 전·최종각색 저장 전 과거 글 중복 확인(dup_archive.py), 프롬프트 복사하면 팝업으로 알림, 상태 목록 엑셀을 복지로_포스팅이력.xlsx로 분리(포스팅 이력 파일은 포스팅 프로그램 전용).
+[버전] Ver10.14 — 6)키워드 등록에 🔗 블로그 글 관리(blog_sync.py). Ver10.13 — 최종각색 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지), STEP 1 복사 전·최종각색 저장 전 과거 글 중복 확인(dup_archive.py), 프롬프트 복사하면 팝업으로 알림, 상태 목록 엑셀을 복지로_포스팅이력.xlsx로 분리(포스팅 이력 파일은 포스팅 프로그램 전용).
        Ver10.12 6)키워드 등록 날짜 선택·상태 필터 줄. Ver10.11 화면 디자인(ui_theme.py).
        이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
@@ -3881,6 +3887,133 @@ def _dup_check(parent, md: str, stage: str, stop_label: str, exclude_title: str 
 _DUP_MSG = ""   # 마지막 중복 확인 결과 한 줄(로그·STEP 1 복사 안내에 보임)
 
 
+# [Ver10.14] 🔗 블로그 글 관리(blog_sync.py) — 블로그에서 지우거나 제목을 고친 글을 엑셀·DB·보관 폴더에 함께 반영.
+def get_poster_history_path() -> str:
+    """포스팅 프로그램이 쓰는 발행 기록 엑셀. 설정 "poster_history_path", 비우면 키워드 엑셀 옆."""
+    p = (load_config().get("poster_history_path") or "").strip()
+    return p or os.path.join(os.path.dirname(get_keyword_excel_path()), POSTER_HISTORY_FILE_NAME)
+
+
+class _BlogSyncAdapter:
+    name = "복지로"
+
+    def __init__(self, app):
+        self.app = app
+        self.work_dir = WORK_DIR
+
+    def posts(self):
+        import blog_sync
+        return blog_sync.read_posts(get_keyword_excel_path(), get_poster_history_path())
+
+    def files(self):
+        return [("키워드 엑셀", get_keyword_excel_path(), None),
+                ("포스팅 이력 엑셀", get_poster_history_path(), "poster_history_path"),
+                ("상태 DB", POSTING_STATUS_FILE, None),
+                ("상태 목록 엑셀", get_posting_history_excel_path(), None),
+                ("단계별 결과", get_stage_outputs_path(), None),
+                ("최종원고 색인", get_final_posts_index_path(), None),
+                ("확정 제목", get_confirmed_title_path(), None)]
+
+    def set_file(self, key, path):
+        cfg = load_config()
+        cfg[key] = path
+        save_config(cfg)
+
+    def apply(self, renames, deletes):
+        import blog_sync as bs
+        N = bs.norm
+        ren = {N(o): n for o, n in renames}
+        dl = {N(t) for t in deletes}
+        done = []
+        r, d = bs.xlsx_update(get_keyword_excel_path(), [0], ren, dl, sheet="Keywords")
+        done.append(f"키워드 엑셀: 제목 {r}곳 바꿈, {d}줄 지움")
+        r, d = bs.xlsx_update(get_poster_history_path(), [1, 2], ren, dl)
+        done.append(f"포스팅 이력 엑셀: 제목 {r}곳 바꿈, {d}줄 지움")
+
+        # 제목 → 서비스ID(최종원고 색인·확정 제목·최종각색 # 제목 줄)
+        fidx = load_final_posts_index()
+        conf = load_confirmed_titles()
+        stages = load_stage_outputs()
+        sids = {}
+        for k, sid in fidx.items():
+            sids.setdefault(N(k), set()).add(sid)
+        for sid, v in conf.items():
+            sids.setdefault(N(v.get("title")), set()).add(sid)
+        for sid, v in stages.items():
+            t = extract_title_from_final_text(v.get("final_adaptation") or "")
+            if t:
+                sids.setdefault(N(t), set()).add(sid)
+
+        status_map = load_posting_status()
+        del_sids = set()
+        for k in dl:
+            for sid in sids.get(k, set()):
+                # 블로그 목록에 있던 글이므로 지금 상태(완료 표시를 못 한 글 포함)와 상관없이 포스팅후삭제로
+                if sid in status_map and status_map[sid].get("status") != DELETED_STATUS:
+                    mark_post_deleted_from_blog(sid)
+                    del_sids.add(sid)
+        done.append(f"상태 DB: {DELETED_STATUS}로 바꿈 {len(del_sids)}개")
+        if del_sids and os.path.exists(get_posting_history_excel_path()):
+            from openpyxl import load_workbook
+            wb = load_workbook(get_posting_history_excel_path())
+            ws = wb.active
+            n = 0
+            for i in range(2, ws.max_row + 1):
+                if ws.cell(i, 3).value in del_sids:
+                    ws.cell(i, 4).value = DELETED_STATUS
+                    n += 1
+            if n:
+                wb.save(get_posting_history_excel_path())
+            wb.close()
+            done.append(f"상태 목록 엑셀: {n}줄 상태 바꿈")
+
+        sr = 0
+        for sid, v in stages.items():
+            fa = v.get("final_adaptation") or ""
+            new = ren.get(N(extract_title_from_final_text(fa))) if fa else None
+            if new and bs.set_h1(fa, new) != fa:
+                v["final_adaptation"] = bs.set_h1(fa, new)
+                sr += 1
+        if sr:
+            save_stage_outputs(stages)
+        cr = 0
+        for sid, v in conf.items():
+            new = ren.get(N(v.get("title")))
+            if new and v.get("title") != new:
+                v["title"] = new
+                cr += 1
+        if cr:
+            os.makedirs(DATA_DIR, exist_ok=True)
+            with open(get_confirmed_title_path(), "w", encoding="utf-8") as f:
+                json.dump(conf, f, ensure_ascii=False, indent=2)
+        new_idx, fr, fd = {}, 0, 0
+        for k, sid in fidx.items():
+            if N(k) in dl:
+                fd += 1
+                continue
+            new = ren.get(N(k))
+            if new and sanitize_md_filename(new) != k:
+                k = sanitize_md_filename(new)
+                fr += 1
+            new_idx[k] = sid
+        if fr or fd:
+            save_final_posts_index(new_idx)
+        done.append(f"최종각색 # 제목 줄 {sr}개 · 확정 제목 {cr}개 · 최종원고 색인 {fr}개 바꿈, {fd}개 지움")
+
+        for root in (FINAL_POSTS_BACKUP_DIR, FINAL_POSTS_DIR):
+            for o, n in renames:
+                if o == n:
+                    continue
+                x = bs.archive_rename(root, o, n, sanitize_md_filename)
+                if x:
+                    done.append(x)
+            for t in deletes:
+                x = bs.archive_delete(root, t, sanitize_md_filename)
+                if x:
+                    done.append(x)
+        return done
+
+
 def _flatten_text(obj) -> str:
     """원문 상세(dict·list)의 글자 값만 이어 붙인다(중복 확인용)."""
     if isinstance(obj, str):
@@ -4868,7 +5001,7 @@ class WelfareCollectorGUI(tk.Tk):
         # 메인 창으로 바뀌는 현상(초기 렌더링 중간 상태 노출)이 사라진다.
         self.withdraw()
 
-        self.title("복지로 정책 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-16_Ver 10.13")
+        self.title("복지로 정책 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-16_Ver 10.14")
 
         self.log_queue = queue.Queue()
         self.stop_event = threading.Event()
@@ -5877,6 +6010,9 @@ class WelfareCollectorGUI(tk.Tk):
         kw_action_f.grid(row=3, column=0, sticky="ew", padx=6, pady=(0, 8))
         ttk.Button(kw_action_f, text="✅ 등록 (선택 시 선택 항목만 / 미선택 시 화면에 보이는 신규 전체)",
                    command=self._process_keyword_registration).pack(side="left")
+        # [Ver10.14] 블로그에서 지우거나 제목을 고친 글을 엑셀·DB·보관 폴더에 함께 반영(blog_sync.py)
+        ttk.Button(kw_action_f, text="🔗 블로그 글 관리",
+                   command=self._open_blog_sync).pack(side="right")
         self.kw_reg_result_var = tk.StringVar(value="")
         ttk.Label(keyword_reg_tab, textvariable=self.kw_reg_result_var,
                   foreground="darkgreen", wraplength=1100, justify="left").grid(
@@ -9456,6 +9592,16 @@ class WelfareCollectorGUI(tk.Tk):
             else:
                 self.kw_reg_board_manual[iid] = b["name"]
         self._refresh_keyword_reg_preview()
+
+    def _open_blog_sync(self):
+        """[Ver10.14] 🔗 블로그 글 관리 창(blog_sync.py). 창을 닫으면 키워드 등록 표를 다시 그린다."""
+        try:
+            import blog_sync
+        except Exception:
+            messagebox.showerror("🔗 블로그 글 관리", "blog_sync.py가 없습니다 — 이 프로그램과 같은 폴더에 넣으세요.")
+            return
+        win = blog_sync.open_window(self, _BlogSyncAdapter(self))
+        win.bind("<Destroy>", lambda e: e.widget is win and self._refresh_keyword_reg_preview())
 
     def _refresh_keyword_reg_preview(self):
         items = self._list_final_post_folders()
