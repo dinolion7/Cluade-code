@@ -42,6 +42,8 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.13, 2026-10-16)
         ⏭ 패스 / ⏸ 보류(빠른 판단·가치판단이 보류면 확인 후). 패스·보류 글은 STEP 1 복사 때 다시 할지 묻는다.
 
 [반드시 지킬 규칙]
+  - 과거 글 중복 확인(dup_archive.py, 같은 폴더): STEP 1 복사 전(원문자료)·최종각색 저장 전(완성 본문)에 복지로·정책뉴스
+    보관소와 자동 비교, 겹치면 창으로 묻는다(판정은 사람). 정책뉴스 보관소 경로는 설정 "policy_archive_dir"(비우면 옆 폴더).
   - 본문 주소에는 https://·http://·www. 를 붙이지 않는다(하이퍼링크 안 씀 — 네이버가 링크·미리보기 카드로
     바꿔 줄이 깨짐). 최종각색 저장 때 strip_url_prefixes()가 떼고 알려 준다.
   - 📤 포스팅완료는 되돌리지 않는다(set_posting_status가 거부). 🗑 포스팅후삭제로는
@@ -72,7 +74,7 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.13, 2026-10-16)
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - API 일일 한도 초과 → QuotaExceededError로 멈춘다(재시도 안 함). 일일 사용량은 quota_state.json.
 
-[버전] Ver10.13 — 최종각색 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지).
+[버전] Ver10.13 — 최종각색 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지), STEP 1 복사 전·최종각색 저장 전 과거 글 중복 확인(dup_archive.py).
        Ver10.12 6)키워드 등록 날짜 선택·상태 필터 줄. Ver10.11 화면 디자인(ui_theme.py).
        이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
@@ -3835,6 +3837,35 @@ _URL_PREFIX_PAT = re.compile(r"\b(?:https?://(?:www\.)?|www\.)(?=[A-Za-z0-9-]+\.
 def strip_url_prefixes(text: str) -> tuple:
     """본문 주소에서 https://·http://·www. 를 떼고 (새 본문, 뗀 곳 수)를 돌려준다."""
     return _URL_PREFIX_PAT.subn("", text or "")
+
+
+# [Ver10.13] 과거 글 중복 확인(dup_archive.py) — 보관소 두 곳: 복지로(final_posts_backup)와
+# 정책뉴스(설정 "policy_archive_dir", 비우면 이 프로그램 옆 정책뉴스 작업폴더/final_posts_backup).
+def _dup_archives() -> list:
+    cfg = load_config()
+    policy = (cfg.get("policy_archive_dir") or "").strip() or os.path.join(
+        BASE_DIR, "Naver_blog_정책뉴스_markdown_work_folder", "final_posts_backup")
+    return [("복지로", FINAL_POSTS_BACKUP_DIR), ("정책뉴스", policy)]
+
+
+def _dup_check(parent, md: str, stage: str, stop_label: str, exclude_title: str = "") -> str:
+    """dup_archive.py가 없거나 오류면 "go"(작업을 막지 않음)."""
+    try:
+        import dup_archive
+    except Exception:
+        return "go"
+    return dup_archive.check_and_ask(parent, md, _dup_archives(), stage, stop_label, exclude_title)
+
+
+def _flatten_text(obj) -> str:
+    """원문 상세(dict·list)의 글자 값만 이어 붙인다(중복 확인용)."""
+    if isinstance(obj, str):
+        return obj
+    if isinstance(obj, dict):
+        return "\n".join(_flatten_text(v) for v in obj.values())
+    if isinstance(obj, (list, tuple)):
+        return "\n".join(_flatten_text(v) for v in obj)
+    return ""
 
 
 def split_keyword_line(raw: str) -> list:
@@ -7822,6 +7853,11 @@ class WelfareCollectorGUI(tk.Tk):
         detail = self._load_selected_detail(row)
         if detail is None:
             return
+        # [Ver10.13] 처음 체크 — 원문자료로 내가 전에 올린 글과 겹치는지
+        if _dup_check(self, f"{row['servNm']}\n{_flatten_text(detail)}", "STEP 1 복사 전(원문자료)",
+                      "⏭ 이 글 패스") == "stop":
+            self._apply_posting_status_change("⏭ 패스")
+            return
         attachments = list_attachment_files(row["folder"])
         try:
             package = build_quick_judgment_package(detail, row["source"], attachments)
@@ -8727,6 +8763,11 @@ class WelfareCollectorGUI(tk.Tk):
                 messagebox.showwarning("알림", "저장할 내용이 없습니다.", parent=dialog)
                 return
             if not _para_gate(content):   # [Ver10.06] 저장 전 문단 정리
+                return
+            # [Ver10.13] 저장 전 체크 — 완성 본문 전체로 내가 전에 올린 글과 비교
+            if stage_key == "final_adaptation" and _dup_check(
+                    dialog, content, "최종각색 저장 전(완성 본문)", "저장하지 않음",
+                    exclude_title=extract_title_from_final_text(content) or "") == "stop":
                 return
 
             if stage_key == "final_adaptation":

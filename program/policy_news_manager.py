@@ -29,6 +29,8 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
   7)설정
 
 [반드시 지킬 규칙]
+  - 과거 글 중복 확인(dup_archive.py, 같은 폴더): A 복사 전(기사 제목)·MD 저장 전(완성 본문)에 정책뉴스·복지로
+    보관소와 자동 비교, 겹치면 창으로 묻는다(판정은 사람). 복지로 보관소 경로는 설정 "welfare_archive_dir"(비우면 옆 폴더).
   - 본문 주소에는 https://·http://·www. 를 붙이지 않는다(하이퍼링크 안 씀 — 네이버가 링크·미리보기 카드로
     바꿔 줄이 깨짐). 3)탭 MD 저장 때 strip_url_prefixes()가 떼고 알려 준다.
   - 실제 확정은 6)키워드 등록 "엑셀에 추가" 때만: 이때 핵심DB 등록 + 📤 포스팅완료. 🟡 발행준비완료는
@@ -59,7 +61,7 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - 작은따옴표 속마음 후킹 → 제목 점검은 앞 25자 안에서 끝나는지 보고, 앞구 검색은 후킹을 빼고 한다.
 
-[버전] Ver10.12 — MD 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지). 키워드 등록 때 핵심DB에 이력의 핵심·분산 키워드를 씀(예전엔 제목이 들어감), MD를 보관소(작업폴더/final_posts_backup/{제목}/)에 한 부(중복 체크용). Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
+[버전] Ver10.12 — MD 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지). 키워드 등록 때 핵심DB에 이력의 핵심·분산 키워드를 씀(예전엔 제목이 들어감), MD를 보관소(작업폴더/final_posts_backup/{제목}/)에 한 부, A 복사 전·MD 저장 전 과거 글 중복 확인(dup_archive.py). Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
 
 import os
@@ -3995,6 +3997,24 @@ def strip_url_prefixes(text: str) -> tuple:
     return _URL_PREFIX_PAT.subn("", text or "")
 
 
+# [Ver10.12] 과거 글 중복 확인(dup_archive.py) — 보관소 두 곳: 정책뉴스(작업폴더/final_posts_backup)와
+# 복지로(설정 "welfare_archive_dir", 비우면 이 프로그램 옆 복지로 작업폴더/final_posts_backup).
+def _dup_archives() -> list:
+    cfg = load_config()
+    welfare = (cfg.get("welfare_archive_dir") or "").strip() or os.path.join(
+        str(BASE_DIR), "Naver_blog_복지로_markdown_work_folder", "final_posts_backup")
+    return [("정책뉴스", os.path.join(_get_work_folder(), ARCHIVE_SUBFOLDER_NAME)), ("복지로", welfare)]
+
+
+def _dup_check(parent, md: str, stage: str, stop_label: str, exclude_title: str = "") -> str:
+    """dup_archive.py가 없거나 오류면 "go"(작업을 막지 않음)."""
+    try:
+        import dup_archive
+    except Exception:
+        return "go"
+    return dup_archive.check_and_ask(parent, md, _dup_archives(), stage, stop_label, exclude_title)
+
+
 def save_md_file(title: str, content: str, domain: str, output_dir: str) -> str:
     """완성 글을 MD 파일로 저장.
     제목과 같은 이름의 하위 폴더를 만들고 그 안에 저장한다
@@ -6526,6 +6546,18 @@ class App(tk.Tk):
                 f"프롬프트A 파일이 없습니다.\n설정 탭에서 경로를 확인하세요.\n({_prompt_missing_hint(cfg, 'prompt_a_file')})")
             return
 
+        # [Ver10.12] 처음 체크 — 이 기사 제목으로 내가 전에 올린 글과 겹치는지(본문은 PDF라 제목으로 본다)
+        if _dup_check(self, f"{art.get('title', '')}\n{art.get('dept', '')}", "A 복사 전(기사 제목)",
+                      "⏭ 이 기사 패스") == "stop":
+            add_history_record({"title": art["title"], "link": art["link"], "dept": art["dept"],
+                                "published": art["published"], "body_type": art["body_type"], "status": "⏭ 패스"})
+            update_history_status(art["link"], "⏭ 패스")
+            self.history = load_history()
+            self._refresh_history_tree()
+            self._refresh_collect_tree()
+            self._log_collect(f"[중복 확인] 패스: {art['title'][:40]}")
+            return
+
         pdf_count = self.pdf_listbox.size() if hasattr(self, "pdf_listbox") else 0
         body_type = art.get("body_type", "")
 
@@ -7939,6 +7971,9 @@ class App(tk.Tk):
                                 "네이버가 링크·미리보기 카드로 바꿔 줄이 깨지는 것을 막기 위해서입니다.")
         # [Ver10.06] 저장 전 모바일 문단 정리 — 켜져 있으면 먼저 정리하고 이번 저장은 멈춘다.
         if not self._para_reflow_gate(content):
+            return
+        # [Ver10.12] 저장 전 체크 — 완성 본문 전체로 내가 전에 올린 글과 비교
+        if _dup_check(self, content, "MD 저장 전(완성 본문)", "저장하지 않음", exclude_title=title) == "stop":
             return
 
         # [버그 재발방지] TAB1에서 선택한 원본 기사와 지금 작성한 글의

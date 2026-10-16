@@ -11,7 +11,7 @@
     문장 겹침(4글자 묶음). 소제목 단위로 어디가 겹쳤는지도 돌려준다.
   - 보관소가 없거나 읽기 실패해도 예외를 내지 않는다(빈 결과).
 
-[버전] V1 (2026-10-16)
+[버전] V1 (2026-10-16) — 비교·색인·팝업(check_and_ask)
 """
 import json
 import math
@@ -21,6 +21,8 @@ import re
 INDEX_NAME = "_dup_index.json"
 INDEX_VER = 1
 GRAM = 4
+SHORT_CHARS = 300        # 이보다 짧으면(뉴스 제목 등) "말이 얼마나 들어 있나"로 본다
+NOTE_TOPIC, NOTE_BODY, NOTE_SHORT = 0.15, 0.10, 0.5   # 팝업 기준(샘플: 관계없는 글 2~5%, 같은 정책 다른 각도 13~20%)
 
 _TOKEN_PAT = re.compile(r"[가-힣A-Za-z0-9.%㎡]{2,}")
 _STRIP_PAT = re.compile(r"[*_`>|\[\]#:~\-]")
@@ -174,15 +176,20 @@ def compare(md: str, archives: list, top: int = 5, exclude_title: str = "") -> l
 
     nv = vec(new["tf"])
     nn = norm(nv)
+    short = len(" ".join(_body_lines(md))) < SHORT_CHARS
     ng = set(new["grams"])
     nsecs = [(h, set(g)) for h, g in new["sections"]]
     out = []
     for d in docs:
         dv = vec(d["tf"])
-        topic = sum(nv[t] * dv.get(t, 0) for t in nv) / (nn * norm(dv))
+        if short:
+            # 제목 한 줄처럼 짧은 글: 그 말들이 과거 글에 얼마나 들어 있는지(드문 말일수록 무겁게)
+            topic = sum(nv[t] for t in nv if t in dv) / (sum(nv.values()) or 1.0)
+        else:
+            topic = sum(nv[t] * dv.get(t, 0) for t in nv) / (nn * norm(dv))
         dg = set(d["grams"])
         body = len(ng & dg) / (len(ng | dg) or 1)
-        if topic < 0.08 and body < 0.06:
+        if (topic < 0.3) if short else (topic < 0.08 and body < 0.06):
             continue
         shared = sorted((t for t in nv if t in dv), key=lambda t: -(nv[t] * dv[t]))[:8]
         secs = []
@@ -198,10 +205,24 @@ def compare(md: str, archives: list, top: int = 5, exclude_title: str = "") -> l
             if best >= 0.35:
                 secs.append((h, bh, round(best, 2)))
         out.append({"series": d["series"], "title": d["title"], "path": d["path"], "date": d["date"],
-                    "topic": round(topic, 3), "body": round(body, 3),
+                    "topic": round(topic, 3), "body": round(body, 3), "short": short,
                     "shared_terms": shared, "shared_sections": secs})
     out.sort(key=lambda r: -(r["topic"] + r["body"]))
     return out[:top]
+
+
+def notable(results: list) -> list:
+    """팝업에 올릴 만큼 겹친 글만."""
+    return [r for r in results
+            if (r["topic"] >= NOTE_SHORT if r.get("short") else (r["topic"] >= NOTE_TOPIC or r["body"] >= NOTE_BODY))]
+
+
+def archive_counts(archives: list) -> str:
+    parts = []
+    for series, root in archives:
+        n = sum(1 for _ in _iter_md(root)) if root and os.path.isdir(root) else 0
+        parts.append(f"{series} {n}개")
+    return ", ".join(parts)
 
 
 def report(results: list) -> str:
@@ -213,9 +234,69 @@ def report(results: list) -> str:
         import datetime as _dt
         day = _dt.datetime.fromtimestamp(r["date"]).strftime("%Y-%m-%d")
         lines.append(f"[{r['series']}] {r['title']}  ({day})")
-        lines.append(f"   주제 겹침 {round(r['topic'] * 100)}% · 문장 겹침 {round(r['body'] * 100)}%")
+        if r.get("short"):
+            lines.append(f"   제목 말 겹침 {round(r['topic'] * 100)}%")
+        else:
+            lines.append(f"   주제 겹침 {round(r['topic'] * 100)}% · 문장 겹침 {round(r['body'] * 100)}%")
         if r["shared_terms"]:
             lines.append("   겹친 핵심어: " + ", ".join(r["shared_terms"][:6]))
         for h, ph, v in r["shared_sections"][:4]:
             lines.append(f"   겹친 소제목: 「{h}」 ↔ 「{ph}」 {round(v * 100)}%")
     return "\n".join(lines)
+
+
+def open_folder(path: str):
+    import subprocess
+    import sys
+    folder = os.path.abspath(os.path.dirname(path))
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(folder)  # noqa: S606
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", folder])
+        else:
+            subprocess.Popen(["xdg-open", folder])
+    except Exception:
+        pass
+
+
+def check_and_ask(parent, md: str, archives: list, stage: str, stop_label: str,
+                  exclude_title: str = "") -> str:
+    """비교해서 겹친 과거 글이 있으면 창을 띄워 묻는다.
+    돌려주는 값: "go"(겹친 글 없음·계속 작성) / "stop"(stop_label 버튼). 오류가 나면 "go"(작업을 막지 않음)."""
+    try:
+        res = notable(compare(md, archives, exclude_title=exclude_title))
+    except Exception:
+        return "go"
+    if not res:
+        return "go"
+    import tkinter as tk
+    from tkinter import ttk
+    ans = {"v": "go"}
+    win = tk.Toplevel(parent)
+    win.title(f"과거 글 중복 확인 — {stage}")
+    try:
+        if parent.winfo_viewable():
+            win.transient(parent)
+    except Exception:
+        pass
+    ttk.Label(win, text=f"내가 전에 올린 글 가운데 겹치는 글이 {len(res)}개 있습니다. "
+                        "같은 내용이면 새로 쓰지 말고 기존 글을 고치는 쪽을 생각해 보세요.",
+              wraplength=760, justify="left").pack(anchor="w", padx=14, pady=(12, 4))
+    txt = tk.Text(win, width=100, height=min(24, 4 + 5 * len(res)), wrap="word")
+    txt.insert("1.0", report(res) + f"\n\n(비교한 보관소: {archive_counts(archives)})")
+    txt.configure(state="disabled")
+    txt.pack(fill="both", expand=True, padx=14, pady=4)
+    row = ttk.Frame(win)
+    row.pack(fill="x", padx=14, pady=(4, 12))
+
+    def done(v):
+        ans["v"] = v
+        win.destroy()
+    ttk.Button(row, text="계속 작성", command=lambda: done("go")).pack(side="left")
+    ttk.Button(row, text="📂 기존 글 열기", command=lambda: open_folder(res[0]["path"])).pack(side="left", padx=8)
+    ttk.Button(row, text=stop_label, command=lambda: done("stop")).pack(side="right")
+    win.protocol("WM_DELETE_WINDOW", lambda: done("go"))
+    win.grab_set()
+    parent.wait_window(win)
+    return ans["v"]
