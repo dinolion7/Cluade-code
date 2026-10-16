@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-policy_news_manager.py — 정책뉴스 관리 프로그램 (Ver10.11, 2026-10-15)
+policy_news_manager.py — 정책뉴스 관리 프로그램 (Ver10.12, 2026-10-16)
 korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽을 만드는 준비 프로그램(단일 파일 Tkinter).
 실제 네이버 발행은 포스팅 프로그램(blog_poster.py)이 한다. (정책뉴스 RSS는 2026-07-01 서비스 중단 —
 목록 페이지를 직접 읽는다.)
@@ -29,6 +29,8 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
   7)설정
 
 [반드시 지킬 규칙]
+  - 본문 주소에는 https://·http://·www. 를 붙이지 않는다(하이퍼링크 안 씀 — 네이버가 링크·미리보기 카드로
+    바꿔 줄이 깨짐). 3)탭 MD 저장 때 strip_url_prefixes()가 떼고 알려 준다.
   - 실제 확정은 6)키워드 등록 "엑셀에 추가" 때만: 이때 핵심DB 등록 + 📤 포스팅완료. 🟡 발행준비완료는
     되돌릴 수 있는 상태(핵심DB 등록 안 함). 📤 포스팅완료는 되돌리지 않는다(is_published 보호).
   - 중복의심 글은 포스팅 폴더로 보내지 않고 작업폴더/{날짜}/..._duplicated 로 격리한다. 사람이
@@ -57,7 +59,7 @@ korea.kr 정책뉴스를 모아 Claude 웹으로 블로그 글·인포그래픽�
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - 작은따옴표 속마음 후킹 → 제목 점검은 앞 25자 안에서 끝나는지 보고, 앞구 검색은 후킹을 빼고 한다.
 
-[버전] Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
+[버전] Ver10.12 — MD 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지). Ver10.11 — 화면 디자인(ui_theme.py): 탭 줄 → 왼쪽 메뉴, 머리줄 상태 점, 흰 카드, 버튼 색. 기능은 그대로. 이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
 
 import os
@@ -3977,6 +3979,17 @@ def card_prepare_spec(spec: dict, work_dir: str, background_path):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(spec, f, ensure_ascii=False, indent=2)
     return path, bg_name
+
+
+# [Ver10.12] 본문 주소의 https://·http://·www. 를 뗀다 — 네이버 에디터는 "www."나 "http"로 시작하는
+# 주소를 치면 자동으로 링크로 바꾸고 미리보기 카드를 늦게 끼워 넣어 줄이 깨진다(실제 사례:
+# "www.lh.or.kr" 뒤 띄어쓰기가 사라지고 카드가 다음 주소 중간에 들어감). 하이퍼링크는 넣지 않는다(사용자).
+_URL_PREFIX_PAT = re.compile(r"\b(?:https?://(?:www\.)?|www\.)(?=[A-Za-z0-9-]+\.[A-Za-z])", re.I)
+
+
+def strip_url_prefixes(text: str) -> tuple:
+    """본문 주소에서 https://·http://·www. 를 떼고 (새 본문, 뗀 곳 수)를 돌려준다."""
+    return _URL_PREFIX_PAT.subn("", text or "")
 
 
 def save_md_file(title: str, content: str, domain: str, output_dir: str) -> str:
@@ -7914,6 +7927,13 @@ class App(tk.Tk):
                 "이미 포스팅완료된 기사입니다.\n"
                 "재작성하려면 이력관리에서 먼저 '검토 전 상태로 되돌리기'를 사용하세요.")
             return
+        # [Ver10.12] 주소의 https://·www. 를 떼어 본문칸에도 반영한다(네이버 자동 링크 방지).
+        content, _url_n = strip_url_prefixes(content)
+        if _url_n:
+            self.md_text.delete("1.0", "end")
+            self.md_text.insert("1.0", content)
+            messagebox.showinfo("주소 정리", f"주소 {_url_n}곳에서 https://·www. 를 뗐습니다.\n"
+                                "네이버가 링크·미리보기 카드로 바꿔 줄이 깨지는 것을 막기 위해서입니다.")
         # [Ver10.06] 저장 전 모바일 문단 정리 — 켜져 있으면 먼저 정리하고 이번 저장은 멈춘다.
         if not self._para_reflow_gate(content):
             return
@@ -10484,7 +10504,7 @@ class App(tk.Tk):
             var.set(path)
 
     def _update_window_title(self):
-        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-15_Ver 10.11")
+        self.title("정책뉴스 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-16_Ver 10.12")
 
     def _browse_prompt_file(self, var: tk.StringVar):
         cfg      = load_config()

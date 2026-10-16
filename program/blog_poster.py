@@ -593,6 +593,9 @@
 #     그대로). 시리즈는 이력 엑셀을 따로 쓰는 것으로 나뉜다 — 자동 포스팅 시작 때 키워드 파일과
 #     포스팅 결과 파일 이름의 시리즈(정책뉴스·복지로·지식인)가 다르면 물어본다. 화면을 다 만들 때까지
 #     창을 숨겨, 시작할 때 화면이 몇 번 바뀌어 보이던 것을 없앰.
+# - Ver9.19 (2026-10-16): 번호 목록("1. " 줄이 이어질 때) "2. 2."로 겹치던 것 - 네이버 에디터가
+#     "1. "을 자동 번호 목록으로 바꾸고 번호를 스스로 붙이므로, 앞 줄도 번호 항목이면 MD 번호를 빼고
+#     치고, 목록 끝 줄은 Enter를 한 번 더 쳐 빈 줄을 살린다(일반 문단 처리만, 볼드 줄은 그대로).
 
 # ✅ 1. 표준 라이브러리 - 시스템 및 파일
 import os  # 운영체제 기능 (파일, 경로 등)
@@ -11319,7 +11322,15 @@ Sub: ___
 
                     # 문장을 마침표/물음표/느낌표 기준으로 분리
                     # 숫자(\d) 또는 한글([가-힣]) 바로 뒤의 마침표는 분리 제외 → 1. 2. 가. 나. 등
-                    if re.match(r'^\d+[.)]\s', current_line):
+                    # ✅ [Ver9.19] 네이버 에디터는 줄 맨 앞 "1. "을 치면 번호 목록으로 바꾸고, Enter마다
+                    #    다음 번호를 스스로 붙인다 - MD 번호를 그대로 치면 "2. 2."가 됐다.
+                    #    바로 앞 줄도 "숫자. " 항목이면 번호를 빼고 치고(번호는 에디터가 붙임),
+                    #    목록이 끝나는 줄은 아래에서 Enter를 한 번 더 친다(목록 빠져나가기 + 빈 줄).
+                    _num_item = bool(re.match(r'^\d+\.\s', current_line))
+                    _prev_num_item = i > 0 and bool(re.match(r'^\d+\.\s', lines[i - 1].strip()))
+                    if _num_item and _prev_num_item:
+                        sentences = [re.sub(r'^\d+\.\s+', '', current_line, count=1)]
+                    elif re.match(r'^\d+[.)]\s', current_line):
                         sentences = [current_line]
                     else:
                         sentences = re.split(r'(?<![a-zA-Z0-9가-힣][.!?])(?<=[.!?])\s+', current_line)  
@@ -11346,6 +11357,8 @@ Sub: ___
                         if _para_breaks[_para_idx] == 2:
                             actions.send_keys(Keys.ENTER)
                             actions.send_keys(Keys.ENTER)
+                            if _num_item:
+                                actions.send_keys(Keys.ENTER)  # [Ver9.19] 번호 목록 끝 - 빈 줄 살리기
                         elif _para_breaks[_para_idx] == 1:
                             actions.send_keys(Keys.ENTER)
                         else:
@@ -14257,7 +14270,7 @@ class NaverBlogGUI:
  
         os.makedirs(os.path.join(BASE_DIR, "Naver_User_thumbnail_MP4_folder"), exist_ok=True)                                # 사용자 수동 생성 썸네일과 동열상 파일  
 
-        self.root.title("Naver Blog Auto Posting Intergrated Program_Updated_2026-10-16_Ver 9.18")
+        self.root.title("Naver Blog Auto Posting Intergrated Program_Updated_2026-10-16_Ver 9.19")
         
         # 파비콘 설정 추가
         ico_path = str(BASE_DIR / "favicon.ico")

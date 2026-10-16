@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-welfare_manager.py — 복지로 관리 프로그램 (Ver10.12, 2026-10-15)
+welfare_manager.py — 복지로 관리 프로그램 (Ver10.13, 2026-10-16)
 복지로(중앙부처·지자체) Open API로 복지서비스를 모으고, Claude 웹으로 블로그 글·인포그래픽을
 만드는 준비 프로그램(단일 파일 Tkinter). 실제 네이버 발행은 포스팅 프로그램(blog_poster.py)이 한다.
 
@@ -42,6 +42,8 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.12, 2026-10-15)
         ⏭ 패스 / ⏸ 보류(빠른 판단·가치판단이 보류면 확인 후). 패스·보류 글은 STEP 1 복사 때 다시 할지 묻는다.
 
 [반드시 지킬 규칙]
+  - 본문 주소에는 https://·http://·www. 를 붙이지 않는다(하이퍼링크 안 씀 — 네이버가 링크·미리보기 카드로
+    바꿔 줄이 깨짐). 최종각색 저장 때 strip_url_prefixes()가 떼고 알려 준다.
   - 📤 포스팅완료는 되돌리지 않는다(set_posting_status가 거부). 🗑 포스팅후삭제로는
     mark_post_deleted_from_blog() 한 통로로만(이중 확인).
   - 중앙부처를 포스팅완료로 바꿀 때 이름이 비슷한 지자체 정책이 미처리면 막고 연관 정책 팝업으로 안내.
@@ -70,8 +72,8 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.12, 2026-10-15)
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - API 일일 한도 초과 → QuotaExceededError로 멈춘다(재시도 안 함). 일일 사용량은 quota_state.json.
 
-[버전] Ver10.12 — 6)키워드 등록 날짜 선택·상태 필터 줄, 폴더 열기를 절대 경로로(실패하면 안내 창).
-       Ver10.11 화면 디자인(ui_theme.py).
+[버전] Ver10.13 — 최종각색 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지).
+       Ver10.12 6)키워드 등록 날짜 선택·상태 필터 줄. Ver10.11 화면 디자인(ui_theme.py).
        이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
 
@@ -3817,11 +3819,22 @@ def check_source_line(text: str) -> list:
     for ln in lines:
         if re.search(r"blog\.naver|m\.blog|tistory|cafe\.naver|cafe\.daum|brunch\.co|velog|블로그\s*[「(]", ln):
             warns.append(f"출처 줄에 블로그가 들어 있습니다 — 공식기관 자료만 출처로 씁니다:\n  {ln.strip()[:150]}")
-        if re.search(r"https?://\S+/\S", ln):
+        if re.search(r"(?:https?://)?[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/\S", ln):  # [Ver10.13] 주소 앞부분을 떼도 잡게
             warns.append(f"출처 줄에 전체 주소가 있습니다 — 도메인까지만 씁니다:\n  {ln.strip()[:150]}")
     if "### 근거 출처" in (text or ""):
         warns.append("원고에 \"### 근거 출처\" 목록이 남아 있습니다 — 2차각색이 출처 줄로 바꿨어야 합니다.")
     return warns
+
+
+# [Ver10.13] 본문 주소의 https://·http://·www. 를 뗀다 — 네이버 에디터는 "www."나 "http"로 시작하는
+# 주소를 치면 자동으로 링크로 바꾸고 미리보기 카드를 늦게 끼워 넣어 줄이 깨진다(실제 사례:
+# "www.lh.or.kr" 뒤 띄어쓰기가 사라지고 카드가 다음 주소 중간에 들어감). 하이퍼링크는 넣지 않는다(사용자).
+_URL_PREFIX_PAT = re.compile(r"\b(?:https?://(?:www\.)?|www\.)(?=[A-Za-z0-9-]+\.[A-Za-z])", re.I)
+
+
+def strip_url_prefixes(text: str) -> tuple:
+    """본문 주소에서 https://·http://·www. 를 떼고 (새 본문, 뗀 곳 수)를 돌려준다."""
+    return _URL_PREFIX_PAT.subn("", text or "")
 
 
 def split_keyword_line(raw: str) -> list:
@@ -4800,7 +4813,7 @@ class WelfareCollectorGUI(tk.Tk):
         # 메인 창으로 바뀌는 현상(초기 렌더링 중간 상태 노출)이 사라진다.
         self.withdraw()
 
-        self.title("복지로 정책 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-15_Ver 10.12")
+        self.title("복지로 정책 수집한 후 Claude로 각색 및 인포그래픽 설계하는 프로그램_2026-10-16_Ver 10.13")
 
         self.log_queue = queue.Queue()
         self.stop_event = threading.Event()
@@ -8717,6 +8730,15 @@ class WelfareCollectorGUI(tk.Tk):
                 return
 
             if stage_key == "final_adaptation":
+                # [Ver10.13] 주소의 https://·www. 를 떼어 본문칸에도 반영한다(네이버 자동 링크 방지).
+                content, _url_n = strip_url_prefixes(content)
+                if _url_n:
+                    text_widget.delete("1.0", "end")
+                    text_widget.insert("1.0", content)
+                    self._log(f"🔗 주소 {_url_n}곳에서 https://·www. 를 뗐습니다(네이버 자동 링크 방지)")
+                    messagebox.showinfo("주소 정리", f"주소 {_url_n}곳에서 https://·www. 를 뗐습니다.\n"
+                                        "네이버가 링크·미리보기 카드로 바꿔 줄이 깨지는 것을 막기 위해서입니다.",
+                                        parent=dialog)
                 # 정규화(불릿 변환)까지 반영된 뒤의 제목으로 충돌을 확인해야
                 # 하므로, 저장 직전에 normalize된 텍스트 기준으로 먼저 검사한다.
                 normalized_preview = normalize_markdown_bullets(content.strip())
