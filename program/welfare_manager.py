@@ -74,7 +74,7 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.13, 2026-10-16)
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - API 일일 한도 초과 → QuotaExceededError로 멈춘다(재시도 안 함). 일일 사용량은 quota_state.json.
 
-[버전] Ver10.13 — 최종각색 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지), STEP 1 복사 전·최종각색 저장 전 과거 글 중복 확인(dup_archive.py).
+[버전] Ver10.13 — 최종각색 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지), STEP 1 복사 전·최종각색 저장 전 과거 글 중복 확인(dup_archive.py), 프롬프트 복사하면 팝업으로 알림.
        Ver10.12 6)키워드 등록 날짜 선택·상태 필터 줄. Ver10.11 화면 디자인(ui_theme.py).
        이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
@@ -7513,6 +7513,7 @@ class WelfareCollectorGUI(tk.Tk):
         content = f"아래는 요청하신 키워드의 실측 결과입니다.\n\n{body}"
         self.clipboard_clear()
         self.clipboard_append(content)
+        self._copied_popup("키워드 리서치 결과(AI에게 결과 전달)", "가치판단을 하던 같은 대화창에 붙여넣으세요(Ctrl+V).")  # [Ver10.13] 복사했는지 알 수 있게
         sv.set("✅ 키워드 리서치 결과를 클립보드에 넣었습니다 → 같은 대화창에 붙여넣고, Claude 새 답을 복사해 "
                "'💾 가치판단 저장(메모리값 자동저장)' 다시 누르기")
         self._log(f"📋 AI에게 리서치 결과 전달용 복사 완료: {', '.join(keywords)}")
@@ -7823,6 +7824,7 @@ class WelfareCollectorGUI(tk.Tk):
             return
         self.clipboard_clear()
         self.clipboard_append(prompt)
+        self._copied_popup("가치판단 프롬프트", "앞 단계를 한 같은 대화창에 이어서 붙여넣으세요(Ctrl+V).")  # [Ver10.13] 복사했는지 알 수 있게
         row = self._get_selected_posting_row()
         if row is None:
             self._log("📋 가치판단 프롬프트(문구만) 복사 완료")
@@ -8399,6 +8401,7 @@ class WelfareCollectorGUI(tk.Tk):
             return
         self.clipboard_clear()
         self.clipboard_append(prompt)
+        self._copied_popup("본 분석(통합) 프롬프트", "앞 단계를 한 같은 대화창에 이어서 붙여넣으세요(Ctrl+V).")  # [Ver10.13] 복사했는지 알 수 있게
         row = self._get_selected_posting_row()
         if row is None:
             self._log("📋 본 분석(통합) 프롬프트(문구만) 복사 완료")
@@ -8406,6 +8409,10 @@ class WelfareCollectorGUI(tk.Tk):
         self._log(f"📋 본 분석(통합) 프롬프트(문구만) 복사 완료: {row['servNm']}")
         if advance_posting_status(row["servId"], "🔎 가치판단대기", row["servNm"], row["source"]):
             self._refresh_posting_tree()
+
+    def _copied_popup(self, what: str, where: str):
+        """[Ver10.13] 프롬프트를 복사하면 팝업으로 알린다(사용자: 반응이 없어 복사됐는지 헷갈림)."""
+        messagebox.showinfo("복사 완료", f"{what}를 클립보드에 복사했습니다.\n\n{where}")
 
     def _show_attachment_reminder_popup(self, row: dict, attach_list: list, note_extra: str = ""):
         """사전스크리닝/가치판단처럼 첨부파일 누락이 특히 치명적인
@@ -8474,6 +8481,7 @@ class WelfareCollectorGUI(tk.Tk):
             return
         self.clipboard_clear()
         self.clipboard_append(package)
+        self._copied_popup("초안 작성 프롬프트(원문자료 포함)", "Claude 대화창에 붙여넣으세요(Ctrl+V).")  # [Ver10.13] 복사했는지 알 수 있게
         has_vj = bool(get_stage_output(row["servId"], "value_judgment"))
         vj_note = "" if has_vj else " (⚠ 저장된 가치판단 결과 없음 — 원문만으로 진행)"
         self._log(f"✍️ 초안 작성 프롬프트 복사 완료: {row['servNm']} (공식자료 {len(attachments)}건){vj_note}")
@@ -8503,6 +8511,7 @@ class WelfareCollectorGUI(tk.Tk):
             prompt += block + "\n(서비스 원문·공식자료·본 분석 결과는 이 대화의 앞부분 것을 그대로 씁니다.)"
         self.clipboard_clear()
         self.clipboard_append(prompt)
+        self._copied_popup("초안 작성 프롬프트", "앞 단계를 한 같은 대화창에 이어서 붙여넣으세요(Ctrl+V).")  # [Ver10.13] 복사했는지 알 수 있게
         if row is None:
             self._log("📋 초안 작성 프롬프트(문구만) 복사 완료")
             return
@@ -8552,6 +8561,7 @@ class WelfareCollectorGUI(tk.Tk):
             return
         self.clipboard_clear()
         self.clipboard_append(package)
+        self._copied_popup("최종각색 프롬프트(초안 포함)", "Claude 대화창에 붙여넣으세요(Ctrl+V).")  # [Ver10.13] 복사했는지 알 수 있게
         self._log(f"✒️ 최종각색 프롬프트 복사 완료: {row['servNm']}")
 
         if advance_posting_status(row["servId"], "✒️ 최종각색중", row["servNm"], row["source"]):
@@ -8567,6 +8577,7 @@ class WelfareCollectorGUI(tk.Tk):
             return
         self.clipboard_clear()
         self.clipboard_append(prompt)
+        self._copied_popup("최종각색 프롬프트", "앞 단계를 한 같은 대화창에 이어서 붙여넣으세요(Ctrl+V).")  # [Ver10.13] 복사했는지 알 수 있게
         row = self._get_selected_posting_row()
         if row is None:
             self._log("📋 최종각색 프롬프트(문구만) 복사 완료")
@@ -8621,6 +8632,7 @@ class WelfareCollectorGUI(tk.Tk):
             return
         self.clipboard_clear()
         self.clipboard_append(package)
+        self._copied_popup("2차 각색 프롬프트(초안 포함)", "Claude 대화창에 붙여넣으세요(Ctrl+V).")  # [Ver10.13] 복사했는지 알 수 있게
         self._log(f"🩹 2차 각색(Claude) 프롬프트 복사 완료: {row['servNm']}")
 
         if advance_posting_status(row["servId"], "✒️ 최종각색중", row["servNm"], row["source"]):
@@ -8636,6 +8648,7 @@ class WelfareCollectorGUI(tk.Tk):
             return
         self.clipboard_clear()
         self.clipboard_append(prompt)
+        self._copied_popup("2차 각색 프롬프트", "앞 단계를 한 같은 대화창에 이어서 붙여넣으세요(Ctrl+V).")  # [Ver10.13] 복사했는지 알 수 있게
         row = self._get_selected_posting_row()
         if row is None:
             self._log("📋 2차 각색(Claude) 프롬프트(문구만) 복사 완료")
@@ -9074,6 +9087,7 @@ class WelfareCollectorGUI(tk.Tk):
                    f"## 모드\n\n웹\n\n## 직전 글의 썸네일 shape\n\n{last_shape}\n")
         self.clipboard_clear()
         self.clipboard_append(content)
+        self._copied_popup("카드용 프롬프트", "Claude 대화창에 붙여넣고, 답이 나오면 ② JSON 블럭 칸으로(Ctrl+V).")  # [Ver10.13] 복사했는지 알 수 있게
         self.card_copy_status.config(text="✅ 복사 완료 — Claude에 Ctrl+V, 답변이 나오면 ②")
         self.after(5000, lambda: self.card_copy_status.config(text=""))
         self._log("📋 카드용 ⑦ 프롬프트 복사" + (" (프롬프트만)" if simplified else ""))
@@ -9838,6 +9852,7 @@ class WelfareCollectorGUI(tk.Tk):
             return
         self.clipboard_clear()
         self.clipboard_append(prompt)
+        self._copied_popup("인포그래픽 프롬프트(최종 원고 포함)", "Claude 대화창에 붙여넣으세요(Ctrl+V).")  # [Ver10.13] 복사했는지 알 수 있게
         self._log(f"📋 인포그래픽 프롬프트 복사 완료: {row['servNm']}")
 
         if advance_posting_status(row["servId"], "🎨 인포그래픽준비중", row["servNm"], row["source"]):
@@ -9853,6 +9868,7 @@ class WelfareCollectorGUI(tk.Tk):
             return
         self.clipboard_clear()
         self.clipboard_append(prompt)
+        self._copied_popup("인포그래픽 프롬프트", "앞 단계를 한 같은 대화창에 이어서 붙여넣으세요(Ctrl+V).")  # [Ver10.13] 복사했는지 알 수 있게
         row = self._get_selected_ig_row()
         if row is None:
             self._log("📋 인포그래픽 프롬프트(문구만) 복사 완료")
