@@ -13,7 +13,9 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.13, 2026-10-16)
     data/            수집 원본(services_list.json, first_seen.json, posting_status.json,
                      quota_state.json, services/, services_lcgv/), 서비스별 자료 폴더
     final_posts/     최종각색 MD(제목별 폴더) → 6)키워드 등록 때 final_posts_backup/으로 이동
-    Naver_blog_복지로_keyword.xlsx / _posting_history.xlsx
+    Naver_blog_복지로_keyword.xlsx           키워드(포스팅 프로그램이 읽음)
+    Naver_blog_복지로_posting_history.xlsx   포스팅 프로그램 발행 기록(정책뉴스와 같은 6칸) — 이 프로그램은 쓰지 않음
+    복지로_포스팅이력.xlsx                    상태 목록("📊 상태 목록 엑셀 저장")
   Naver_blog_keyword_perplexity_gpt_manual_markdown_for_posting/  포스팅 프로그램이 읽는 공용 폴더
   ui_theme.py                              화면 디자인(왼쪽 메뉴·카드·버튼 색, 정책뉴스와 공용) — 없거나 오류면 예전 모습으로 실행
   준비: pip install requests openpyxl selenium (코드 카드는 playwright)
@@ -42,6 +44,8 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.13, 2026-10-16)
         ⏭ 패스 / ⏸ 보류(빠른 판단·가치판단이 보류면 확인 후). 패스·보류 글은 STEP 1 복사 때 다시 할지 묻는다.
 
 [반드시 지킬 규칙]
+  - Naver_blog_복지로_posting_history.xlsx는 포스팅 프로그램 전용(날짜·원본키워드·생성된 제목·게시글URL·카테고리·연관검색어).
+    상태 목록은 복지로_포스팅이력.xlsx로만 저장한다(같은 파일에 쓰면 발행 기록이 지워지고 내부링크가 안 걸린다).
   - 과거 글 중복 확인(dup_archive.py, 같은 폴더): STEP 1 복사 전(원문자료)·최종각색 저장 전(완성 본문)에 복지로·정책뉴스
     보관소와 자동 비교, 겹치면 창으로 묻는다(판정은 사람). 정책뉴스 보관소 경로는 설정 "policy_archive_dir"(비우면 옆 폴더).
   - 본문 주소에는 https://·http://·www. 를 붙이지 않는다(하이퍼링크 안 씀 — 네이버가 링크·미리보기 카드로
@@ -74,7 +78,7 @@ welfare_manager.py — 복지로 관리 프로그램 (Ver10.13, 2026-10-16)
     없을 때만 _카드작업의 지난 답변 파일을 쓸지 날짜를 보여 주고 묻는다(말없이 지난 답을 읽지 않는다).
   - API 일일 한도 초과 → QuotaExceededError로 멈춘다(재시도 안 함). 일일 사용량은 quota_state.json.
 
-[버전] Ver10.13 — 최종각색 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지), STEP 1 복사 전·최종각색 저장 전 과거 글 중복 확인(dup_archive.py), 프롬프트 복사하면 팝업으로 알림.
+[버전] Ver10.13 — 최종각색 저장 때 주소의 https://·www. 를 뗌(네이버 자동 링크 방지), STEP 1 복사 전·최종각색 저장 전 과거 글 중복 확인(dup_archive.py), 프롬프트 복사하면 팝업으로 알림, 상태 목록 엑셀을 복지로_포스팅이력.xlsx로 분리(포스팅 이력 파일은 포스팅 프로그램 전용).
        Ver10.12 6)키워드 등록 날짜 선택·상태 필터 줄. Ver10.11 화면 디자인(ui_theme.py).
        이전 버전의 바뀐 점은 program/README.md와 git 기록.
 """
@@ -986,7 +990,17 @@ def load_board_cfg() -> dict:
 
 def get_posting_history_excel_path() -> str:
     cfg = load_config()
-    return cfg.get("posting_history_excel_path") or os.path.join(WORK_DIR, "Naver_blog_복지로_posting_history.xlsx")
+    # [Ver10.13] 상태 목록은 "복지로_포스팅이력.xlsx"(정책뉴스의 "정책뉴스_포스팅이력.xlsx"와 같은 방식).
+    # "Naver_blog_복지로_posting_history.xlsx"는 포스팅 프로그램 발행 기록(날짜·키워드·제목·게시글URL…) 전용 —
+    # 예전엔 같은 이름에 상태 목록을 덮어써서 발행 기록이 지워지고 내부링크가 걸리지 않았다.
+    path = (cfg.get("posting_history_excel_path") or "").strip()
+    if not path or os.path.basename(path) == POSTER_HISTORY_FILE_NAME:
+        path = os.path.join(WORK_DIR, STATUS_LIST_FILE_NAME)
+    return path
+
+
+POSTER_HISTORY_FILE_NAME = "Naver_blog_복지로_posting_history.xlsx"   # 포스팅 프로그램 전용(건드리지 않음)
+STATUS_LIST_FILE_NAME = "복지로_포스팅이력.xlsx"
 
 
 def get_research_api_keys() -> dict:
@@ -5400,7 +5414,7 @@ class WelfareCollectorGUI(tk.Tk):
         list_bar = ttk.Frame(pt)
         list_bar.grid(row=4, column=0, columnspan=2, sticky="ew", padx=6, pady=(0, 6))
         ttk.Button(list_bar, text="🔄 새로고침", command=self._refresh_posting_tree).pack(side="left")
-        ttk.Button(list_bar, text="📊 포스팅 이력 엑셀 저장",
+        ttk.Button(list_bar, text="📊 상태 목록 엑셀 저장",
                    command=self._export_posting_history).pack(side="left", padx=(6, 0))
         ttk.Button(list_bar, text="📁 자료 폴더 열기",
                    command=self._open_selected_posting_folder).pack(side="left", padx=(6, 0))
@@ -5985,7 +5999,7 @@ class WelfareCollectorGUI(tk.Tk):
             row=srow, column=2, padx=6, pady=2)
         srow += 1
 
-        ttk.Label(settings_inner, text="포스팅 이력 엑셀 파일:", font=("맑은 고딕", 9, "bold")).grid(
+        ttk.Label(settings_inner, text="상태 목록 엑셀 파일:", font=("맑은 고딕", 9, "bold")).grid(
             row=srow, column=0, sticky="w", padx=6, pady=2)
         self.settings_history_var = tk.StringVar(value=get_posting_history_excel_path())
         ttk.Entry(settings_inner, textvariable=self.settings_history_var).grid(
@@ -9996,7 +10010,7 @@ class WelfareCollectorGUI(tk.Tk):
             self._copy_title_text(title)
 
     def _export_posting_history(self):
-        """포스팅 이력 엑셀을 고정 경로(Naver_blog_복지로_posting_history.xlsx)에
+        """상태 목록 엑셀을 고정 경로(복지로_포스팅이력.xlsx — 포스팅 프로그램 발행 기록 파일과 다름)에
         저장한다. 필터와 무관하게 수집완료된 전체 자료를 기준으로 저장해야
         외부 포스팅 프로그램이 언제나 같은 위치에서 전체 이력을 읽을 수 있다."""
         rows = [r for r in build_listing_rows() if r["downloaded"]]
@@ -10008,8 +10022,8 @@ class WelfareCollectorGUI(tk.Tk):
         while True:
             ok, result = export_posting_status_xlsx(rows, save_path)
             if ok:
-                self._log(f"📊 포스팅 이력 엑셀 저장 완료: {result}")
-                messagebox.showinfo("완료", f"포스팅 이력 엑셀 저장 완료:\n{result}")
+                self._log(f"📊 상태 목록 엑셀 저장 완료: {result}")
+                messagebox.showinfo("완료", f"상태 목록 엑셀 저장 완료:\n{result}")
                 return
             if "openpyxl" in str(result):
                 messagebox.showerror("오류", result)
